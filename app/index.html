@@ -218,6 +218,9 @@ main[data-view=saved],main[data-view=tag]{max-width:640px}
 .tmore[open]>summary{border-color:var(--accent);color:var(--accent)}
 .tmore[open]>summary::after{content:"－";color:var(--accent)}
 .tmore>div{display:grid;gap:16px;margin-top:16px}
+/* 긴 도메인·영문(후기 근거의 'xxx.tistory.com')이 카드 밖으로 삐져나오지 않게: display:grid 의 한 칸이 글의 최소 폭만큼 넓어지지 않도록 minmax(0,1fr)로 카드 폭에 맞추고, 글은 어디서든 줄바꿈 */
+.card,.cand,.pa,.actor,.tile,.likebox,.lkrole,.tl{grid-template-columns:minmax(0,1fr)}
+.q,.why li,.tag,.tlab,.small,.tiny,.vrow{overflow-wrap:anywhere}
 /* QA(통합) CSS 보정 */
 /* 내 공연 카드: V.plans가 카드에 작품별 --accent(작품 색)를 인라인으로 박아 버튼이 보라색으로 나온다. 토큰 하나(와인)로 되돌림. 근본 해결은 V.plans의 style 속성 삭제 */
 #view .cards2>.card{--accent:inherit!important}
@@ -365,7 +368,7 @@ main[data-view=saved],main[data-view=tag]{max-width:640px}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610081607"></script>
+<script src="data.js?v=202610081651"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
