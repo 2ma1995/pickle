@@ -364,7 +364,7 @@ main[data-view=saved],main[data-view=tag]{max-width:640px}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610081521"></script>
+<script src="data.js?v=202610081526"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -409,7 +409,7 @@ function recommend(work, lo, hi, prefs, actors = [], top = 2, avoid = []) {
   const want = wantSet(prefs), pins = pinsByRole(work, actors);
   const groups = new Map();
   for (const p of D.perfs) {
-    if (p.work !== work || p.date < lo || p.date > hi || !passes(p, pins, avoid)) continue;
+    if (p.work !== work || isPrivate(p) || p.date < lo || p.date > hi || !passes(p, pins, avoid)) continue;
     const key = Object.entries(p.cast).sort().map(e => e.join(":")).join("|");
     if (!groups.has(key)) groups.set(key, {cast: p.cast, shows: []});
     groups.get(key).shows.push(p);
@@ -445,7 +445,7 @@ const md = d => `${+d.slice(5, 7)}/${+d.slice(8, 10)}`;
 const runsOf = work => { const w = workOf(work); if (!w) return []; const live = w.runs.filter(r => r.end >= today()); return live.length ? live : w.runs; };
 const runOf = (work, date) => { const w = workOf(work); if (!w) return null; return w.runs.find(r => date >= r.start && date <= r.end) || runsOf(work)[0]; };
 const fmtPeriod = r => `${md(r.start)} ~ ${r.end.slice(0, 4) !== r.start.slice(0, 4) ? r.end.slice(0, 4) + " " : ""}${md(r.end)}`;
-const perfsOf = (work, run) => D.perfs.filter(p => p.work === work && (!run || (p.date >= run.start && p.date <= run.end)));
+const perfsOf = (work, run) => D.perfs.filter(p => p.work === work && !isPrivate(p) && (!run || (p.date >= run.start && p.date <= run.end)));
 const dateRange = (work, run) => { const ds = perfsOf(work, run).map(p => p.date); return ds.length ? [ds.reduce((a, b) => a < b ? a : b), ds.reduce((a, b) => a > b ? a : b)] : null; };
 // 날짜는 전부 로컬(한국) 기준 문자열 YYYY-MM-DD. toISOString은 UTC라 하루가 밀리므로 쓰지 않는다.
 const fmt = x => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
@@ -565,7 +565,7 @@ V.works = () => {
       <div><i>3</i><span>언제: 조건에 맞는 회차를 남은 배역 조합별로 묶어 보여줘요. 고른 취향과 맞는 근거가 많은 조합에 PICK. 이미 본 조합은 흐리게</span></div>
       <div><i>4</i><span>회차 상세에서 가격·좌석 배치도·예매처를 보고 '볼 예정'에 담아요</span></div>
       <div><i>5</i><span>보고 나서 3초 기록 + 같은 배역 비교 → 다음 추천의 근거가 되고, 내 공연에 '본 조합'이 쌓여요</span></div></div></details>
-  <p class="tiny muted">데이터 기준 ${esc(D.generated)} · 회차 ${D.perfs.length}개 · 리뷰 태그 ${Object.values(D.actorTags).reduce((n, w) => n + Object.values(w).flat().filter(r => !r.from).length, 0)}건 · 포스터 출처 KOPIS</p>`;
+  <p class="tiny muted">데이터 기준 ${esc(D.generated)} · 회차 ${D.perfs.filter(p => !isPrivate(p)).length}개 · 리뷰 태그 ${Object.values(D.actorTags).reduce((n, w) => n + Object.values(w).flat().filter(r => !r.from).length, 0)}건 · 포스터 출처 KOPIS</p>`;
 };
 
 // 언제? — 날짜 고르는 화면. 질문 하나만: "갈 수 있는 날은?" 배우·기간 칩은 여기 없다(비교 화면에서).
@@ -647,7 +647,7 @@ V.result = (workArg, mode = "", runs = [], pickRun = null) => {
   const prefs = followBase(st, S.prefs?.axes || []), want = wantSet(prefs);  // 취향은 작품마다 따로. 이 작품에서 직접 바꾸기 전엔 기본 취향을 따라간다
   const run = runOf(work, q.lo);
   const dates = [...(q.dates || [])].sort(), dateMode = dates.length >= 1 && dates.length <= 3;
-  const all = D.perfs.filter(p => p.work === work && p.date >= q.lo && p.date <= q.hi && (dates.length < 4 || dates.includes(p.date))).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  const all = D.perfs.filter(p => p.work === work && !isPrivate(p) && p.date >= q.lo && p.date <= q.hi && (dates.length < 4 || dates.includes(p.date))).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const avoid = (st.avoid ||= []);
   const pins = pinsByRole(work, st.actors), matched = all.filter(p => passes(p, pins, avoid));
   RES = dateMode ? null : {n: matched.length, sel: st.actors.length + avoid.length};  // 폰 하단 버튼용 요약. 날짜 모드엔 카드가 곧 답이라 없음
@@ -913,6 +913,8 @@ const toggleAxis = (axes, v, l, r) => !v ? axes.filter(x => x !== l && x !== r) 
 // 카드와 작품이 맞는 기준: 카드의 태그가 작품 태그에 하나 이상(태그를 셋 이상 묶은 카드는 둘 이상) 있을 때. '감동' 하나로 비극 카드가 맞아 버리지 않게
 const cardHit = (c, tags) => c.tags.filter(t => tags.has(t)).length >= (c.tags.length >= 3 ? 2 : 1);
 const workTagSet = (D, work) => new Set(((D.workTags || {})[work] || []).map(r => r.tag));
+// 전체대관 회차(비고에 '대관'): 단체가 통째로 빌려 일반 예매가 안 된다. 날짜·조합 추천, 달력, 목록, 후보 계산에서 뺀다(상세 화면은 직접 열면 안내 줄만)
+const isPrivate = p => (p.notes || []).some(n => /대관/.test(n));
 // 작품 추천은 회차 캐스팅이 없어도 된다. 끝난 작품(모든 공연의 끝 < from)은 뺀다
 const ended = (w, from) => (w.runs || []).length > 0 && w.runs.every(r => r.end < from);
 // 지금 하는 작품의 주연 후보 Map(이름 → 이 작품에서 맡은 주연 배역들). 회차가 있는 작품은 남은 회차의 주연(예전 그대로, 남은 회차가 없으면 null),
@@ -920,7 +922,7 @@ const ended = (w, from) => (w.runs || []).length > 0 && w.runs.every(r => r.end 
 const runningLeads = (D, w, from) => {
   const lead = (D.roles[w.name] || []).filter(r => r.weight === "주연"), map = new Map(), add = (x, role) => map.set(x, [...new Set([...(map.get(x) || []), role])]);
   if (w.hasSchedule) {
-    const ls = new Set(lead.map(r => r.role)), ups = D.perfs.filter(p => p.work === w.name && p.date >= from); if (!ups.length) return null;
+    const ls = new Set(lead.map(r => r.role)), ups = D.perfs.filter(p => p.work === w.name && p.date >= from && !isPrivate(p)); if (!ups.length) return null;
     for (const p of ups) for (const [role, x] of Object.entries(p.cast)) if (ls.has(role)) add(x, role);
   } else if (ended(w, from)) return null;
   else for (const r of lead) for (const x of r.cast) add(x, r.role);
@@ -986,7 +988,7 @@ const similarWorks = (D, a, extra, from) => {
       const r = similarTo(fav, traitsOf(D, c, [], {work: w.name, roles: roleOf.get(c)})); if (r.out || !r.shared.length) continue;
       const k = r.shared.join("|"); if (!groups.has(k)) groups.set(k, {labels: r.shared, names: []}); groups.get(k).names.push(c);
     }
-    const here = w.hasSchedule ? D.perfs.some(p => p.work === w.name && p.date >= from && Object.values(p.cast).includes(a)) : (D.roles[w.name] || []).some(r => r.cast.includes(a));
+    const here = w.hasSchedule ? D.perfs.some(p => p.work === w.name && p.date >= from && !isPrivate(p) && Object.values(p.cast).includes(a)) : (D.roles[w.name] || []).some(r => r.cast.includes(a));
     if (here || groups.size) res.push({w, here, n: new Set([...groups.values()].flatMap(g => g.labels)).size, groups: [...groups.values()].sort((x, y) => y.labels.length - x.labels.length)});
   }
   return res.sort((x, y) => y.here - x.here || y.n - x.n || x.w.name.localeCompare(y.w.name, "ko"));
@@ -1140,9 +1142,10 @@ V.detail = (work, date, time) => {
   const allRows = order.flatMap(([role, a]) => ((D.actorTags[work] || {})[a] || []).map(r => ({who: a, role, ...r})));
   const rows = allRows.filter(r => !isOfficial(r)), ivs = allRows.filter(r => isOfficial(r) && r.level !== "제작진·공식"), prod = allRows.filter(r => r.level === "제작진·공식");  // 배우 본인·제작진 공식은 근거·점수 밖, '배우가 밝힌 해석'·'공식 소개'로 따로
   const same = perfsOf(work).filter(x => !(x.date === date && x.time === time) && leads(work, x.cast).every(([r, a]) => p.cast[r] === a)).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-  const grade = S.prefs?.grade;
+  const grade = S.prefs?.grade, priv = isPrivate(p);
   return `
     <div class="mainc">
+    ${priv ? `<div class="card"><b>전체대관 · 일반 예매 불가</b><p class="small muted">단체가 통째로 빌린 회차라 일반 예매로는 볼 수 없어요. 추천에서도 빠져 있어요.</p></div>` : ""}
     <div class="card accent"><div class="pick" style="grid-template-columns:68px 1fr">${whenTile(p)}
       <div class="head sm">${posterEl(w)}<div><h2>${esc(work)}</h2><p class="tiny muted">${esc(run.label || "")} · ${esc(run.venue || "")}</p></div></div></div></div>
     <div class="card"><h3>이 회차 캐스트</h3>
@@ -1165,9 +1168,9 @@ V.detail = (work, date, time) => {
         <p class="tiny muted">주연 ${leads(work, p.cast).map(([, a]) => esc(a)).join(" · ")}${leads(work, p.cast).length > 1 ? " 조합이" : "이(가)"} 그대로인 날이에요. 조연은 다를 수 있어요.</p>`
         : `<p class="small muted">이 주연 조합은 이 회차뿐이에요. 좌석이 없으면 PICK CAST에서 다른 조합의 회차를 골라 주세요.</p>`}</div>
     <div style="display:grid;gap:10px">
-    ${run.ticket ? `<a class="btn" href="${esc(run.ticket)}" target="_blank" rel="noopener">예매처에서 ${md(date)}(${esc(p.dow)}) ${esc(time)} 좌석 보기 ↗</a>
+    ${priv ? `<button class="btn" disabled>일반 예매 불가</button>` : run.ticket ? `<a class="btn" href="${esc(run.ticket)}" target="_blank" rel="noopener">예매처에서 ${md(date)}(${esc(p.dow)}) ${esc(time)} 좌석 보기 ↗</a>
     <p class="tiny muted">예매처 달력에서 <b>${md(date)} ${esc(time)}</b>을 다시 골라야 해요. 예매처가 날짜를 링크로 받지 않아서 자동으로 넘어가지 않아요.</p>` : `<button class="btn" disabled>예매 링크 준비 중</button>`}
-    <button class="btn ghost" data-act="plan" data-work="${esc(work)}" data-date="${date}" data-time="${time}" ${planned ? "disabled" : ""}>${planned ? "볼 예정에 담겼어요" : "볼 예정에 담기"}</button>
+    <button class="btn ghost" data-act="plan" data-work="${esc(work)}" data-date="${date}" data-time="${time}" ${planned || priv ? "disabled" : ""}>${planned ? "볼 예정에 담겼어요" : priv ? "볼 예정에 담을 수 없어요" : "볼 예정에 담기"}</button>
     <p class="tiny muted">담아 두면 공연 다음 날 3초 태그를 남길 수 있어요.</p>
     </div>
     </div>`;
@@ -1397,7 +1400,7 @@ document.addEventListener("click", e => {
     case "toSide": $("#view .side").scrollIntoView(); break;
     case "closeSheet": closeSheet(); break;
     case "runQuery": { const st = S.cal[d.work]; if (!st?.count) { toast("조건에 맞는 회차가 없어요"); return; } S.query = {work: d.work, lo: st.lo, hi: st.hi, actors: st.actors, dates: st.dates || []}; save(); location.hash = "#result"; break; }
-    case "plan": { const p = D.perfs.find(x => x.work === d.work && x.date === d.date && x.time === d.time); S.plans.push({work: p.work, date: p.date, dow: p.dow, time: p.time, cast: p.cast, tagged: false}); save(); location.hash = "#saved/" + (S.plans.length - 1); break; }
+    case "plan": { const p = D.perfs.find(x => x.work === d.work && x.date === d.date && x.time === d.time); if (isPrivate(p)) { toast("전체대관 회차는 일반 예매가 안 돼요"); return; } S.plans.push({work: p.work, date: p.date, dow: p.dow, time: p.time, cast: p.cast, tagged: false}); save(); location.hash = "#saved/" + (S.plans.length - 1); break; }
     case "unplan": S.plans.splice(+d.i, 1); save(); route(); break;
     case "plansTab": S.plansTab = d.t; save(); route(); break;
     case "tQuick": { const x = S.plans[+d.i]; x.quick = x.quick === d.q ? "" : d.q; save(); route(); break; }  // 저장 확인 화면의 좋아요/아쉬워요. 다시 누르면 해제
