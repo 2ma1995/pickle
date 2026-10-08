@@ -360,7 +360,7 @@ main[data-view=saved],main[data-view=tag]{max-width:640px}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610081328"></script>
+<script src="data.js?v=202610081331"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -764,7 +764,19 @@ const sgn = v => (v > 0 ? "+" : "−") + Math.abs(v);
 // 사전 하위 영역 음색·파워·기술 = 배우 특성이라 작품이 바뀌어도 이어지는 태그. 평소엔 data.js의 D.voiceTags(사전에서 내보냄)를 쓰고, 그게 없을 때만 이 기본 목록을 쓴다
 const VOICE_TAGS = ["맑음", "부드러움", "허스키", "묵직한 음색", "성량", "고음", "딕션"];
 // 자유 글 → 태그 후보. 키워드 매칭만(AI API 없음): 태그 이름이나 사전의 '이런 표현이면 이 태그' 표현(phrases)이 글에 그대로(띄어쓰기는 무시) 들어 있으면 후보. phrases가 없으면 태그 이름만 쓴다
-const suggestTags = (text, tagNames, phrases = {}) => { const flat = String(text || "").replace(/\s+/g, ""); return tagNames.filter(t => [t, ...(phrases[t] || [])].some(k => flat.includes(k.replace(/\s+/g, "")))); };
+// 활용형도 찾는다(맑고·청아해요·부드러운): 사전 표현은 끝의 하다·이다·다를, 태그 이름은 끝의 음·함·움을 뗀 어간이 글에 있고 바로 뒤가 알맞은 어미일 때(STEM_END). 'ㅂ' 불규칙(…럽→…러)도 본다.
+// 한 글자 어간(맑)은 사전 표현에서만 쓰고 어미가 꼭 붙어야 한다. 태그 이름의 한 글자 어간(고음→고)은 '고은성'·'고민'에 걸려서 안 쓴다
+const STEM_END = {"하다": "하한해합했함할히", "이다": "이인입였", "다": "고은는아어으게네지며았었습운워웠"};
+const stemHit = (flat, key, isName) => {
+  const m = isName ? key.match(/^(.*)[음함움]$/) : key.match(/^(.*?)(하다|이다|다)$/);
+  if (!m || (isName && m[1].length < 2)) return false;
+  const ends = isName ? "" : STEM_END[m[2]];
+  return (m[1].endsWith("럽") ? [m[1], m[1].slice(0, -1) + "러"] : [m[1]]).some(st => {
+    for (let i = flat.indexOf(st); i >= 0; i = flat.indexOf(st, i + 1)) { const c = flat[i + st.length]; if (!"비불".includes(flat[i - 1] || " ") && (isName || (c && /[가-힣]/.test(c) ? ends.includes(c) : st.length > 1))) return true; }  // 비현실적·불편 같은 부정 접두어가 앞에 붙으면 뺀다
+    return false; });
+};
+const suggestTags = (text, tagNames, phrases = {}) => { const flat = String(text || "").replace(/\s+/g, ""), nk = k => k.replace(/\s+/g, "");
+  return tagNames.filter(t => flat.includes(nk(t)) || stemHit(flat, nk(t), true) || (phrases[t] || []).some(k => flat.includes(nk(k)) || stemHit(flat, nk(k), false))); };
 // 근거 수준(r.level, 시트 허용 목록): 전문매체·언론 / 일반 관객 후기 / 설문 / 직접 관람 / 배우 본인·공식 / 제작진·공식 / 기타. 예전 값(관객 후기·배우 인터뷰)도 알아본다.
 // 배우 본인·제작진의 말은 확정이어도 점수·반대 근거·내 기록에는 안 쓰고, 상세 화면에 '배우가 밝힌 해석'(제작진은 '공식 소개')으로만 보여 준다
 const OFFICIAL_LEVELS = ["배우 본인·공식", "배우 인터뷰", "제작진·공식"];
