@@ -287,6 +287,9 @@ main[data-view=saved],main[data-view=tag]{max-width:640px}
 .obcard.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
 .obg{display:grid;gap:10px}
 .recs{display:grid;gap:12px}
+.sims{display:grid;gap:8px}
+.simrow{cursor:pointer}
+.simrow:hover{border-color:var(--accent)}
 .rsn{color:var(--accent);font-weight:600}
 .chip .rs{font-size:12px;font-weight:500;color:var(--muted)}
 .bar{height:6px;border-radius:999px;background:var(--soft);overflow:hidden}
@@ -360,7 +363,7 @@ main[data-view=saved],main[data-view=tag]{max-width:640px}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610081331"></script>
+<script src="data.js?v=202610081415"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -525,14 +528,29 @@ const workCard = (w, entry, why = "") => { const rs = runsOf(w.name); return `<d
       <span class="state">${w.hasSchedule ? `회차 ${perfsOf(w.name).length}개` : "준비 중"}</span>
       <div class="info"><b>${esc(w.name)}</b>${why ? `<span class="tiny rsn">${esc(why)}</span>` : ""}${rs.map(r => `<span class="tiny muted">${rs.length > 1 ? `<b>${esc(r.label)}</b> ` : ""}${esc(r.venue)} · ${fmtPeriod(r)}</span>`).join("")}${w.hasSchedule ? `<span class="go">캐스팅 조합 찾기 →</span>` : ""}</div></div>`; };
 
+// 아직 PICKLE 데이터에 없는 배우 이름은 S.requests 에 적어 둔다(나중에 추가). 새로 적었으면 true
+const noteRequest = name => addRequest(S.requests ||= [], name, today());
+const likeTagsOf = a => { const l = (S.likes || []).find(x => x.actor === a); return l ? [...(l.tags || []), ...(l.roles || []).flatMap(r => r.tags || [])] : []; };
+// 좋아하는 배우 한 명 구역: 특성이 있으면 닮은 배우가 나오는 작품, 없으면 '어떤 점이 좋아요?'(내 취향의 입력 칸을 연다)
+const favBlock = a => {
+  const extra = likeTagsOf(a), tr = traitsOf(D, a, extra), known = knownActor(D, a), A = esc(a);
+  if (!known && noteRequest(a)) save();
+  if (!tr.voice.length && !tr.role.length) return `<div class="card"><h3>${A}의 어떤 점이 좋아요?</h3>${known ? "" : `<p class="small muted">아직 PICKLE에 정보가 없어요. 이름은 나중에 추가할 수 있게 적어 뒀어요.</p>`}<p class="small muted">알려 주면 닮은 배우가 나오는 공연을 찾아 드려요.</p><button class="btn ghost" data-act="likeAsk" data-a="${A}">알려주기</button></div>`;
+  const ws = similarWorks(D, a, extra, today());
+  return `<div class="recs"><h2>${A}${eul(a)} 좋아하면</h2>
+    <p class="tiny muted">${A}의 특성: ${[...tr.voice.map(v => v.tag), ...tr.role].map(esc).join(" · ")} · 근거가 있는 배우 중에서${known ? "" : " · 아직 PICKLE에 정보가 없어서 내가 고른 특성으로만 찾았어요"}</p>
+    ${ws.length ? `<div class="sims">${ws.map(x => `<div class="tile simrow" data-go="#pick/${esc(x.w.name)}" data-entry="rec"><b>${esc(x.w.name)}</b>${x.here ? `<span class="small rsn">${A} 출연 중</span>` : ""}${x.groups.map(g => `<span class="small">${g.names.map(esc).join("·")}: ${A}처럼 ${g.labels.map(esc).join("·")}</span>`).join("")}</div>`).join("")}</div>` : `<p class="small muted">닮은 특성의 배우가 지금 하는 공연에는 아직 없어요.</p>`}</div>`;
+};
+
 V.works = () => {
-  const p = S.prefs, taste = hasTaste(p), ids = p?.works || [], axes = p?.axes || [];
+  const p = S.prefs, taste = hasTaste(p), ids = p?.works || [], axes = p?.axes || [], favs = (p?.favs || []).slice(0, 3);
   const axisLabel = v => D.axes.flatMap(a => [[a.left, a.l], [a.right, a.r]]).find(([k]) => k === v)?.[1] || v;
   const likes = ids.length ? likeWorks(D, ids) : [], chips = axes.length ? D.works.filter(w => w.hasSchedule).map(w => ({w, cs: actorChips(D, w.name, axes, today())})).filter(x => x.cs.length) : [];
-  const mine = [...ids.map(id => cardOf(id)?.l), ...axes.map(axisLabel)].filter(Boolean);
+  const mine = [...ids.map(id => cardOf(id)?.l), ...axes.map(axisLabel), ...favs].filter(Boolean);
   const recs = !taste ? `<div class="card accent"><h3>취향부터 알려 주세요</h3><p class="small muted">어떤 공연과 배우가 끌리는지 알려 주면, 맞는 공연과 배우를 홈에서 먼저 보여 드려요. 건너뛰어도 돼요.</p><button class="btn" data-go="#onboard/1">30초 취향 알려주기</button></div>`
     : `<p class="muted small">내 취향: ${esc(mine.join(" · "))} <a href="#onboard/1">다시 고르기</a></p>
     ${ids.length ? `<div class="recs"><h2>이런 공연 좋아하면</h2>${likes.length ? `<div class="grid">${likes.map(x => workCard(x.w, "rec", x.cards.map(c => c.l).join(" · "))).join("")}</div>` : `<p class="small muted">고른 카드와 맞는 작품이 아직 없어요. 아래 모든 작품에서 골라 보세요.</p>`}</div>` : ""}
+    ${favs.map(favBlock).join("")}
     ${axes.length ? `<div class="recs"><h2>이런 배우 좋아하면</h2><p class="tiny muted">근거가 있는 배우 중에서</p>${chips.length ? chips.map(x => `<div class="card"><h3>${esc(x.w.name)}</h3><div class="chips">${x.cs.map(c => `<button class="chip" data-go="#pick/${esc(x.w.name)}" data-entry="rec"><b>${esc(c.a)}</b><span class="rs">· ${esc(c.tags.join(", "))}</span></button>`).join("")}</div></div>`).join("") : `<p class="small muted">고른 취향과 맞는 근거가 있는 배우가 아직 없어요.</p>`}</div>` : ""}`;
   return `
   <div><p class="eyebrow">캐스팅 일정이 열린 작품</p><h1>무슨 작품 볼 거예요?</h1></div>
@@ -897,8 +915,56 @@ const actorChips = (D, work, axes, from) => {
 // 작품별 취향은 이 작품에서 직접 바꾸기 전(edited 아님)엔 기본 취향을 그대로 따라간다. edited 표시가 없던 예전 작품은 기본과 다르면 직접 바꾼 것으로 본다
 const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x));
 const followBase = (st, base) => { if (st.edited === undefined) st.edited = st.axes ? !sameSet(st.axes, base) : false; if (!st.edited) st.axes = [...base]; return st.axes; };
-// 기본 취향이 있는지(홈에 추천을 보일지). 좋아하는 배우만 있으면 추천할 근거가 없다
-const hasTaste = p => !!p && !!((p.works || []).length || (p.axes || []).length);
+// 기본 취향이 있는지(홈에 추천을 보일지). 좋아하는 배우도 취향의 예시라서 하나라도 있으면 있다
+const hasTaste = p => !!p && !!((p.works || []).length || (p.axes || []).length || (p.favs || []).length);
+
+// ---- 좋아하는 배우 = 내 취향의 예시. 지금 하는 공연에서 닮은 특성(점수 아님)을 가진 주연을 찾는다. 배우 프로필(D.actorProfiles)은 공식 출처를 뺀 확정 태그 전부
+const VOICE_AXIS_FB = {"맑음": "음색", "부드러움": "음색", "허스키": "음색", "묵직한 음색": "음색"};  // D.voiceAxis 가 없을 때. 나머지 목소리 태그는 태그 하나가 한 축
+// 목소리 태그의 축과 쪽: 음색은 맑은 음색(L) ↔ 묵직한 음색(R)처럼 취향 축의 어느 쪽인지. 반대쪽이 없는 축(고음·딕션 등)은 side가 빈 값
+const voiceKey = (D, tag) => {
+  const x = (D.axes || []).find(x => x.left !== "가창" && ((D.axis[x.left] || []).includes(tag) || (D.axis[x.right] || []).includes(tag)));
+  return {axis: (D.voiceAxis || VOICE_AXIS_FB)[tag] || tag, side: x ? ((D.axis[x.left] || []).includes(tag) ? "L" : "R") : ""};
+};
+const profileOf = (D, a) => (D.actorProfiles || {})[a] || {voice: [], role: []};
+// 배우의 특성 {voice: [{tag, axis, side}], role: [태그]}: 프로필 태그 + extra(내가 '왜 좋아요'에서 누른 태그). 목소리 먼저, 같은 축·같은 쪽은 하나로.
+// 두 겹: 목소리는 모든 작품 프로필을 합치고, 연기·해석·몸 태그는 here={work, roles}(후보가 이 작품에서 맡은 배역)가 있으면 그 작품 그 배역의 기록(다른 시즌 포함)만 쓴다.
+// 좋아하는 배우 쪽은 here 없이 부르니 다른 작품의 연기 태그도 취향으로 남는다(그 배역에서 그 특성이 좋았다면 그 특성이 취향)
+const traitsOf = (D, a, extra = [], here = null) => {
+  const vs = D.voiceTags || VOICE_TAGS, p = profileOf(D, a), voice = [], role = [];
+  const all = [...p.voice, ...(here ? p.role.filter(r => r.work === here.work && here.roles.includes(r.role)) : p.role)].map(r => r.tag).concat(extra);
+  for (const t of all.filter(t => vs.includes(t))) { const k = voiceKey(D, t); if (!voice.some(v => v.axis === k.axis && v.side === k.side)) voice.push({tag: t, ...k}); }
+  for (const t of all.filter(t => !vs.includes(t))) if (!role.includes(t)) role.push(t);
+  return {voice, role};
+};
+// 좋아하는 배우(fav)와 이 배우(c)의 겹치는 특성. 목소리는 같은 축의 같은 쪽, 연기·해석 태그는 같은 태그. 같은 목소리 축에서 fav 쪽이 하나도 없고 반대쪽만 있으면 out
+const similarTo = (fav, c) => {
+  const out = [...new Set(fav.voice.filter(f => f.side).map(f => f.axis))].some(ax => { const F = fav.voice.filter(f => f.axis === ax).map(f => f.side), C = c.voice.filter(v => v.axis === ax && v.side).map(v => v.side); return C.length > 0 && !C.some(sd => F.includes(sd)); });
+  return {out, shared: [...fav.voice.filter(f => c.voice.some(v => v.axis === f.axis && v.side === f.side)).map(f => f.tag), ...fav.role.filter(t => c.role.includes(t))]};
+};
+// 아직 PICKLE 데이터에 없는 이름(프로필도, 어느 작품 캐스트에도 없음)
+const knownActor = (D, a) => !!(D.actorProfiles || {})[a] || Object.values(D.roles || {}).some(rs => rs.some(r => r.cast.includes(a)));
+// 좋아하는 배우 a 와 닮은 배우가 나오는 작품. 지금 하는(끝나지 않은) 작품의 남은 회차 주연이 후보고, a 본인은 후보가 아니다. 닮은 특성이 같은 후보끼리 한 줄로 묶는다.
+// 점수·순위 없음: 작품은 a 가 나오는 작품 먼저 → 나오는 서로 다른 닮은 특성 수 → 이름. 특성이 없으면 [] (좋아하는 점을 물어봐야 한다)
+const similarWorks = (D, a, extra, from) => {
+  const fav = traitsOf(D, a, extra); if (!fav.voice.length && !fav.role.length) return [];
+  const res = [];
+  for (const w of D.works) {
+    const ups = w.hasSchedule ? D.perfs.filter(p => p.work === w.name && p.date >= from) : []; if (!ups.length) continue;
+    const lead = new Set((D.roles[w.name] || []).filter(r => r.weight === "주연").map(r => r.role)), groups = new Map(), roleOf = new Map();
+    for (const p of ups) for (const [role, x] of Object.entries(p.cast)) if (lead.has(role)) roleOf.set(x, [...new Set([...(roleOf.get(x) || []), role])]);  // 후보 → 이 작품에서 맡은 주연 배역
+    for (const c of [...roleOf.keys()].filter(x => x !== a).sort((x, y) => x.localeCompare(y, "ko"))) {
+      const r = similarTo(fav, traitsOf(D, c, [], {work: w.name, roles: roleOf.get(c)})); if (r.out || !r.shared.length) continue;
+      const k = r.shared.join("|"); if (!groups.has(k)) groups.set(k, {labels: r.shared, names: []}); groups.get(k).names.push(c);
+    }
+    const here = ups.some(p => Object.values(p.cast).includes(a));
+    if (here || groups.size) res.push({w, here, n: new Set([...groups.values()].flatMap(g => g.labels)).size, groups: [...groups.values()].sort((x, y) => y.labels.length - x.labels.length)});
+  }
+  return res.sort((x, y) => y.here - x.here || y.n - x.n || x.w.name.localeCompare(y.w.name, "ko"));
+};
+// 아직 데이터에 없는 이름을 요청 목록(S.requests)에 적는다. 새로 적었으면 true, 이미 있으면 false
+const addRequest = (list, name, at) => list.some(x => x.name === name) ? false : (list.push({name, at}), true);
+// 이름 뒤 조사(을/를): 받침이 있으면 을
+const eul = name => { const c = String(name).charCodeAt(String(name).length - 1) - 0xAC00; return c >= 0 && c % 28 ? "을" : "를"; };
 // </taste-first>
 // 배우 태그 두 줄: '목소리'(다른 작품에서 온 건 작품 이름을 괄호로)와 '이 배역'. 취향과 맞는 태그를 앞에 둔다
 const tagLines = (rows, want, max = 99) => {
@@ -1271,7 +1337,8 @@ document.addEventListener("click", e => {
       P.axes = next; for (const st of Object.values(S.cal)) followBase(st, next);  // 안 바꾼 작품은 새 기본 취향을 따라가게 저장 값도 맞춘다
       save(); route(); break; }
     case "obGo": { prefsOf(); save(); if (+d.to > 3) { location.hash = "#works"; if (hasTaste(S.prefs)) toast("취향을 저장했어요"); } else location.hash = "#onboard/" + d.to; break; }  // 건너뛰어도 S.prefs 는 만들어 둔다(다시 자동으로 안 뜨게)
-    case "addFav": { const v = $("#fav").value.trim(), P = prefsOf(); if (!v) return; if (!P.favs.includes(v)) { P.favs.push(v); likeOpen.add(v); } save(); route(); $("#fav")?.focus(); break; }
+    case "addFav": { const v = $("#fav").value.trim(), P = prefsOf(); if (!v) return; if (!P.favs.includes(v)) { P.favs.push(v); likeOpen.add(v); if (!knownActor(D, v)) noteRequest(v); } save(); route(); $("#fav")?.focus(); break; }
+    case "likeAsk": likeOpen.add(d.a); location.hash = "#me"; setTimeout(() => [...document.querySelectorAll(".likebox")].find(x => x.dataset.a === d.a)?.scrollIntoView(), 60); break;  // 홈의 '어떤 점이 좋아요?' → 내 취향의 그 배우 입력 칸을 열어 둔다
     case "rmFav": { const P = prefsOf(); P.favs = P.favs.filter(a => a !== d.a); save(); route(); break; }
     case "setGrade": { const P = prefsOf(); P.grade = P.grade === d.g ? "" : d.g; save(); route(); break; }
     case "toggleActor": { const st = (S.cal[d.work || work] ||= {actors: [], period: "all"}); st.actors = st.actors.includes(d.a) ? st.actors.filter(a => a !== d.a) : [...st.actors, d.a]; save(); route(); break; }
