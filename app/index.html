@@ -167,6 +167,7 @@ input::placeholder{color:var(--faint)}
 /* 영상 썸네일(탭하면 재생) */
 .vth{position:relative;display:block;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:var(--line);text-decoration:none;color:inherit}
 .vth img{width:100%;height:100%;object-fit:cover;display:block}
+.vth .vcc{position:absolute;left:6px;top:6px;font-size:11px;line-height:1.3;padding:2px 7px;border-radius:999px;background:#fff;color:var(--muted);font-weight:600}
 .vth .play{position:absolute;left:6px;bottom:6px;max-width:calc(100% - 12px);font-size:11px;line-height:1.3;padding:2px 7px;border-radius:999px;background:rgba(26,26,26,.72);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vth.none{display:grid;place-items:center;font-size:12px;color:var(--muted)}
 .vrow{display:flex;gap:10px;align-items:center;font-size:13px;text-decoration:none;color:inherit}
@@ -364,7 +365,7 @@ main[data-view=saved],main[data-view=tag]{max-width:640px}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610081526"></script>
+<script src="data.js?v=202610081542"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -476,13 +477,16 @@ const evidenceList = ev => (levelMix(ev) ? `<p class="tiny muted mix">출처 ${l
 const won = n => n.toLocaleString("ko-KR") + "원";
 const views = n => n >= 10000 ? `${(n / 10000).toFixed(n >= 100000 ? 0 : 1)}만` : n.toLocaleString("ko-KR");
 const videoOf = (work, a) => (((D.videos || {})[work] || {})[a] || [])[0];  // 공식 채널 우선으로 정렬돼 있어서 첫 번째가 대표 영상
-const videoLink = (v, cls = "q") => `<a class="${cls}" href="${esc(v.url)}" target="_blank" rel="noopener">▶ ${esc(v.title.length > 38 ? v.title.slice(0, 38) + "…" : v.title)} <span class="muted">· ${esc(v.channel)}${v.official ? " · 공식" : ""}${v.views ? ` · 조회 ${views(v.views)}` : ""}</span></a>`;
+// 제목에 커튼콜(스페셜 커튼콜 포함)이 있으면 '커튼콜 영상' 표시. 방송 이름 '이호광의 커튼콜'은 넘버 영상이라 뺀다(recommend.py is_curtain 과 같은 규칙)
+const isCurtain = v => (v?.title || "").replace("이호광의 커튼콜", "").includes("커튼콜");
+const ccTag = v => isCurtain(v) ? `<span class="sbadge">커튼콜 영상</span> ` : "";
+const videoLink = (v, cls = "q") => `<a class="${cls}" href="${esc(v.url)}" target="_blank" rel="noopener">▶ ${ccTag(v)}${esc(v.title.length > 38 ? v.title.slice(0, 38) + "…" : v.title)} <span class="muted">· ${esc(v.channel)}${v.official ? " · 공식" : ""}${v.views ? ` · 조회 ${views(v.views)}` : ""}</span></a>`;
 const ytIdOf = v => (v?.url || "").match(/[?&]v=([\w-]+)/)?.[1];
 // 글자 링크 대신 썸네일을 누르게(와이어프레임 '탭하면 재생'). 영상이 없으면 유튜브 검색으로 가는 회색 칸.
 const videoThumb = (v, fallbackHref, label = "") => v && ytIdOf(v)
-  ? `<a class="vth" href="${esc(v.url)}" target="_blank" rel="noopener" title="${esc(v.title)}"><img src="https://i.ytimg.com/vi/${esc(ytIdOf(v))}/mqdefault.jpg" alt="${esc(label)} 영상" loading="lazy"><span class="play">▶ ${esc(v.channel)}${v.official ? " · 공식" : ""}${v.views ? ` · ${views(v.views)}` : ""}</span></a>`
+  ? `<a class="vth" href="${esc(v.url)}" target="_blank" rel="noopener" title="${esc(v.title)}"><img src="https://i.ytimg.com/vi/${esc(ytIdOf(v))}/mqdefault.jpg" alt="${esc(label)} 영상" loading="lazy">${isCurtain(v) ? `<span class="vcc">커튼콜 영상</span>` : ""}<span class="play">▶ ${esc(v.channel)}${v.official ? " · 공식" : ""}${v.views ? ` · ${views(v.views)}` : ""}</span></a>`
   : `<a class="vth none" href="${esc(fallbackHref)}" target="_blank" rel="noopener">▶ 영상 찾아보기</a>`;
-const videoRow = v => ytIdOf(v) ? `<a class="vrow" href="${esc(v.url)}" target="_blank" rel="noopener"><img src="https://i.ytimg.com/vi/${esc(ytIdOf(v))}/mqdefault.jpg" alt="" loading="lazy"><span>▶ ${esc(v.title.length > 44 ? v.title.slice(0, 44) + "…" : v.title)}<br><span class="muted tiny">${esc(v.channel)}${v.official ? " · 공식" : ""}${v.views ? ` · 조회 ${views(v.views)}` : ""}</span></span></a>` : videoLink(v, "small");
+const videoRow = v => ytIdOf(v) ? `<a class="vrow" href="${esc(v.url)}" target="_blank" rel="noopener"><img src="https://i.ytimg.com/vi/${esc(ytIdOf(v))}/mqdefault.jpg" alt="" loading="lazy"><span>▶ ${ccTag(v)}${esc(v.title.length > 44 ? v.title.slice(0, 44) + "…" : v.title)}<br><span class="muted tiny">${esc(v.channel)}${v.official ? " · 공식" : ""}${v.views ? ` · 조회 ${views(v.views)}` : ""}</span></span></a>` : videoLink(v, "small");
 const priceStrip = (w, grade) => w?.prices?.length ? `<div class="chips">${w.prices.map(([g, p]) => `<span class="tag ${g === grade ? "hit" : ""}">${esc(g)} ${won(p)}</span>`).join("")}</div>` : "";
 const castChips = (work, cast, hitActors = []) => leads(work, cast).map(([r, a]) => `<span class="tag ${hitActors.includes(a) ? "rc" : ""}" style="--rc:${roleColor(work, r)}">${esc(r)} ${esc(a)}</span>`).join(" ");
 
