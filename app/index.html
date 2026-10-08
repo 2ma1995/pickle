@@ -352,7 +352,7 @@ main[data-view=saved],main[data-view=tag]{max-width:640px}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610071805"></script>
+<script src="data.js?v=202610081230"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -740,6 +740,10 @@ const opinionDist = (rows, D) => D.axes.filter(x => x.left !== "가창").map(x =
 }).filter(Boolean);
 // 두 겹 배우 특성: 목소리(하위 영역 음색·파워·기술)는 배우 자체의 특성이라 다른 작품 리뷰에서도 오고, 나머지(연기·해석·몸·조합)는 그 작품에서만 온다
 const voiceSplit = (rows, D) => { const vs = D.voiceTags || VOICE_TAGS; return {voice: rows.filter(r => vs.includes(r.tag)), role: rows.filter(r => !vs.includes(r.tag))}; };
+// 같은 태그가 여러 줄이면 칩 하나로 합친다. 여러 작품에서 빌려 온 태그는 작품을 모아 '성량 (데스노트·드라큘라)'. 이 작품 리뷰(from 없음)가 하나라도 있으면 이 작품 태그로 본다. 점수에는 안 쓴다(보여 주기만)
+const mergeTags = rows => { const by = new Map();
+  for (const r of rows) { const g = by.get(r.tag) || {r, froms: [], own: false}; if (r.from) { if (!g.froms.includes(r.from)) g.froms.push(r.from); } else { g.own = true; if (g.r.from) g.r = r; } by.set(r.tag, g); }
+  return [...by.values()]; };
 const reviewTags = (D, work, a) => [...new Set((((D.actorTags || {})[work] || {})[a] || []).filter(r => r.src !== "내 관람" && !isInterview(r)).map(r => r.tag))];  // 내가 직접 고른 태그(src 내 관람)는 아래 3번에서 따로 센다
 const planOf = (S, r) => (S.plans || []).find(x => x.work === r.work && x.date === r.date && x.time === r.time);
 function recordMood(S, r) {  // 기록 한 건의 +1/0/-1. 기분이 비었으면 저장 확인 화면의 좋아요/아쉬워요로 대신하고, 둘 다 없으면 undefined(건너뜀)
@@ -779,8 +783,8 @@ function personalCounts(S) {  // 좋았던 회차 / 아쉬웠던 회차 (같은 
 // </personal-weights>
 // 배우 태그 두 줄: '목소리'(다른 작품에서 온 건 작품 이름을 괄호로)와 '이 배역'. 취향과 맞는 태그를 앞에 둔다
 const tagLines = (rows, want, max = 99) => {
-  const one = (label, rs) => { const seen = new Set(), items = rs.filter(r => { const k = r.tag + "|" + (r.from || ""); return seen.has(k) ? false : (seen.add(k), true); }).sort((a, b) => want.has(b.tag) - want.has(a.tag)).slice(0, max);
-    return items.length ? `<div class="tl"><span class="tlab">${label}</span><div class="chips">${items.map(r => `<span class="tag ${want.has(r.tag) ? "hit" : ""}" title="${esc(r.why)}">${esc(r.tag)}${r.from ? ` (${esc(r.from)})` : r.season && r.season !== "2026" ? ` (${esc(r.season)})` : ""}</span>`).join("")}</div></div>` : ""; };
+  const one = (label, rs) => { const items = mergeTags(rs).sort((a, b) => want.has(b.r.tag) - want.has(a.r.tag)).slice(0, max);
+    return items.length ? `<div class="tl"><span class="tlab">${label}</span><div class="chips">${items.map(g => `<span class="tag ${want.has(g.r.tag) ? "hit" : ""}" title="${esc(g.r.why)}">${esc(g.r.tag)}${!g.own && g.froms.length ? ` (${esc(g.froms.join("·"))})` : g.r.season && g.r.season !== "2026" ? ` (${esc(g.r.season)})` : ""}</span>`).join("")}</div></div>` : ""; };
   const sp = voiceSplit(rows, D); return one("목소리", sp.voice) + one("이 배역", sp.role);
 };
 const distLine = rows => { const d = opinionDist(rows, D); return d.length ? `<p class="tiny muted dist">의견이 갈려요 · ${esc(d.join(" / "))}</p>` : ""; };
