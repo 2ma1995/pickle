@@ -290,9 +290,7 @@ main[data-view=saved],main[data-view=tag]{max-width:640px}
 .sims{display:grid;gap:8px}
 .simrow{cursor:pointer}
 .simrow:hover{border-color:var(--accent)}
-.simrow.static{cursor:default}
-.simrow.static:hover{border-color:var(--line)}
-span.chip{cursor:default}
+.sbadge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--soft);color:var(--muted);vertical-align:2px}
 .rsn{color:var(--accent);font-weight:600}
 .chip .rs{font-size:12px;font-weight:500;color:var(--muted)}
 .bar{height:6px;border-radius:999px;background:var(--soft);overflow:hidden}
@@ -366,7 +364,7 @@ span.chip{cursor:default}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610081443"></script>
+<script src="data.js?v=202610081449"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -526,10 +524,10 @@ const onboardBody = step => {
 V.onboard = (step = "1") => `<div class="one">${onboardBody(step)}</div>`;  // 웹에서 카드가 화면 끝까지 늘어나지 않게 한 컬럼으로
 
 // 홈 카드 한 장. entry: 어느 입구로 들어왔는지('rec' 추천 칸 · 'browse' 모든 작품) — 누를 때 S.stats.entry 에 센다(화면엔 안 보인다). why: 추천 이유 줄
-const workCard = (w, entry, why = "") => { const rs = runsOf(w.name); return `<div class="work ${w.hasSchedule ? "" : "off"}" ${w.hasSchedule ? `data-go="#pick/${esc(w.name)}" data-entry="${entry}"` : ""} style="--accent:${esc(w.accent)}">
+const workCard = (w, entry, why = "") => { const rs = runsOf(w.name); return `<div class="work" data-go="#${w.hasSchedule ? "pick" : "show"}/${esc(w.name)}" data-entry="${entry}" style="--accent:${esc(w.accent)}">
       ${posterEl(w)}
       <span class="state">${w.hasSchedule ? `회차 ${perfsOf(w.name).length}개` : "회차 준비 중"}</span>
-      <div class="info"><b>${esc(w.name)}</b>${why ? `<span class="tiny rsn">${esc(why)}</span>` : ""}${rs.map(r => `<span class="tiny muted">${rs.length > 1 ? `<b>${esc(r.label)}</b> ` : ""}${esc(r.venue)} · ${fmtPeriod(r)}</span>`).join("")}${w.hasSchedule ? `<span class="go">캐스팅 조합 찾기 →</span>` : ""}</div></div>`; };
+      <div class="info"><b>${esc(w.name)}</b>${why ? `<span class="tiny rsn">${esc(why)}</span>` : ""}${rs.map(r => `<span class="tiny muted">${rs.length > 1 || /STAGE/i.test(r.label) ? `<b>${esc(r.label)}</b> ` : ""}${esc(r.venue)} · ${fmtPeriod(r)}</span>`).join("")}<span class="go">${w.hasSchedule ? "캐스팅 조합 찾기 →" : "작품 보기 →"}</span></div></div>`; };
 
 // 아직 PICKLE 데이터에 없는 배우 이름은 S.requests 에 적어 둔다(나중에 추가). 새로 적었으면 true
 const noteRequest = name => addRequest(S.requests ||= [], name, today());
@@ -542,7 +540,7 @@ const favBlock = a => {
   const ws = similarWorks(D, a, extra, today());
   return `<div class="recs"><h2>${A}${eul(a)} 좋아하면</h2>
     <p class="tiny muted">${A}의 특성: ${[...tr.voice.map(v => v.tag), ...tr.role].map(esc).join(" · ")} · 근거가 있는 배우 중에서${known ? "" : " · 아직 PICKLE에 정보가 없어서 내가 고른 특성으로만 찾았어요"}</p>
-    ${ws.length ? `<div class="sims">${ws.map(x => `<div class="tile simrow ${x.w.hasSchedule ? "" : "static"}" ${x.w.hasSchedule ? `data-go="#pick/${esc(x.w.name)}" data-entry="rec"` : ""}><b>${esc(x.w.name)}${x.w.hasSchedule ? "" : ` <span class="small muted">회차 준비 중</span>`}</b>${x.here ? `<span class="small rsn">${A} 출연 중</span>` : ""}${x.groups.map(g => `<span class="small">${g.names.map(esc).join("·")}: ${A}처럼 ${g.labels.map(esc).join("·")}</span>`).join("")}</div>`).join("")}</div>` : `<p class="small muted">닮은 특성의 배우가 지금 하는 공연에는 아직 없어요.</p>`}</div>`;
+    ${ws.length ? `<div class="sims">${ws.map(x => `<div class="tile simrow" data-go="#${x.w.hasSchedule ? "pick" : "show"}/${esc(x.w.name)}" data-entry="rec"><b>${esc(x.w.name)}${x.w.hasSchedule ? "" : ` <span class="sbadge">회차 준비 중</span>`}</b>${x.here ? `<span class="small rsn">${A} 출연 중</span>` : ""}${x.groups.map(g => `<span class="small">${g.names.map(esc).join("·")}: ${A}처럼 ${g.labels.map(esc).join("·")}</span>`).join("")}</div>`).join("")}</div>` : `<p class="small muted">닮은 특성의 배우가 지금 하는 공연에는 아직 없어요.</p>`}</div>`;
 };
 
 V.works = () => {
@@ -554,7 +552,7 @@ V.works = () => {
     : `<p class="muted small">내 취향: ${esc(mine.join(" · "))} <a href="#onboard/1">다시 고르기</a></p>
     ${ids.length ? `<div class="recs"><h2>이런 공연 좋아하면</h2>${likes.length ? `<div class="grid">${likes.map(x => workCard(x.w, "rec", x.cards.map(c => c.l).join(" · "))).join("")}</div>` : `<p class="small muted">고른 카드와 맞는 작품이 아직 없어요. 아래 모든 작품에서 골라 보세요.</p>`}</div>` : ""}
     ${favs.map(favBlock).join("")}
-    ${axes.length ? `<div class="recs"><h2>이런 배우 좋아하면</h2><p class="tiny muted">근거가 있는 배우 중에서</p>${chips.length ? chips.map(x => `<div class="card"><h3>${esc(x.w.name)}${x.w.hasSchedule ? "" : ` <span class="small muted">회차 준비 중</span>`}</h3><div class="chips">${x.cs.map(c => x.w.hasSchedule ? `<button class="chip" data-go="#pick/${esc(x.w.name)}" data-entry="rec"><b>${esc(c.a)}</b><span class="rs">· ${esc(c.tags.join(", "))}</span></button>` : `<span class="chip"><b>${esc(c.a)}</b><span class="rs">· ${esc(c.tags.join(", "))}</span></span>`).join("")}</div></div>`).join("") : `<p class="small muted">고른 취향과 맞는 근거가 있는 배우가 아직 없어요.</p>`}</div>` : ""}`;
+    ${axes.length ? `<div class="recs"><h2>이런 배우 좋아하면</h2><p class="tiny muted">근거가 있는 배우 중에서</p>${chips.length ? chips.map(x => `<div class="card"><h3>${esc(x.w.name)}${x.w.hasSchedule ? "" : ` <span class="sbadge">회차 준비 중</span>`}</h3><div class="chips">${x.cs.map(c => `<button class="chip" data-go="#${x.w.hasSchedule ? "pick" : "show"}/${esc(x.w.name)}" data-entry="rec"><b>${esc(c.a)}</b><span class="rs">· ${esc(c.tags.join(", "))}</span></button>`).join("")}</div></div>`).join("") : `<p class="small muted">고른 취향과 맞는 근거가 있는 배우가 아직 없어요.</p>`}</div>` : ""}`;
   return `
   <div><p class="eyebrow">캐스팅 일정이 열린 작품</p><h1>무슨 작품 볼 거예요?</h1></div>
   ${recs}
@@ -766,9 +764,27 @@ const leadKey = (work, cast) => leads(work, cast).map(([r, a]) => r + ":" + a).s
 const isSeen = x => x.tagged || x.date < today();
 const seenKeys = work => new Set(S.plans.filter(x => x.work === work && isSeen(x)).map(x => leadKey(work, x.cast)));
 
+// 작품 화면(회차 캐스팅이 아직 없는 작품): 공연 기간·장소, 주연 배역별 배우 특성(목소리 = 모든 작품 · 이 배역 = 이 작품 기록만), 작품 태그. 날짜 고르기·조합 단계는 없다. 회차가 있는 작품은 예전 흐름(#pick)
+const SHOW_GROUPS = ["스토리 분위기", "넘버", "볼거리", "소재"];
+V.show = work => {
+  const w = workOf(work); if (!w) return V.works();
+  if (w.hasSchedule) return V.pick(work);
+  const want = S.prefs?.axes?.length ? wantSet(S.prefs.axes) : new Set(), wt = (D.workTags || {})[work] || [];
+  const tagGroups = SHOW_GROUPS.map(g => ({g, rows: wt.filter(r => String(r.group).replace(/^작품 · /, "") === g)})).filter(x => x.rows.length);
+  const roleCard = r => `<div class="card"><h3>${esc(r.role)} <span class="small muted">주연</span></h3>${r.cast.map(a => {
+    const rows = roleRows(D, work, a, r.role);  // 목소리는 모든 작품, 연기·해석은 이 배역 기록만
+    return `<div class="actor"><div class="name"><span>${esc(a)}</span></div>${rows.length ? tagLines(rows, want) + distLine(rows) : `<p class="small muted">아직 리뷰 태그가 없어요.${videoOf(work, a) ? "" : " 공식 영상으로 확인해 보세요."}</p>`}${videoOf(work, a) ? videoRow(videoOf(work, a)) : ""}</div>`; }).join("")}</div>`;
+  return `<div class="one">
+    <div class="head">${posterEl(w)}<div><h1>${esc(work)}</h1>${runsOf(work).map(r => `<p class="small muted">${esc(r.label)} · ${esc(r.venue)} · ${fmtPeriod(r)}</p>`).join("")}</div></div>
+    <div class="card accent"><b>회차 캐스팅은 아직 준비 중이에요.</b><p class="small muted">공식 캐스팅 스케줄이 나오면 날짜별로 조합을 비교할 수 있어요. 지금은 주연 배우들의 특성을 볼 수 있어요.</p></div>
+    ${tagGroups.length ? `<div class="card"><h3>작품 태그</h3>${tagGroups.map(x => `<div class="tl"><span class="tlab">${esc(x.g)}</span><div class="chips">${[...new Set(x.rows.map(r => r.tag))].map(t => `<span class="tag" title="${esc(x.rows.find(r => r.tag === t).why)}">${esc(t)}</span>`).join("")}</div></div>`).join("")}</div>` : ""}
+    ${(D.roles[work] || []).filter(r => r.weight === "주연").map(roleCard).join("")}
+    <p class="tiny muted">진한 태그가 내 취향과 맞는 거예요. 배우를 우열로 평가하지 않고 특성 차이로 보여드려요 · '아직 리뷰 태그가 없어요'는 데이터가 없는 거지 취향과 안 맞는다는 뜻이 아니에요.</p></div>`;
+};
+
 // 누구? — 작품을 고르면 여기부터. 고른 공연(서울·대구 등) 전체 기간에서 꼭 볼 배우·뺄 배우를 고른다
 V.pick = work => {
-  const w = workOf(work); if (!w?.hasSchedule) return V.works();
+  const w = workOf(work); if (w && !w.hasSchedule) return V.show(work); if (!w) return V.works();
   const runs = runsOf(work).filter(r => r.hasSchedule).concat(runsOf(work).some(r => r.hasSchedule) ? [] : w.runs.filter(r => r.hasSchedule));
   const st = (S.cal[work] ||= {actors: (S.prefs?.favs || []).filter(a => (D.roles[work] || []).some(r => r.cast.includes(a))), period: "all", run: runs[0]?.label});
   const run = runs.find(r => r.label === st.run) || runs[0];
@@ -977,6 +993,8 @@ const similarWorks = (D, a, extra, from) => {
 };
 // 아직 데이터에 없는 이름을 요청 목록(S.requests)에 적는다. 새로 적었으면 true, 이미 있으면 false
 const addRequest = (list, name, at) => list.some(x => x.name === name) ? false : (list.push({name, at}), true);
+// 작품 화면의 배우 칸에 보일 태그: 이 작품 기록 중 공식 출처가 아니고(목소리는 모든 작품에서 와도 되고, 연기·해석은 그 배역 기록만). role 이 없는 행은 배역을 모르니 둔다
+const roleRows = (D, work, a, role) => (((D.actorTags || {})[work] || {})[a] || []).filter(x => !isOfficial(x) && ((D.voiceTags || VOICE_TAGS).includes(x.tag) || !x.role || x.role === role));
 // 이름 뒤 조사(을/를): 받침이 있으면 을
 const eul = name => { const c = String(name).charCodeAt(String(name).length - 1) - 0xAC00; return c >= 0 && c % 28 ? "을" : "를"; };
 // </taste-first>
@@ -1316,7 +1334,7 @@ function route() {
   closeSheet();
   RES = null;
   const view = $("#view"); view.innerHTML = (V[name] || V.works)(...args); view.dataset.view = V[name] ? name : "works";
-  const stepIdx = {works: 0, pick: 1, result: 1, when: 2, cal: 2, detail: 3, saved: 3, tag: 4}[name];
+  const stepIdx = {works: 0, show: 0, pick: 1, result: 1, when: 2, cal: 2, detail: 3, saved: 3, tag: 4}[name];
   $("#steps").innerHTML = stepIdx === undefined ? "" : STEP_NAMES.map((s, i) => `<span class="${i === stepIdx ? "on" : ""}"><i>0${i + 1}</i>${s}</span>`).join('<b class="sep">→</b>');
   $("#back").hidden = ["works", "onboard", "plans", "me"].includes(name);
   const tab = {plans: "plans", tag: "plans", me: "me"}[name] || "home";
