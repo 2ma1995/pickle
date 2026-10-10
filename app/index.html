@@ -292,6 +292,12 @@ main[data-view=saved],main[data-view=tag]{max-width:640px}
 .obg{display:grid;gap:10px}
 .recs{display:grid;gap:12px}
 .sims{display:grid;gap:8px}
+.lvlist{display:grid;gap:8px;margin-top:10px}
+.lvrow{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer}
+.lvrow:hover{border-color:var(--accent)}
+.lvrow>div{display:grid;gap:2px;min-width:0}
+.lvp{width:44px;aspect-ratio:3/4;object-fit:cover;border-radius:6px;background:var(--soft);display:block}
+.lvp.type{display:grid;place-items:center;font-size:10px;padding:2px;text-align:center;color:var(--muted);overflow:hidden}
 .simrow{cursor:pointer}
 .simrow:hover{border-color:var(--accent)}
 .sbadge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--soft);color:var(--muted);vertical-align:2px}
@@ -368,7 +374,7 @@ main[data-view=saved],main[data-view=tag]{max-width:640px}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610101350"></script>
+<script src="data.js?v=202610101418"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -547,14 +553,14 @@ const favBlock = a => {
   const ws = similarWorks(D, a, extra, today());
   return `<div class="recs"><h2>${A}${eul(a)} 좋아하면</h2>
     <p class="tiny muted">${A}의 특성: ${[...tr.voice.map(v => v.tag), ...tr.role].map(esc).join(" · ")} · 근거가 있는 배우 중에서${known ? "" : " · 아직 PICKLE에 정보가 없어서 내가 고른 특성으로만 찾았어요"}</p>
-    ${ws.length ? `<div class="sims">${ws.map(x => `<div class="tile simrow" data-go="#${x.w.hasSchedule ? "pick" : "show"}/${esc(x.w.name)}" data-entry="rec"><b>${esc(x.w.name)}${x.w.hasSchedule ? "" : ` <span class="sbadge">회차 준비 중</span>`}</b>${x.here ? `<span class="small rsn">${A} 출연 중</span>` : ""}${x.groups.map(g => `<span class="small">${g.names.map(esc).join("·")}: ${A}처럼 ${g.labels.map(esc).join("·")}</span>`).join("")}</div>`).join("")}</div>` : `<p class="small muted">닮은 특성의 배우가 지금 하는 공연에는 아직 없어요.</p>`}</div>`;
+    ${ws.length ? `<div class="sims">${ws.map(x => `<div class="tile simrow" data-go="#${x.w.current ? "cshow" : x.w.hasSchedule ? "pick" : "show"}/${esc(x.w.current ? x.w.id : x.w.name)}" data-entry="rec"><b>${esc(x.w.name)}${x.w.current ? ` <span class="small muted">대표 출연진 기준</span>` : x.w.hasSchedule ? "" : ` <span class="sbadge">회차 준비 중</span>`}</b>${x.here ? `<span class="small rsn">${A} 출연 중</span>` : ""}${x.groups.map(g => `<span class="small">${g.names.map(esc).join("·")}: ${A}처럼 ${g.labels.map(esc).join("·")}</span>`).join("")}</div>`).join("")}</div>` : `<p class="small muted">닮은 특성의 배우가 지금 하는 공연에는 아직 없어요.</p>`}</div>`;
 };
 
 V.works = () => {
   const p = S.prefs, taste = hasTaste(p), ids = p?.works || [], axes = p?.axes || [], favs = (p?.favs || []).slice(0, 3);
   const axisLabel = v => D.axes.flatMap(a => [[a.left, a.l], [a.right, a.r]]).find(([k]) => k === v)?.[1] || v;
   const likes = ids.length ? likeWorks(D, ids, today()) : [], chips = axes.length ? D.works.map(w => ({w, cs: actorChips(D, w.name, axes, today())})).filter(x => x.cs.length) : [];  // 회차 캐스팅이 없어도 지금 하는 작품이면 추천에 나온다(누르면 갈 회차 화면만 아직 없다)
-  const mine = [...ids.map(id => cardOf(id)?.l), ...axes.map(axisLabel), ...favs].filter(Boolean);
+  const mine = [...ids.map(id => cardOf(id)?.l), ...axes.map(axisLabel), ...favs].filter(Boolean), live = liveShows(D, today()).sort((x, y) => x.title.localeCompare(y.title, "ko"));
   const recs = !taste ? `<div class="card accent"><h3>취향부터 알려 주세요</h3><p class="small muted">어떤 공연과 배우가 끌리는지 알려 주면, 맞는 공연과 배우를 홈에서 먼저 보여 드려요. 건너뛰어도 돼요.</p><button class="btn" data-go="#onboard/1">30초 취향 알려주기</button></div>`
     : `<p class="muted small">내 취향: ${esc(mine.join(" · "))} <a href="#onboard/1">다시 고르기</a></p>
     ${ids.length ? `<div class="recs"><h2>이런 공연 좋아하면</h2>${likes.length ? `<div class="grid">${likes.map(x => workCard(x.w, "rec", x.cards.map(c => c.l).join(" · "))).join("")}</div>` : `<p class="small muted">고른 카드와 맞는 작품이 아직 없어요. 아래 모든 작품에서 골라 보세요.</p>`}</div>` : ""}
@@ -565,6 +571,9 @@ V.works = () => {
   ${recs}
   ${taste ? `<h2>모든 작품</h2>` : ""}
   <div class="grid">${D.works.map(w => workCard(w, "browse")).join("")}</div>
+  ${live.length ? `<details class="card"><summary>지금 하는 다른 공연 <span class="small muted">${live.length}개 · KOPIS${D.currentAsOf ? ` ${esc(D.currentAsOf)} 기준` : ""}</span></summary>
+    <p class="tiny muted" style="margin-top:8px">서울에서 하는 뮤지컬 중 이 서비스에 회차 캐스팅이 없는 공연이에요. 만 18세 이상 공연과 출연진 정보가 없는 공연은 뺐어요. 날짜별 캐스팅은 예매처에서 확인해야 해요.</p>
+    <div class="lvlist">${live.map(sh => `<div class="lvrow" data-go="#cshow/${esc(sh.id)}" data-entry="browse">${curPoster(sh, "lvp", true)}<div><b>${esc(sh.title)}</b><span class="tiny muted">${esc(sh.venue)} · ${md(sh.start)} ~ ${md(sh.end)} · ${esc(sh.age)}</span><span class="tiny muted">${sh.cast.slice(0, 4).map(esc).join(", ")}${sh.cast.length > 4 ? " 등" : ""}</span></div></div>`).join("")}</div></details>` : ""}
   <details class="card"><summary>이 가안의 흐름</summary>
     <div class="flow" style="margin-top:8px">
       <div><i>1</i><span>작품 고르기</span></div>
@@ -770,6 +779,27 @@ V.result = (workArg, mode = "", runs = [], pickRun = null) => {
 const leadKey = (work, cast) => leads(work, cast).map(([r, a]) => r + ":" + a).sort().join("|");
 const isSeen = x => x.tagged || x.date < today();
 const seenKeys = work => new Set(S.plans.filter(x => x.work === work && isSeen(x)).map(x => leadKey(work, x.cast)));
+
+// 지금 하는 다른 공연 화면(KOPIS, 시드 밖): 포스터·기간·장소·관람 연령·러닝타임·공연 시간, 대표 출연진(목소리 특성은 우리 데이터가 있는 배우만), 예매처 링크.
+// 날짜·조합 단계로는 안 간다(날짜별 캐스팅은 예매처에서). KOPIS 가 주는 출연진은 대표 7명까지라 전부가 아니다
+const curPoster = (s, cls = "poster", lazy = false) => s.poster ? `<img class="${cls}" src="${esc(s.poster)}" alt="${esc(s.title)} 포스터" referrerpolicy="no-referrer"${lazy ? ` loading="lazy"` : ""}>` : `<div class="${cls} type">${esc(s.title)}</div>`;
+V.cshow = id => {
+  const s = liveShows(D, today()).find(x => x.id === id); if (!s) return V.works();
+  const want = S.prefs?.axes?.length ? wantSet(S.prefs.axes) : new Set(), safeUrl = u => /^https?:\/\//.test(u) ? esc(u) : "";
+  return `<div class="one">
+    <div class="head">${curPoster(s)}<div><h1>${esc(s.title)}</h1><p class="small muted">${esc(s.venue)} · ${md(s.start)} ~ ${s.end.slice(0, 4) !== s.start.slice(0, 4) ? s.end.slice(0, 4) + " " : ""}${md(s.end)} · ${esc(s.status)}</p></div></div>
+    <div class="card accent"><b>날짜별 캐스팅은 예매처에서 확인</b><p class="small muted">이 화면의 출연진은 KOPIS에 올라온 대표 출연진이에요. 전부가 아니고, 날짜별 조합은 예매처에서 봐야 해요.</p></div>
+    <div class="card"><h3>공연 정보</h3>
+      <div class="tl"><span class="tlab">관람 연령</span><span>${esc(s.age)}</span></div>
+      <div class="tl"><span class="tlab">러닝타임</span><span>${esc(s.runtime)}</span></div>
+      <div class="tl"><span class="tlab">공연 시간</span><span class="small">${esc(s.times)}</span></div></div>
+    <div class="card"><h3>대표 출연진 <span class="small muted">등</span></h3><div>${s.cast.map(a => { const p = profileOf(D, a);
+      return `<div class="actor"><div class="name"><span>${esc(a)}</span></div>${p.voice.length ? tagLines(p.voice.map(r => ({...r, from: r.work, why: r.work})), want) : `<p class="small muted">아직 PICKLE에 목소리 정보가 없어요.</p>`}</div>`; }).join("")}</div>
+      <p class="tiny muted">목소리 태그는 다른 작품 리뷰에서 온 거예요. 배우를 우열로 평가하지 않고 특성 차이로 보여드려요.</p></div>
+    <div class="card"><h3>예매처</h3><div style="display:grid;gap:8px">${s.tickets.map(t => safeUrl(t.url) ? `<a class="btn ghost" href="${safeUrl(t.url)}" target="_blank" rel="noopener">${esc(t.name || "예매처")} ↗</a>` : "").join("") || `<p class="small muted">예매 링크가 아직 없어요.</p>`}</div>
+      <p class="tiny muted">날짜별 캐스팅은 예매처에서 확인하세요.</p></div>
+    <p class="tiny muted">공연 정보 출처 KOPIS(공연예술통합전산망)${D.currentAsOf ? ` · ${esc(D.currentAsOf)} 기준` : ""}</p></div>`;
+};
 
 // 작품 화면(회차 캐스팅이 아직 없는 작품): 공연 기간·장소, 주연 배역별 배우 특성(목소리 = 모든 작품 · 이 배역 = 이 작품 기록만), 작품 태그. 날짜 고르기·조합 단계는 없다. 회차가 있는 작품은 예전 흐름(#pick)
 const SHOW_GROUPS = ["스토리 분위기", "넘버", "볼거리", "소재"];
@@ -983,21 +1013,29 @@ const similarTo = (fav, c) => {
 };
 // 아직 PICKLE 데이터에 없는 이름(프로필도, 어느 작품 캐스트에도 없음)
 const knownActor = (D, a) => !!(D.actorProfiles || {})[a] || Object.values(D.roles || {}).some(rs => rs.some(r => r.cast.includes(a)));
+// 지금 하는 다른 공연(KOPIS, 시드 밖). recommend.py 가 만 18세 이상·출연진 없음·끝난 공연·시드를 이미 뺐지만, 내보낸 뒤 날짜가 지나므로 끝난 공연은 여기서 한 번 더 거른다(같은 규칙)
+const minAge = a => +((String(a || "").match(/만\s*(\d+)\s*세/) || [])[1] || 0);
+const liveShows = (D, from) => (D.currentShows || []).filter(s => s.end >= from && (s.cast || []).length && minAge(s.age) < 18 && !(D.works || []).some(w => String(s.title).replace(/\s+/g, "").includes(w.name.replace(/\s+/g, ""))));
 // 좋아하는 배우 a 와 닮은 배우가 나오는 작품. 지금 하는(끝나지 않은) 작품의 주연(runningLeads)이 후보고, a 본인은 후보가 아니다. 닮은 특성이 같은 후보끼리 한 줄로 묶는다.
 // 점수·순위 없음: 작품은 a 가 나오는 작품 먼저 → 나오는 서로 다른 닮은 특성 수 → 이름. 특성이 없으면 [] (좋아하는 점을 물어봐야 한다)
 const similarWorks = (D, a, extra, from) => {
   const fav = traitsOf(D, a, extra); if (!fav.voice.length && !fav.role.length) return [];
   const res = [];
-  for (const w of D.works) {
-    const roleOf = runningLeads(D, w, from); if (!roleOf) continue;  // 끝난 작품·남은 회차 없는 작품은 뺀다. roleOf: 후보 → 이 작품에서 맡은 주연 배역
+  const add = (w, names, here, traitsFor) => {  // names 중 닮은 특성이 겹치는 후보를 같은 특성끼리 한 줄로 묶어 res 에 더한다
     const groups = new Map();
-    for (const c of [...roleOf.keys()].filter(x => x !== a).sort((x, y) => x.localeCompare(y, "ko"))) {
-      const r = similarTo(fav, traitsOf(D, c, [], {work: w.name, roles: roleOf.get(c)})); if (r.out || !r.shared.length) continue;
+    for (const c of names.filter(x => x !== a).sort((x, y) => x.localeCompare(y, "ko"))) {
+      const r = similarTo(fav, traitsFor(c)); if (r.out || !r.shared.length) continue;
       const k = r.shared.join("|"); if (!groups.has(k)) groups.set(k, {labels: r.shared, names: []}); groups.get(k).names.push(c);
     }
-    const here = w.hasSchedule ? D.perfs.some(p => p.work === w.name && p.date >= from && !isPrivate(p) && Object.values(p.cast).includes(a)) : (D.roles[w.name] || []).some(r => r.cast.includes(a));
     if (here || groups.size) res.push({w, here, n: new Set([...groups.values()].flatMap(g => g.labels)).size, groups: [...groups.values()].sort((x, y) => y.labels.length - x.labels.length)});
+  };
+  for (const w of D.works) {
+    const roleOf = runningLeads(D, w, from); if (!roleOf) continue;  // 끝난 작품·남은 회차 없는 작품은 뺀다. roleOf: 후보 → 이 작품에서 맡은 주연 배역
+    add(w, [...roleOf.keys()], w.hasSchedule ? D.perfs.some(p => p.work === w.name && p.date >= from && !isPrivate(p) && Object.values(p.cast).includes(a)) : (D.roles[w.name] || []).some(r => r.cast.includes(a)),
+      c => traitsOf(D, c, [], {work: w.name, roles: roleOf.get(c)}));
   }
+  // 지금 하는 다른 공연(KOPIS): 후보는 대표 출연진, 배역 정보가 없어서 목소리 특성만 견준다(here 의 roles 가 비어 연기·해석 태그는 안 쓴다)
+  for (const sh of liveShows(D, from)) add({name: sh.title, id: sh.id, current: true, hasSchedule: false}, sh.cast, sh.cast.includes(a), c => traitsOf(D, c, [], {work: "", roles: []}));
   return res.sort((x, y) => y.here - x.here || y.n - x.n || x.w.name.localeCompare(y.w.name, "ko"));
 };
 // 아직 데이터에 없는 이름을 요청 목록(S.requests)에 적는다. 새로 적었으면 true, 이미 있으면 false
@@ -1344,7 +1382,7 @@ function route() {
   closeSheet();
   RES = null;
   const view = $("#view"); view.innerHTML = (V[name] || V.works)(...args); view.dataset.view = V[name] ? name : "works";
-  const stepIdx = {works: 0, show: 0, pick: 1, result: 1, when: 2, cal: 2, detail: 3, saved: 3, tag: 4}[name];
+  const stepIdx = {works: 0, show: 0, cshow: 0, pick: 1, result: 1, when: 2, cal: 2, detail: 3, saved: 3, tag: 4}[name];
   $("#steps").innerHTML = stepIdx === undefined ? "" : STEP_NAMES.map((s, i) => `<span class="${i === stepIdx ? "on" : ""}"><i>0${i + 1}</i>${s}</span>`).join('<b class="sep">→</b>');
   $("#back").hidden = ["works", "onboard", "plans", "me"].includes(name);
   const tab = {plans: "plans", tag: "plans", me: "me"}[name] || "home";
