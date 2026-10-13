@@ -212,6 +212,8 @@ details li span{color:var(--fg)}
 .pmenu{position:absolute;top:42px;right:6px;z-index:5;display:grid;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px;min-width:112px}
 .pmenu button{border:0;background:transparent;color:var(--fg);text-align:left;padding:9px 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
 .pmenu button:hover{background:var(--soft)}
+.askcard{display:grid;gap:10px}
+.askcard .btn[disabled]{opacity:.45;cursor:default}
 .hidlist{margin-top:4px}
 .hidlist>summary{cursor:pointer;color:var(--muted)}
 .hidbox{display:grid;gap:6px;margin-top:8px}
@@ -457,7 +459,7 @@ button.day{font:inherit;color:inherit;text-align:center}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610131655"></script>
+<script src="data.js?v=202610131659"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -1262,7 +1264,15 @@ const resetCombo = (S, work) => { const P = S.proto; if (!P) return; for (const 
 const tasteSnapshot = (D, S) => { const p = S.prefs || {}, ax = p.axes || [], cards = p.works || [];
   return {axes: Object.fromEntries(D.axes.map(a => [a.left, ax.includes(a.left) ? -1 : ax.includes(a.right) ? 1 : 0])), favs: (p.favs || []).slice(0, 3), tags: [...new Set(cards.flatMap(id => cardOf(id)?.tags || []))].slice(0, 12)}; };
 // taste_snapshot: 좋아하는 배우는 앱 데이터에 있는 이름(actors Set)만 — 이름 칸에 아무 글이나 쓸 수 있어서. 취향 5축 값·고른 태그는 tasteSnapshot 그대로
-const tasteSnapRecord = (D, S, actors) => { const ts = tasteSnapshot(D, S); return {likes: ((S.prefs || {}).favs || []).filter(a => actors.has(a)).slice(0, 10), axes: ts.axes, tags: ts.tags}; };
+const tasteSnapRecord = (D, S, actors) => { const ts = tasteSnapshot(D, S), likes = ((S.prefs || {}).favs || []).filter(a => actors.has(a)).slice(0, 10), labels = D.actorTagLabels || {}, likeTags = {};
+  for (const a of likes) { const t = [...new Set(likeTagsFor(S, a))].filter(x => labels[x]).slice(0, 8); if (t.length) likeTags[a] = t; }  // 좋아하는 배우별로 고른 특징 태그(사전 확정 태그만). '왜 좋아요' 글은 안 넣는다
+  return {likes, axes: ts.axes, tags: ts.tags, likeTags}; };
+// 홈 '비슷한 배우' 줄이 비는 이유가 좋아하는 배우의 특징 없음일 때 묻는 칸: 앞 3명 중 특징 태그가 하나도 없고 아직 안 물어본(건너뛰지 않은) 첫 배우 한 명. 건너뜀·답은 S.likes 의 그 배우 항목에 저장(asked)
+const askActorOf = (D, S) => ((S.prefs || {}).favs || []).slice(0, 3).find(a => { const t = traitsOf(D, a, likeTagsFor(S, a)); return !t.voice.length && !t.role.length && !(S.likes || []).some(l => l.actor === a && l.asked); }) || null;
+// 묻는 칸의 칩 6~8개: 비교에 쓰는 태그(목소리 6 + 연기·해석 가장 흔한 2), 사전 확정 태그(D.actorTagLabels)만
+const askTagList = D => { const lab = D.actorTagLabels || {}, vs = D.voiceTags || VOICE_TAGS, cnt = {};
+  for (const p of Object.values(D.actorProfiles || {})) for (const r of p.role || []) if (lab[r.tag] && !vs.includes(r.tag)) cnt[r.tag] = (cnt[r.tag] || 0) + 1;
+  return [...vs.filter(t => lab[t]).slice(0, 6), ...Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a] || a.localeCompare(b, "ko")).slice(0, 2)]; };
 // 홈 추천 줄에서 숨긴 공연(S.proto.hid[공연 열쇠] = {a: seen|not_interested, row}): 추천 줄(좋아하는 배우·비슷한 배우·내 취향)에서만 빠진다. '지금 하는 공연 전체'엔 그대로
 const hiddenShows = S => S.proto?.hid || {};
 const hideShow = (S, key, row, action) => { if (!["seen", "not_interested"].includes(action) || !["fav", "similar", "taste"].includes(row)) return false; ((S.proto ||= {}).hid ||= {})[key] = {a: action, row}; return true; };
@@ -1449,7 +1459,7 @@ const EVENTS = {
   role_duel: {req: ["work", "role", "left", "right", "result"], shape: {work: R_WORK, role: R.inSet("roles"), left: R_SIDE, right: R_SIDE, result: R.oneOf(["left", "right", "tie"])}},  // 좌우 위치는 무작위, 그때 놓인 대로 남긴다
   actor_rating: {req: ["show_id", "actor", "score"], shape: {show_id: R.inSet("shows"), actor: R.inSet("actors"), score: R.int(1, 5), chips: R_CHIPS}},
   video_reaction: {req: ["work", "role", "actor", "video", "reaction"], shape: {work: R_WORK, role: R.inSet("roles"), actor: R.inSet("actors"), video: R.ytid, reaction: R.oneOf(["like", "unsure", "dislike"])}},  // 배우 영상 썸네일을 누른 뒤 '이 영상 어땠어요?'에 답할 때(답을 바꿀 때마다 한 줄)
-  taste_snapshot: {req: ["likes", "axes", "tags"], shape: {likes: R.arr(10, R.inSet("actors")), axes: R.dict(R.inSet("axisKeys"), R.int(-2, 2), 5), tags: R.arr(12, R.inSet("tags"))}},  // 취향폼을 저장하거나 고칠 때: 좋아하는 배우(앱 데이터에 있는 이름만), 취향 5축 값, 고른 태그. '왜 좋아요' 글은 안 보낸다
+  taste_snapshot: {req: ["likes", "axes", "tags"], shape: {likes: R.arr(10, R.inSet("actors")), axes: R.dict(R.inSet("axisKeys"), R.int(-2, 2), 5), tags: R.arr(12, R.inSet("tags")), likeTags: R.dict(R.inSet("actors"), R.arr(8, R.inSet("actorTags")), 10)}},  // 취향폼을 저장하거나 고칠 때·홈에서 좋아하는 배우의 특징을 골라 [찾기]를 누를 때: 좋아하는 배우(앱 데이터에 있는 이름만), 취향 5축 값, 고른 태그, 좋아하는 배우별로 고른 특징 태그(사전 확정 태그만). '왜 좋아요' 글은 안 보낸다
   rec_feedback: {req: ["show", "row", "action"], shape: {show: R.inSet("shows"), row: R.oneOf(["fav", "similar", "taste"]), action: R.oneOf(["seen", "not_interested", "undo"])}},  // 홈 추천 줄 카드의 [이미 봤어요]·[관심 없어요]·되돌리기. row: fav 좋아하는 배우 출연작 / similar 비슷한 배우 출연작 / taste 내 취향 추천
 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -1511,6 +1521,7 @@ function buildVocab(D) {
     actors: new Set([...Object.values(D.roles).flatMap(rs => rs.flatMap(r => r.cast)), ...Object.keys(D.actorProfiles || {}), ...(D.currentShows || []).flatMap(s => s.cast || [])]),
     tags, comboTags: new Set([...Object.keys(D.comboTagLabels || {}), ...Object.values(D.comboTags || {}).flatMap(rs => rs.map(r => r.tag))]),
     roles: new Set(Object.values(D.roles).flatMap(rs => rs.map(r => r.role))), axisKeys: new Set(D.axes.map(a => a.left)),
+    actorTags: new Set([...Object.keys(D.actorTagLabels || {}), ...(D.voiceTags || [])]),  // 사전 확정 배우 태그(taste_snapshot 의 likeTags 값 검사용)
     works: new Set(D.works.map(w => w.name)), runs: new Set(D.works.flatMap(w => w.runs.map(r => r.label))), shows: new Set([...D.works.map(w => w.name), ...(D.currentShows || []).map(s => s.id)]),
   };
 }
@@ -1566,7 +1577,7 @@ V.privacy = () => !trackUi() ? `<div class="one"><div class="card"><p class="sma
       <tr><td>끌리는 배우 고르기에서 고를 때</td><td>맞붙은 두 배우와 그때 보여 준 태그, 고른 결과</td></tr>
       <tr><td>날짜별 조합 정보가 없는 공연에서 배우가 내 취향이었는지 고를 때</td><td>공연, 배우, 점수(1~5점), 고른 이유</td></tr>
       <tr><td>배우 영상을 눌러 본 뒤 '이 영상 어땠어요?'에 답할 때</td><td>작품, 배역, 배우, 영상 번호(유튜브 영상 ID), 고른 답(마음에 들어요·모르겠어요·취향 아니에요). 답을 바꾸면 그때마다 한 줄 더 남아요</td></tr>
-      <tr><td>취향 고르기를 저장하거나 고칠 때</td><td>좋아하는 배우 이름(앱에 있는 이름만, 내가 직접 쓴 글은 보내지 않아요), 취향 5가지 값, 고른 태그. 전에 보낸 것과 같으면 다시 보내지 않아요</td></tr>
+      <tr><td>취향 고르기를 저장하거나 고칠 때, 홈에서 좋아하는 배우의 어떤 점이 좋은지 골라 [찾기]를 누를 때</td><td>좋아하는 배우 이름(앱에 있는 이름만), 취향 5가지 값, 고른 태그, 좋아하는 배우별로 고른 특징 태그(음색·성량 같은 정해진 태그만). 내가 직접 쓴 글은 보내지 않아요. 전에 보낸 것과 같으면 다시 보내지 않아요</td></tr>
       <tr><td>홈 추천 줄에서 [이미 봤어요]·[관심 없어요]·[되돌리기]를 누를 때</td><td>공연, 어느 추천 줄이었는지(좋아하는 배우 · 비슷한 배우 · 내 취향), 누른 것</td></tr></table>
     <p class="small">모든 기록에는 <b>이 기기의 무작위 번호 2개</b>(기기 번호, 이번 방문 번호), 앱 버전, 기록한 <b>날짜</b>(시각은 남기지 않아요), 한 방문 안에서의 순서가 같이 붙어요.</p>
     <p class="small"><b>받지 않는 것</b></p>
@@ -1630,6 +1641,12 @@ const castMark = ref => ref.kind === "seed" && ref.w.hasSchedule ? `<span class=
 const recCard = (r, row = "taste") => { const ref = showRef(D, r.key); if (!ref) return "";
   return `<div class="pwrap" data-key="${esc(r.key)}" data-row="${row}"><a class="pcard" href="#show/${esc(r.key)}" data-go="#show/${esc(r.key)}" data-entry="rec"><div class="pimg">${posterOf(ref, "pi")}${castMark(ref)}</div><span class="pt">${esc(r.title)}</span><span class="pw">${esc(r.line)}</span></a><button type="button" class="pmore" data-act="recMenu" data-key="${esc(r.key)}" data-row="${row}" aria-label="${esc(r.title)} 숨기기 메뉴" aria-haspopup="true">⋯</button></div>`; };
 const recMenuHtml = (key, row) => `<div class="pmenu" role="menu"><button type="button" role="menuitem" data-act="recFb" data-key="${esc(key)}" data-row="${row}" data-a="seen">이미 봤어요</button><button type="button" role="menuitem" data-act="recFb" data-key="${esc(key)}" data-row="${row}" data-a="not_interested">관심 없어요</button></div>`;
+// 홈 '비슷한 배우' 자리의 묻는 칸: 좋아하는 배우의 특징이 없어서 줄이 빌 때. 칩은 여러 개 고를 수 있고(저장 전엔 이 화면에서만 기억), [찾기]를 누르면 S.likes 에 저장돼 그 자리에서 줄이 채워진다. [건너뛰기]는 저장해서 다시 안 묻는다
+const ASK = {a: "", sel: new Set()};
+const askCard = a => { const sel = ASK.a === a ? ASK.sel : new Set(), A = esc(a);
+  return `<section class="hsec"><div class="card askcard"><p class="small">${A}의 어떤 점이 좋아요? 고르면 비슷한 배우가 나오는 공연을 찾아 드려요</p>
+    <div class="chips">${askTagList(D).map(t => `<button type="button" class="chip ${sel.has(t) ? "on" : ""}" data-act="askTag" data-a="${A}" data-t="${esc(t)}" aria-pressed="${sel.has(t)}">${esc(t)}</button>`).join("")}</div>
+    <div class="between"><button type="button" class="chip x" data-act="askSkip" data-a="${A}">건너뛰기</button><button type="button" class="btn" data-act="askFind" data-a="${A}" ${sel.size ? "" : "disabled"}>찾기</button></div></div></section>`; };
 // 숨긴 공연 N개 · 되돌리기(추천 줄 아래): 목록을 펼쳐서 하나씩 되돌린다
 const hiddenList = () => { const items = Object.entries(hiddenShows(S)).map(([key, e]) => ({key, e, ref: showRef(D, key)})).filter(x => x.ref); if (!items.length) return "";
   return `<details class="hidlist"><summary class="small">숨긴 공연 ${items.length}개 · 되돌리기</summary><div class="hidbox">${items.map(x => `<div class="hidrow"><span class="small">${esc(x.ref.title)} <span class="muted">· ${x.e.a === "seen" ? "이미 봤어요" : "관심 없어요"}</span></span><button type="button" class="chip x" data-act="recUndo" data-key="${esc(x.key)}">되돌리기</button></div>`).join("")}</div></details>`; };
@@ -1655,8 +1672,9 @@ V.home = () => {
   const recHtml = rows.mode === "fav"
     ? (`${rows.A.length ? `<section class="hsec"><h2>좋아하는 배우가 나와요</h2><p class="hsub">지금 하는 공연 중에서 좋아하는 배우가 출연하는 공연이에요</p>${row(rows.A, "fav")}</section>` : ""}
       ${rows.B.length ? `<section class="hsec"><h2>좋아하는 배우와 비슷한 배우가 나와요</h2><p class="hsub">좋아하는 배우가 안 나와도, 목소리 특징이 비슷한 배우가 나오는 공연이에요</p>${row(rows.B, "similar")}</section>` : ""}
+      ${!rows.B.length && askActorOf(D, S) ? askCard(askActorOf(D, S)) : ""}
       ${rows.taste.length ? `<section class="hsec"><h2>내 취향 추천</h2><p class="hsub">고른 취향 카드·배우 특징과 맞는 공연이에요</p>${row(rows.taste, "taste")}</section>` : ""}
-      ${rows.A.length || rows.B.length || rows.taste.length ? "" : `<section class="hsec">${emptyCard("지금 하는 공연 중에 좋아하는 배우나 비슷한 배우가 나오는 공연이 아직 없어요. 아래 전체에서 찾아보세요.", "#taste/3")}</section>`}`)
+      ${rows.A.length || rows.B.length || rows.taste.length || askActorOf(D, S) ? "" : `<section class="hsec">${emptyCard("지금 하는 공연 중에 좋아하는 배우나 비슷한 배우가 나오는 공연이 아직 없어요. 아래 전체에서 찾아보세요.", "#taste/3")}</section>`}`)
     : `<section class="hsec"><h2>내 취향 추천</h2>${rows.mode === "taste" ? row(rows.taste, "taste")
       : !taste ? `<div class="card accent"><h3>취향을 고르면 추천해 드려요</h3><p class="small muted">아직 취향을 안 골랐어요. 아래에서 지금 하는 공연 전체를 볼 수 있어요.</p><button class="btn" data-go="#taste/1">취향 고르기</button></div>`
       : emptyCard("아직 근거가 있는 추천이 없어요. 좋아하는 배우나 끌리는 공연을 더 고르면 이유와 함께 보여 드려요.", "#taste/1")}</section>`;
@@ -1951,6 +1969,10 @@ document.addEventListener("click", e => {
       save(); route(); break; }
     case "tasteSkipAll": { prefsOf(); save(); location.hash = "#home"; break; }  // 취향을 한 번도 안 고르고 전체 목록으로
     case "obGo": { prefsOf(); save(); snapTaste(); const dw = +d.to === 4 ? tasteDuelWork(D, S, today()) : null; location.hash = tasteNext(+d.to - 1, dw); if (+d.to > 3 && hasTaste(S.prefs)) toast("취향을 저장했어요"); break; }  // 건너뛰어도 S.prefs 는 만들어 둔다(다음부터는 곧바로 홈)
+    case "askTag": { if (!askTagList(D).includes(d.t) || !(S.prefs?.favs || []).includes(d.a)) break; if (ASK.a !== d.a) { ASK.a = d.a; ASK.sel = new Set(); } ASK.sel.has(d.t) ? ASK.sel.delete(d.t) : ASK.sel.add(d.t); route(); break; }
+    case "askSkip": { if (!(S.prefs?.favs || []).includes(d.a)) break; likeGet(d.a).asked = "skip"; if (ASK.a === d.a) ASK.sel = new Set(); save(); route(); break; }
+    case "askFind": { const tags = ASK.a === d.a ? [...ASK.sel].filter(t => askTagList(D).includes(t)) : []; if (!tags.length || !(S.prefs?.favs || []).includes(d.a)) break;
+      const l = likeGet(d.a); l.tags = [...new Set([...l.tags, ...tags])]; ASK.sel = new Set(); save(); snapTaste(); route(); toast(homeRows(D, S, today()).B.length ? "비슷한 배우가 나오는 공연을 찾았어요" : "비슷한 배우가 나오는 공연이 아직 없어요"); break; }  // 고른 특징은 '왜 좋아요' 와 같은 S.likes 에 들어가 likeTagsFor 가 그대로 읽는다
     case "recMenu": { const w = [...document.querySelectorAll(".pwrap")].find(x => x.dataset.key === d.key && x.dataset.row === d.row); if (!w) break; const open = w.querySelector(".pmenu"); document.querySelectorAll(".pmenu").forEach(m => m.remove()); if (!open) w.insertAdjacentHTML("beforeend", recMenuHtml(d.key, d.row)); break; }  // 줄을 다시 그리지 않고 그 카드에만 메뉴를 붙인다(가로 스크롤 위치를 지키려고)
     case "recFb": { if (!hideShow(S, d.key, d.row, d.a) || !showRef(D, d.key)) { if (S.proto?.hid?.[d.key] && !showRef(D, d.key)) delete S.proto.hid[d.key]; break; } track("rec_feedback", {show: d.key, row: d.row, action: d.a}); save(); route(); showUndo(d.key, d.a); break; }
     case "recUndo": { const e = unhideShow(S, d.key); if (!e) break; track("rec_feedback", {show: d.key, row: e.row, action: "undo"}); save(); $("#undo").hidden = true; route(); break; }
