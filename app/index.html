@@ -203,6 +203,17 @@ details li span{color:var(--fg)}
 .tabs a .ico{display:block;font-size:18px}
 .toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:30}
 .toast.show{opacity:1}
+.undobar{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font-size:14px;z-index:31;width:max-content;max-width:calc(100vw - 32px)}
+.undobar button{white-space:nowrap;flex:none;background:transparent;border:1px solid currentColor;color:inherit;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.pwrap{position:relative;min-width:0;scroll-snap-align:start}
+.pmore{position:absolute;top:6px;right:6px;width:32px;height:32px;border-radius:999px;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:18px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0;font-family:inherit}
+.pmenu{position:absolute;top:42px;right:6px;z-index:5;display:grid;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px;min-width:112px}
+.pmenu button{border:0;background:transparent;color:var(--fg);text-align:left;padding:9px 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.pmenu button:hover{background:var(--soft)}
+.hidlist{margin-top:4px}
+.hidlist>summary{cursor:pointer;color:var(--muted)}
+.hidbox{display:grid;gap:6px;margin-top:8px}
+.hidrow{display:flex;justify-content:space-between;align-items:center;gap:8px}
 pre{background:var(--soft);border-radius:10px;padding:10px;overflow-x:auto;font-size:11px;margin:0}
 .score{display:flex;gap:6px}
 .score .chip{flex:1;justify-content:center;text-align:center;padding:10px 0}
@@ -402,6 +413,8 @@ main[data-view=saved],main[data-view=tag]{max-width:640px}
 .pickb.sm{font-size:10px;padding:1px 6px;vertical-align:1px}
 .actorx{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:10px}
 .actorx .vth{max-width:280px}
+.vq{display:grid;gap:6px;margin-top:6px}
+.vq:empty{display:none}
 .axhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .calnav{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .calnav .chip{min-width:44px;justify-content:center}
@@ -435,13 +448,14 @@ button.day{font:inherit;color:inherit;text-align:center}
     <a href="#me" data-tab="me"><span class="ico">✦</span>내 취향</a>
   </nav>
   <div class="toast" id="toast"></div>
+  <div class="undobar" id="undo" hidden></div>
   <button id="themebtn" class="themebtn" type="button" data-act="themeToggle"></button>
 </div>
 <div id="dbg"></div>
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610131425"></script>
+<script src="data.js?v=202610131600"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -557,8 +571,8 @@ const ccTag = v => isCurtain(v) ? `<span class="sbadge">커튼콜 영상</span> 
 const videoLink = (v, cls = "q") => `<a class="${cls}" href="${esc(v.url)}" target="_blank" rel="noopener">▶ ${ccTag(v)}${esc(v.title.length > 38 ? v.title.slice(0, 38) + "…" : v.title)} <span class="muted">· ${esc(v.channel)}${v.official ? " · 공식" : ""}${v.views ? ` · 조회 ${views(v.views)}` : ""}</span></a>`;
 const ytIdOf = v => (v?.url || "").match(/[?&]v=([\w-]+)/)?.[1];
 // 글자 링크 대신 썸네일을 누르게(와이어프레임 '탭하면 재생'). 영상이 없으면 유튜브 검색으로 가는 회색 칸.
-const videoThumb = (v, fallbackHref, label = "") => v && ytIdOf(v)
-  ? `<a class="vth" href="${esc(v.url)}" target="_blank" rel="noopener" title="${esc(v.title)}"><img src="https://i.ytimg.com/vi/${esc(ytIdOf(v))}/mqdefault.jpg" alt="${esc(label)} 영상" loading="lazy">${isCurtain(v) ? `<span class="vcc">커튼콜 영상</span>` : ""}<span class="play">▶ ${esc(v.channel)}${v.official ? " · 공식" : ""}${v.views ? ` · ${views(v.views)}` : ""}</span></a>`
+const videoThumb = (v, fallbackHref, label = "", attrs = "") => v && ytIdOf(v)
+  ? `<a class="vth" href="${esc(v.url)}" target="_blank" rel="noopener" title="${esc(v.title)}"${attrs}><img src="https://i.ytimg.com/vi/${esc(ytIdOf(v))}/mqdefault.jpg" alt="${esc(label)} 영상" loading="lazy">${isCurtain(v) ? `<span class="vcc">커튼콜 영상</span>` : ""}<span class="play">▶ ${esc(v.channel)}${v.official ? " · 공식" : ""}${v.views ? ` · ${views(v.views)}` : ""}</span></a>`
   : `<a class="vth none" href="${esc(fallbackHref)}" target="_blank" rel="noopener">▶ 영상 찾아보기</a>`;
 const videoRow = v => ytIdOf(v) ? `<a class="vrow" href="${esc(v.url)}" target="_blank" rel="noopener"><img src="https://i.ytimg.com/vi/${esc(ytIdOf(v))}/mqdefault.jpg" alt="" loading="lazy"><span>▶ ${ccTag(v)}${esc(v.title.length > 44 ? v.title.slice(0, 44) + "…" : v.title)}<br><span class="muted tiny">${esc(v.channel)}${v.official ? " · 공식" : ""}${v.views ? ` · 조회 ${views(v.views)}` : ""}</span></span></a>` : videoLink(v, "small");
 const priceStrip = (w, grade) => w?.prices?.length ? `<div class="chips">${w.prices.map(([g, p]) => `<span class="tag ${g === grade ? "hit" : ""}">${esc(g)} ${won(p)}</span>`).join("")}</div>` : "";
@@ -1126,7 +1140,7 @@ const homeRecs = (D, S, from) => {
 // ---- 홈 추천 줄. 좋아하는 배우가 있으면 줄 A '좋아하는 배우가 나와요'(출연하는 극, 포스터 아래 '○○ 출연')와 줄 B '비슷한 배우가 나와요'(목소리 특성이 비슷한 배우가 나오는 극, 이유를 붙인다 · A 에 나온 극은 뺀다).
 // 없으면 지금처럼 취향 카드·축 기준 한 줄(taste). 근거가 하나도 없으면 none
 const homeRows = (D, S, from) => {
-  const favs = ((S.prefs || {}).favs || []).slice(0, 3), recs = homeRecs(D, S, from);
+  const hid = hiddenShows(S), favs = ((S.prefs || {}).favs || []).slice(0, 3), recs = homeRecs(D, S, from).filter(r => !hid[r.key]);  // 숨긴 공연은 추천 줄 어디에서도 뺀다
   if (!favs.length) return {mode: recs.length ? "taste" : "none", taste: recs, A: [], B: []};
   const A = [], inA = new Set(), B = [];
   for (const r of recs) { const here = [...new Set(r.reasons.filter(x => x.type === "fav-here").map(x => x.actor))]; if (here.length) { A.push({key: r.key, title: r.title, kind: r.kind, line: `${here.join("·")} 출연`}); inA.add(r.key); } }
@@ -1189,6 +1203,12 @@ const togglePin = (S, work, actor, kind) => {
   if (!had) P[kind].push(actor);
   return P.star.includes(actor) ? "star" : P.avoid.includes(actor) ? "avoid" : "";
 };
+// 영상 반응(공연 화면 ② 배우 칸): 썸네일(영상 ID 있는 것만)을 누르면 '이 영상 어땠어요?'가 나온다. (작품, 배우, 영상 ID)별로 S.proto.vr[작품][배우][ID] = {r?} — 있으면 연 상태, r 은 마지막 답
+const VIDEO_REACTIONS = [["like", "마음에 들어요"], ["unsure", "모르겠어요"], ["dislike", "취향 아니에요"]];
+const vrOf = (S, work, actor, vid) => S.proto?.vr?.[work]?.[actor]?.[vid] || null;  // null = 아직 안 연 영상
+const openVideo = (S, work, actor, vid) => { const o = (((S.proto ||= {}).vr ||= {})[work] ||= {})[actor] ||= {}; return o[vid] ||= {}; };
+const setVideoReaction = (S, work, actor, vid, r) => { if (!VIDEO_REACTIONS.some(x => x[0] === r)) return null; const e = openVideo(S, work, actor, vid); if (e.r === r) return null; e.r = r; return r; };  // 바뀌었으면 r, 같으면 null(기록도 안 남긴다)
+const videoReactionRecord = (work, role, actor, vid, r) => ({work, role, actor, video: vid, reaction: r});
 const pinStateOf = (S, work, actor) => { const {star, avoid} = pinsOf(S, work); return star.includes(actor) ? "star" : avoid.includes(actor) ? "avoid" : ""; };
 // ---- 공연 화면(#show): ① 요약 ② 누구로 볼까요?(주연 배역마다 배우 선택, 추천 조합은 미리 선택) ③ 이 조합으로 볼 수 있는 날(한 달 달력). 고른 조합 = 배역 → 배우
 const leadRolesOf = (D, work) => (D.roles[work] || []).filter(r => r.weight === "주연");
@@ -1234,10 +1254,16 @@ const priceMinText = t => { const n = [...String(t || "").matchAll(/(\d{1,3}(?:,
 const tasteDuelWork = (D, S, from) => { for (const r of homeRecs(D, S, from)) { const w = D.works.find(x => x.name === r.key); if (w && w.hasSchedule && duelStatus(D, S, w.name, from).some(x => x.total > 0)) return w.name; } return null; };
 const resetCombo = (S, work) => { const P = S.proto; if (!P) return; for (const k of ["pins", "hide", "wrong", "duelCur", "duelRound", "pinAsk", "sel", "cm", "cd", "cmp"]) if (P[k]) delete P[k][work]; P.duels = (P.duels || []).filter(d => d.work !== work); };
 
-// ---- 기록 한 줄 만들기(정의서 5종). 여기서 만든 값은 기록기(track)가 한 번 더 걸러서 쌓는다
+// ---- 기록 한 줄 만들기(정의서 6종). 여기서 만든 값은 기록기(track)가 한 번 더 걸러서 쌓는다
 // 취향 스냅숏: 5축 값(왼쪽을 골랐으면 -1, 오른쪽 +1, 안 골랐으면 0 · 지금 화면은 3지선다라 ±1 만 쓴다), 좋아하는 배우, 고른 카드의 태그
 const tasteSnapshot = (D, S) => { const p = S.prefs || {}, ax = p.axes || [], cards = p.works || [];
   return {axes: Object.fromEntries(D.axes.map(a => [a.left, ax.includes(a.left) ? -1 : ax.includes(a.right) ? 1 : 0])), favs: (p.favs || []).slice(0, 3), tags: [...new Set(cards.flatMap(id => cardOf(id)?.tags || []))].slice(0, 12)}; };
+// taste_snapshot: 좋아하는 배우는 앱 데이터에 있는 이름(actors Set)만 — 이름 칸에 아무 글이나 쓸 수 있어서. 취향 5축 값·고른 태그는 tasteSnapshot 그대로
+const tasteSnapRecord = (D, S, actors) => { const ts = tasteSnapshot(D, S); return {likes: ((S.prefs || {}).favs || []).filter(a => actors.has(a)).slice(0, 10), axes: ts.axes, tags: ts.tags}; };
+// 홈 추천 줄에서 숨긴 공연(S.proto.hid[공연 열쇠] = {a: seen|not_interested, row}): 추천 줄(좋아하는 배우·비슷한 배우·내 취향)에서만 빠진다. '지금 하는 공연 전체'엔 그대로
+const hiddenShows = S => S.proto?.hid || {};
+const hideShow = (S, key, row, action) => { if (!["seen", "not_interested"].includes(action) || !["fav", "similar", "taste"].includes(row)) return false; ((S.proto ||= {}).hid ||= {})[key] = {a: action, row}; return true; };
+const unhideShow = (S, key) => { const e = S.proto?.hid?.[key]; if (!e) return null; delete S.proto.hid[key]; return e; };
 const runLabelOf = (D, work, date) => { const rs = (D.works.find(x => x.name === work) || {}).runs || []; return (rs.find(r => date >= r.start && date <= r.end) || rs[0] || {}).label; };
 const ratingChips = (rating, only = null) => (rating.chips || []).map(c => { const as = only ? only(c) : c.actors || []; return {chip: c.chip, dir: c.dir, ...(as.length ? {actors: as} : {})}; });  // 배우를 안 골랐으면 actors 는 뺀다
 // combo_rating: stage expected(추천 직후, 날짜 없음 — perf 를 안 넘기고 runDate 로 시즌만) / experienced(관람 후, 본 회차 perf)
@@ -1364,7 +1390,7 @@ const addAgain = (S, i, again) => {  // 또 보고 싶은 배우는 좋아하는
 };
 // </proto-flow>
 
-// ---------- 기록 배선 (docs/data_spec_combo_fit_2026-10-10.md 5종) ----------
+// ---------- 기록 배선 (docs/data_spec_combo_fit_2026-10-10.md 6종) ----------
 // 목적: 추천한 조합이 그 사람 취향에 맞았는지 배우는 데이터. 사용 지표(앱 열기 등)는 만들지 않는다. 가입 없이 무작위 익명 ID 로만.
 // 지금은 연습 모드라 서버로 안 보내고 콘솔과 화면 구석 목록에만 보인다. 켜는 법: 내보내기(recommend.py --export)가 .env 의 SUPABASE_URL·SUPABASE_ANON_KEY(공개 키만)를 data.js 의 window.PICKLE_TRACK 으로 넣는다. 키는 이 파일에 적지 않는다
 // <track>
@@ -1382,6 +1408,7 @@ const R = {
   oneOf: list => (v, V, bad) => list.includes(v) ? v : bad(),
   bool: (v, V, bad) => typeof v === "boolean" ? v : bad(),
   code: (v, V, bad) => typeof v === "string" && /^[a-z0-9_.-]{1,20}$/.test(v) ? v : bad(),
+  ytid: (v, V, bad) => typeof v === "string" && /^[A-Za-z0-9_-]{11}$/.test(v) ? v : bad(),  // 유튜브 영상 ID(11자). 주소나 제목이 아니라 ID 만
   date: (v, V, bad) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : bad(),  // 공연 날짜(기록한 날이 아니다)
   time: (v, V, bad) => typeof v === "string" && /^\d{2}:\d{2}$/.test(v) ? v : bad(),  // 공연 시작 시각
   inSet: key => (v, V, bad) => typeof v === "string" && v.length <= 40 && !!V && !!V[key] && V[key].has(v) ? v : bad(),
@@ -1418,6 +1445,9 @@ const EVENTS = {
   actor_pick: {req: ["work", "role", "actor", "action"], shape: {work: R_WORK, role: R.inSet("roles"), actor: R.inSet("actors"), action: R.oneOf(["pin", "unpin", "avoid", "unavoid"])}},
   role_duel: {req: ["work", "role", "left", "right", "result"], shape: {work: R_WORK, role: R.inSet("roles"), left: R_SIDE, right: R_SIDE, result: R.oneOf(["left", "right", "tie"])}},  // 좌우 위치는 무작위, 그때 놓인 대로 남긴다
   actor_rating: {req: ["show_id", "actor", "score"], shape: {show_id: R.inSet("shows"), actor: R.inSet("actors"), score: R.int(1, 5), chips: R_CHIPS}},
+  video_reaction: {req: ["work", "role", "actor", "video", "reaction"], shape: {work: R_WORK, role: R.inSet("roles"), actor: R.inSet("actors"), video: R.ytid, reaction: R.oneOf(["like", "unsure", "dislike"])}},  // 배우 영상 썸네일을 누른 뒤 '이 영상 어땠어요?'에 답할 때(답을 바꿀 때마다 한 줄)
+  taste_snapshot: {req: ["likes", "axes", "tags"], shape: {likes: R.arr(10, R.inSet("actors")), axes: R.dict(R.inSet("axisKeys"), R.int(-2, 2), 5), tags: R.arr(12, R.inSet("tags"))}},  // 취향폼을 저장하거나 고칠 때: 좋아하는 배우(앱 데이터에 있는 이름만), 취향 5축 값, 고른 태그. '왜 좋아요' 글은 안 보낸다
+  rec_feedback: {req: ["show", "row", "action"], shape: {show: R.inSet("shows"), row: R.oneOf(["fav", "similar", "taste"]), action: R.oneOf(["seen", "not_interested", "undo"])}},  // 홈 추천 줄 카드의 [이미 봤어요]·[관심 없어요]·되돌리기. row: fav 좋아하는 배우 출연작 / similar 비슷한 배우 출연작 / taste 내 취향 추천
 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const isJwt = k => /^eyJ[\w-]+\.[\w-]+\.[\w-]+$/.test(k);
@@ -1523,7 +1553,7 @@ const trackSettings = () => { const off = TRK.isOff();
     ${CLR_ASK ? `<div class="ask"><p class="small"><b>기록을 지웠어요.</b> 이 기기에 저장된 취향·볼 예정도 지울까요?</p><div class="nbgrid"><button class="nb" data-act="clearAppData">취향·볼 예정도 지우기</button><button class="nb" data-act="clearAppKeep">그대로 두기</button></div></div>` : ""}</div>`; };
 // 안내 화면(임시 문안: docs/privacy_notice_draft_2026-10-10.md 3장). 초안·법률 검토 전이라 대괄호 자리는 그대로 둔다
 V.privacy = () => !trackUi() ? `<div class="one"><div class="card"><p class="small">이 앱은 지금 아무 기록도 서버로 보내지 않아요.</p><a class="btn ghost" href="#home">홈으로</a></div></div>` : `<div class="one prv">
-  <div><p class="eyebrow">시행 전 안내</p><h1>기록·개인정보 안내</h1></div>
+  <div><h1>기록·개인정보 안내</h1></div>
   <p class="small">이 앱은 가입도 로그인도 없이 쓸 수 있어요. 대신 추천이 잘 맞았는지 알아보려고, 이름이 없는 기록을 남겨요. 어떤 기록을 남기는지, 얼마나 보관하는지, 어떻게 끄는지 알려 드릴게요.<br><i class="muted">개인정보는 나를 알아볼 수 있는 정보예요. 이름, 전화번호, 주소, 아이디, 사진 같은 것들이에요.</i></p>
   <div class="card"><h3>1) 어떤 기록을 남기나요?</h3>
     <table class="prt"><tr><th>이럴 때</th><th>이런 것이 기록돼요</th></tr>
@@ -1531,7 +1561,10 @@ V.privacy = () => !trackUi() ? `<div class="one"><div class="card"><p class="sma
       <tr><td>'볼 예정에 담기'나 '예매처로 이동'을 누를 때</td><td>고른 회차와 조합, 그때 보여 준 추천 조합 3개, 걸어 둔 기간·꼭 볼 배우·뺀 배우</td></tr>
       <tr><td>배우를 '꼭 볼'이나 '제외'로 정하거나 풀 때</td><td>작품, 배역, 배우, 정했는지 풀었는지</td></tr>
       <tr><td>끌리는 배우 고르기에서 고를 때</td><td>맞붙은 두 배우와 그때 보여 준 태그, 고른 결과</td></tr>
-      <tr><td>날짜별 조합 정보가 없는 공연에서 배우가 내 취향이었는지 고를 때</td><td>공연, 배우, 점수(1~5점), 고른 이유</td></tr></table>
+      <tr><td>날짜별 조합 정보가 없는 공연에서 배우가 내 취향이었는지 고를 때</td><td>공연, 배우, 점수(1~5점), 고른 이유</td></tr>
+      <tr><td>배우 영상을 눌러 본 뒤 '이 영상 어땠어요?'에 답할 때</td><td>작품, 배역, 배우, 영상 번호(유튜브 영상 ID), 고른 답(마음에 들어요·모르겠어요·취향 아니에요). 답을 바꾸면 그때마다 한 줄 더 남아요</td></tr>
+      <tr><td>취향 고르기를 저장하거나 고칠 때</td><td>좋아하는 배우 이름(앱에 있는 이름만, 내가 직접 쓴 글은 보내지 않아요), 취향 5가지 값, 고른 태그. 전에 보낸 것과 같으면 다시 보내지 않아요</td></tr>
+      <tr><td>홈 추천 줄에서 [이미 봤어요]·[관심 없어요]·[되돌리기]를 누를 때</td><td>공연, 어느 추천 줄이었는지(좋아하는 배우 · 비슷한 배우 · 내 취향), 누른 것</td></tr></table>
     <p class="small">모든 기록에는 <b>이 기기의 무작위 번호 2개</b>(기기 번호, 이번 방문 번호), 앱 버전, 기록한 <b>날짜</b>(시각은 남기지 않아요), 한 방문 안에서의 순서가 같이 붙어요.</p>
     <p class="small"><b>받지 않는 것</b></p>
     <ul class="small"><li>이름, 전화번호, 이메일, 주소 같은 개인정보</li><li>가입이나 로그인 정보</li><li>직접 쓴 글. '왜 좋아요' 같은 글은 이 기기 화면 안에서 태그를 찾는 데만 쓰고 보내지 않아요. 기록에는 고른 태그만 남아요.</li><li>위치, 브라우저·기기 종류, 화면 크기, 언어</li><li>IP 주소(기록 표에 저장하지 않아요)</li><li>저장 서비스(Supabase)가 서비스를 운영하는 과정에서 접속 기록을 자체적으로 둘 수 있어요.</li></ul>
@@ -1541,12 +1574,12 @@ V.privacy = () => !trackUi() ? `<div class="one"><div class="card"><p class="sma
   <div class="card"><h3>4) 이 기기에는 무엇이 저장되나요?</h3><p class="small">앱은 이 기기의 브라우저 저장 공간(쿠키와 비슷한 곳)에 <b>무작위 번호와 끄기 설정</b>을 저장해요.</p><ul class="small"><li>지우려면 설정의 <b>[이 기기 기록 지우기]</b>를 누르거나, 브라우저 설정에서 이 사이트의 저장 데이터를 지우세요.</li></ul></div>
   <div class="card"><h3>5) 기록을 끄고 싶으면 어떻게 하나요?</h3><p class="small">설정에서 <b>[기록 끄기]</b>를 누르세요. 그 뒤로는 아무것도 보내지 않고, 이 기기의 번호도 지우고 다시 만들지 않아요. 언제든 다시 켤 수 있어요. 끄더라도 추천은 똑같이 쓸 수 있고, 불이익은 없어요. 이 기기에 저장된 번호만 지우고 싶으면 <b>[이 기기 기록 지우기]</b>를 누르세요.</p></div>
   <div class="card"><h3>6) 기록은 어디에 저장하나요? 외국으로 가나요?</h3><p class="small">기록은 <b>Supabase</b>라는 클라우드 서비스에 저장해요. Supabase에 저장하고 보관하는 일을 맡기는 거예요.</p>
-    <ul class="small"><li>저장 위치는 <b>서울 지역</b>으로 정해요.</li><li>Supabase는 <b>싱가포르 법인(Supabase Pte. Ltd.)</b>이 운영해요. 다만 Supabase나 협력 업체가 있는 다른 나라에서도 처리될 수 있다고 계약서에 적혀 있어요.</li><li>우리가 남기는 기록은 이름 없는 기록이에요. 그래도 외국으로 옮겨지거나 외국에서 볼 수 있는 경우를 미리 알려 드려요.</li></ul>
+    <ul class="small"><li>저장 위치는 <b>서울 리전(ap-northeast-2)</b>이에요. 기록은 서울 리전에 저장해요.</li><li>Supabase는 <b>싱가포르 법인(Supabase Pte. Ltd.)</b>이 운영해요. 다만 Supabase나 협력 업체가 있는 다른 나라에서도 처리될 수 있다고 계약서에 적혀 있어요.</li><li>우리가 남기는 기록은 이름 없는 기록이에요. 그래도 외국으로 옮겨지거나 외국에서 볼 수 있는 경우를 미리 알려 드려요.</li></ul>
     <details><summary class="small">어른용 자세히 보기: 국외 이전에 관한 사항</summary>
       <table class="prt"><tr><td>이전되는 항목</td><td>위 1)의 기록(이름·연락처 없음)</td></tr><tr><td>이전되는 국가</td><td>싱가포르(운영 법인), 그 밖에 Supabase 협력 업체가 처리하는 나라</td></tr><tr><td>이전 시기와 방법</td><td>앱에서 기록을 보낼 때마다 인터넷으로 전송해 Supabase에 저장</td></tr><tr><td>이전받는 자</td><td>Supabase Pte. Ltd.(싱가포르)</td></tr><tr><td>이용 목적, 보관 기간</td><td>추천이 취향에 맞았는지 확인(광고 아님), 6개월</td></tr><tr><td>거부하는 방법, 거부하면</td><td>설정에서 [기록 끄기]. 꺼도 추천은 그대로 쓸 수 있어요</td></tr></table></details></div>
-  <div class="card"><h3>7) 궁금한 점이 있으면 어디에 물어보나요?</h3><p class="small"><b>[문의처: 사용자 확인 필요]</b><br>기록은 이름 없이 번호로만 남아서, 문의해 주셔도 어떤 기록이 내 것인지 우리가 찾아 드리기 어려워요. 그래서 끄기와 지우기를 직접 하실 수 있게 해 두었어요.</p></div>
-  <div class="card"><h3>8) 만 14세 미만이에요</h3><p class="small">만 14세 미만이면 <b>보호자와 함께 이 안내를 읽어 주세요.</b> 이 앱은 이름이나 전화번호 같은 개인정보를 받지 않아서 보호자 동의를 받는 절차가 따로 없어요. 기록이 걱정되거나 이해가 안 되면 보호자와 함께 <b>[기록 끄기]</b>를 누르거나 위 문의처에 물어보세요. 끈다고 앱을 못 쓰게 되지는 않아요.</p></div>
-  <div class="card"><h3>9) 이 안내가 바뀌면 어떻게 알려 주나요?</h3><p class="small">안내가 바뀌면 이 화면에 바뀐 내용과 날짜를 올리고, 앱 첫 화면에 한 번 알려 드려요.<br>시행일: <b>[공개일 확인 후 기재]</b></p></div>
+  <div class="card"><h3>7) 내 기록은 어떻게 관리하나요?</h3><p class="small">기록은 이름 없이 번호로만 남아서, 어떤 기록이 내 것인지 우리도 찾을 수 없어요. 그래서 끄기와 지우기를 직접 하실 수 있게 해 두었어요.</p></div>
+  <div class="card"><h3>8) 만 14세 미만이에요</h3><p class="small">만 14세 미만이면 <b>보호자와 함께 이 안내를 읽어 주세요.</b> 이 앱은 이름이나 전화번호 같은 개인정보를 받지 않아서 보호자 동의를 받는 절차가 따로 없어요. 기록이 걱정되거나 이해가 안 되면 보호자와 함께 <b>[기록 끄기]</b>를 누르세요. 끈다고 앱을 못 쓰게 되지는 않아요.</p></div>
+  <div class="card"><h3>9) 이 안내가 바뀌면 어떻게 알려 주나요?</h3><p class="small">안내가 바뀌면 이 화면에 바뀐 내용과 날짜를 올리고, 앱 첫 화면에 한 번 알려 드려요.<br>시행일: <b>2026년 10월 13일</b></p></div>
   ${trackSettings()}</div>`;
 
 // ---------- proto: 취향폼(1·2·3 + 건너뛰기) ----------
@@ -1590,8 +1623,13 @@ const rateMessage = (ctx, eff) => {
 const posterOf = (ref, cls) => ref.kind === "seed" ? posterEl(ref.w, cls) : curPoster(ref.s, cls, true);
 const periodOf = ref => ref.kind === "seed" ? runsOf(ref.key).map(r => `${esc(r.venue)} · ${fmtPeriod(r)}`).join(" / ") : `${esc(ref.s.venue)} · ${md(ref.s.start)} ~ ${md(ref.s.end)}`;
 const castMark = ref => ref.kind === "seed" && ref.w.hasSchedule ? `<span class="pmark">날짜별 캐스팅 있음</span>` : "";  // 회차 캐스팅이 있는 작품의 포스터 표시
-const recCard = r => { const ref = showRef(D, r.key); if (!ref) return "";  // 큰 포스터(2:3) 아래에 제목과 이유 한 줄
-  return `<a class="pcard" href="#show/${esc(r.key)}" data-go="#show/${esc(r.key)}" data-entry="rec"><div class="pimg">${posterOf(ref, "pi")}${castMark(ref)}</div><span class="pt">${esc(r.title)}</span><span class="pw">${esc(r.line)}</span></a>`; };
+// 추천 줄 카드: 큰 포스터(2:3) 아래에 제목과 이유 한 줄. 모서리의 작은 ⋯ 를 누르면 [이미 봤어요]·[관심 없어요] 가 나온다(카드는 링크라 버튼은 카드 밖 형제로 둔다)
+const recCard = (r, row = "taste") => { const ref = showRef(D, r.key); if (!ref) return "";
+  return `<div class="pwrap" data-key="${esc(r.key)}" data-row="${row}"><a class="pcard" href="#show/${esc(r.key)}" data-go="#show/${esc(r.key)}" data-entry="rec"><div class="pimg">${posterOf(ref, "pi")}${castMark(ref)}</div><span class="pt">${esc(r.title)}</span><span class="pw">${esc(r.line)}</span></a><button type="button" class="pmore" data-act="recMenu" data-key="${esc(r.key)}" data-row="${row}" aria-label="${esc(r.title)} 숨기기 메뉴" aria-haspopup="true">⋯</button></div>`; };
+const recMenuHtml = (key, row) => `<div class="pmenu" role="menu"><button type="button" role="menuitem" data-act="recFb" data-key="${esc(key)}" data-row="${row}" data-a="seen">이미 봤어요</button><button type="button" role="menuitem" data-act="recFb" data-key="${esc(key)}" data-row="${row}" data-a="not_interested">관심 없어요</button></div>`;
+// 숨긴 공연 N개 · 되돌리기(추천 줄 아래): 목록을 펼쳐서 하나씩 되돌린다
+const hiddenList = () => { const items = Object.entries(hiddenShows(S)).map(([key, e]) => ({key, e, ref: showRef(D, key)})).filter(x => x.ref); if (!items.length) return "";
+  return `<details class="hidlist"><summary class="small">숨긴 공연 ${items.length}개 · 되돌리기</summary><div class="hidbox">${items.map(x => `<div class="hidrow"><span class="small">${esc(x.ref.title)} <span class="muted">· ${x.e.a === "seen" ? "이미 봤어요" : "관심 없어요"}</span></span><button type="button" class="chip x" data-act="recUndo" data-key="${esc(x.key)}">되돌리기</button></div>`).join("")}</div></details>`; };
 const listCard = x => { const ref = showRef(D, x.key); if (!ref) return "";  // 포스터 격자: 포스터와 제목만(+ 캐스팅 일정 표시)
   return `<a class="pcard" href="#show/${esc(x.key)}" data-go="#show/${esc(x.key)}" data-entry="browse"><div class="pimg">${posterOf(ref, "pi")}${castMark(ref)}</div><span class="pt">${esc(x.title)}</span></a>`; };
 // 관람 후(한 번만): ① 본 조합 1~5 + 이유 칩(experienced 평가) → ② 또 보고 싶은 배우(선택). 긴 후기는 선택(3초 기록 화면)
@@ -1608,12 +1646,12 @@ V.home = () => {
   const mine = taste ? [...(p.works || []).map(id => cardOf(id)?.l), ...(p.axes || []).map(axisLabel), ...(p.favs || [])].filter(Boolean) : [];
   const due = S.proto?.vd ? S.proto.vd.i : dueVisit(S, from);
   Object.keys(RATE_CTX).forEach(k => delete RATE_CTX[k]);
-  const row = list => `<div class="prow">${list.slice(0, 24).map(recCard).join("")}</div>`;
+  const row = (list, id) => `<div class="prow">${list.slice(0, 24).map(r => recCard(r, id)).join("")}</div>`;
   const recHtml = rows.mode === "fav"
-    ? (rows.A.length || rows.B.length ? `${rows.A.length ? `<section class="hsec"><h2>좋아하는 배우가 나와요</h2><p class="hsub">지금 하는 공연 중에서 좋아하는 배우가 출연하는 공연이에요</p>${row(rows.A)}</section>` : ""}
-      ${rows.B.length ? `<section class="hsec"><h2>좋아하는 배우와 비슷한 배우가 나와요</h2><p class="hsub">좋아하는 배우가 안 나와도, 목소리 특징이 비슷한 배우가 나오는 공연이에요</p>${row(rows.B)}</section>` : ""}`
+    ? (rows.A.length || rows.B.length ? `${rows.A.length ? `<section class="hsec"><h2>좋아하는 배우가 나와요</h2><p class="hsub">지금 하는 공연 중에서 좋아하는 배우가 출연하는 공연이에요</p>${row(rows.A, "fav")}</section>` : ""}
+      ${rows.B.length ? `<section class="hsec"><h2>좋아하는 배우와 비슷한 배우가 나와요</h2><p class="hsub">좋아하는 배우가 안 나와도, 목소리 특징이 비슷한 배우가 나오는 공연이에요</p>${row(rows.B, "similar")}</section>` : ""}`
         : `<section class="hsec"><h2>좋아하는 배우가 나와요</h2><div class="card"><p class="small muted">지금 하는 공연 중에 좋아하는 배우나 비슷한 배우가 나오는 공연이 아직 없어요. 아래 전체에서 찾아보세요.</p><button class="btn ghost" data-go="#taste/3">취향 다시 고르기</button></div></section>`)
-    : `<section class="hsec"><h2>내 취향 추천</h2>${rows.mode === "taste" ? row(rows.taste)
+    : `<section class="hsec"><h2>내 취향 추천</h2>${rows.mode === "taste" ? row(rows.taste, "taste")
       : !taste ? `<div class="card accent"><h3>취향을 고르면 추천해 드려요</h3><p class="small muted">아직 취향을 안 골랐어요. 아래에서 지금 하는 공연 전체를 볼 수 있어요.</p><button class="btn" data-go="#taste/1">취향 고르기</button></div>`
       : `<div class="card"><p class="small muted">아직 근거가 있는 추천이 없어요. 좋아하는 배우나 끌리는 공연을 더 고르면 이유와 함께 보여 드려요.</p><button class="btn ghost" data-go="#taste/1">취향 다시 고르기</button></div>`}</section>`;
   // 지금 하는 공연 전체: 인기순 한 줄 목록. 지역 칩 [전체 N][공연 많은 지역 …][그 외 지역] — 칩 안 목록도 인기순
@@ -1624,6 +1662,7 @@ V.home = () => {
   <div class="browse-head"><p class="eyebrow">다음 뮤지컬 찾기</p><h1>내 취향에 닿는 무대를<br>발견해 보세요.</h1><p class="browse-lead">공연과 배우, 끌리는 이유부터 살펴보세요.</p></div>
   ${taste ? `<p class="muted small">내 취향: ${esc(mine.join(" · ") || "선택한 항목 없음")} <a href="#taste/1">취향 다시 고르기</a></p>` : ""}
   ${recHtml}
+  ${hiddenList()}
   <section class="hsec"><h2>지금 하는 공연 전체<span class="count">${all.length}개</span><span class="sortnote">인기순</span></h2>
   ${tabs.length > 1 ? `<div class="chips afilter" role="group" aria-label="지역">${tabs.map(([k, l, n]) => `<button type="button" class="chip ${tab === k ? "on" : ""}" data-act="areaTab" data-t="${esc(k)}" aria-pressed="${tab === k}">${esc(l)} ${n}</button>`).join("")}</div>` : ""}
   ${allHtml}</section>
@@ -1674,10 +1713,21 @@ const summaryCard = (ref, rec) => {
 };
 
 // ② 누구로 볼까요?: 주연 배역마다 한 줄(배우를 나란히), 추천 조합은 미리 선택 + PICK. 배우 특징은 고른 배우만 펼친다
+// 영상 반응 칸: 영상을 연 뒤에만 질문이 나온다. 마음에 들어요 → ⭐ 담을까요 / 취향 아니에요 → 빼기 할까요(기존 pin 버튼 그대로, 자동으로 걸지 않는다) / 모르겠어요 → 그 배우 유튜브 검색
+const vqHtml = (work, role, a, vid) => {
+  const e = vrOf(S, work, a, vid); if (!e) return "";
+  const W = esc(work), R = esc(role), A = esc(a), I = esc(vid), pin = pinStateOf(S, work, a);
+  const btns = VIDEO_REACTIONS.map(([k, l]) => `<button type="button" class="chip x ${e.r === k ? "on" : ""}" data-act="vreact" data-work="${W}" data-role="${R}" data-a="${A}" data-vid="${I}" data-r="${k}" aria-pressed="${e.r === k}">${l}</button>`).join("");
+  const next = e.r === "like" ? (pin === "star" ? `<p class="small muted">⭐ 꼭 볼 배우로 담아 뒀어요</p>` : `<p class="small">⭐ 꼭 볼 배우로 담을까요? <button type="button" class="chip x" data-act="pin" data-work="${W}" data-a="${A}" data-k="star">담기</button></p>`)
+    : e.r === "dislike" ? (pin === "avoid" ? `<p class="small muted">이 배우는 빼 뒀어요</p>` : `<p class="small">이 배우 빼기 할까요? <button type="button" class="chip x" data-act="pin" data-work="${W}" data-a="${A}" data-k="avoid">빼기</button></p>`)
+    : e.r === "unsure" ? `<p class="small"><a href="${esc(ytSearch(work, a, role))}" target="_blank" rel="noopener">이 배우 영상 더 찾아보기 ▶</a></p>` : "";
+  return `<p class="small">이 영상 어땠어요?</p><div class="chips">${btns}</div>${next}`;
+};
 const actorDetail = (work, role, a, want) => {
-  const rows = roleRows(D, work, a, role), v = videoOf(work, a), pin = pinStateOf(S, work, a);
+  const rows = roleRows(D, work, a, role), v = videoOf(work, a), pin = pinStateOf(S, work, a), vid = ytIdOf(v);
   return `<div class="actorx"><div class="axhead"><b>${esc(a)}</b><span class="pins"><button class="chip x ${pin === "star" ? "on" : ""}" data-act="pin" data-work="${esc(work)}" data-a="${esc(a)}" data-k="star" title="꼭 볼 배우로">⭐ 꼭 볼 배우</button><button class="chip x ${pin === "avoid" ? "on" : ""}" data-act="pin" data-work="${esc(work)}" data-a="${esc(a)}" data-k="avoid" title="이 배우가 나오는 날짜를 빼요">이 배우 빼기</button></span></div>
-    ${videoThumb(v, ytSearch(work, a, role), a)}
+    ${videoThumb(v, ytSearch(work, a, role), a, vid ? ` data-act="vopen" data-work="${esc(work)}" data-role="${esc(role)}" data-a="${esc(a)}" data-vid="${esc(vid)}"` : "")}
+    ${vid ? `<div class="vq" data-vq="${esc(`${work}|${a}|${vid}`)}">${vqHtml(work, role, a, vid)}</div>` : ""}
     ${rows.length ? tagLines(rows, want) + distLine(rows) : `<p class="small muted">아직 리뷰 태그가 없어요.</p>`}</div>`;
 };
 const castSection = (ref, taste, want) => {
@@ -1835,13 +1885,28 @@ themeUi();
 const getDr = k => S.proto?.dr?.[k] || {score: 0, chips: []};
 const setDr = (k, v) => { ((S.proto ||= {}).dr ||= {})[k] = v; save(); refresh(); };  // 시트 안이면 시트만 다시 그린다
 let CUR = {name: "", args: []}, lastHash;
+// 취향폼을 저장하거나 고칠 때(다음·건너뛰기·추천 보러 가기) 한 번: 직전에 보낸 것(같은 기기 번호 + 같은 내용)과 같으면 안 보낸다. 처음부터 빈 취향이면 남길 게 없다
+const snapTaste = () => {
+  const rec = tasteSnapRecord(D, S, buildVocab(D).actors), sig = JSON.stringify(rec), last = S.proto?.snap;
+  if (last && last.id === TRK.peekAnon() && last.sig === sig) return false;
+  if (!last && !rec.likes.length && !rec.tags.length && Object.values(rec.axes).every(v => !v)) return false;
+  if (!track("taste_snapshot", rec)) return false;
+  (S.proto ||= {}).snap = {id: TRK.peekAnon(), sig}; save(); return true;
+};
+// 숨긴 뒤 잠깐 뜨는 '되돌리기'(6초). 다시 보고 싶으면 추천 줄 아래 '숨긴 공연 N개 · 되돌리기'
+let undoT; const showUndo = (key, action) => { const u = $("#undo"), ref = showRef(D, key); u.innerHTML = `<span>${esc(ref?.title || "공연")} 숨겼어요</span><button type="button" data-act="recUndo" data-key="${esc(key)}">되돌리기</button>`; u.hidden = false; clearTimeout(undoT); undoT = setTimeout(() => { u.hidden = true; }, 6000); };
+const vopenTap = d => {  // 영상 ID 가 있는 썸네일을 눌렀을 때: 연 상태를 저장하고 그 자리에 질문 칸을 채운다(화면을 다시 그리지 않아 새 탭 열기를 방해하지 않는다)
+  if (!/^[\w-]{11}$/.test(d.vid || "") || vrOf(S, d.work, d.a, d.vid)) return;
+  openVideo(S, d.work, d.a, d.vid); save();
+  const box = [...document.querySelectorAll(".vq")].find(x => x.dataset.vq === `${d.work}|${d.a}|${d.vid}`); if (box) box.innerHTML = vqHtml(d.work, d.role, d.a, d.vid);
+};
 function route() {
   const h = decodeURIComponent(location.hash.slice(1) || entryRoute(S.prefs, S).slice(1));  // 첫 화면: 취향을 한 번도 안 다룬 사람은 취향폼, 아니면 홈
   const [name, ...args] = h.split("/");
   CUR = {name, args};
   closeSheet();
   if (location.hash !== lastHash && S.proto?.flash) delete S.proto.flash;  // 평가 안내는 그 화면에서만
-  const keepBar = document.querySelector(".afilter")?.scrollLeft || 0;  // 지역 칩 줄의 가로 스크롤 위치(다시 그려도 그 자리 유지)
+  const keepBar = document.querySelector(".afilter")?.scrollLeft || 0, keepRows = [...document.querySelectorAll(".prow")].map(x => x.scrollLeft);  // 지역 칩 줄·추천 줄의 가로 스크롤 위치(다시 그려도 그 자리 유지)  // 지역 칩 줄의 가로 스크롤 위치(다시 그려도 그 자리 유지)
   CTA = null; const view = $("#view"); view.innerHTML = (V[name] || V.home)(...args); view.dataset.view = V[name] ? name : "home";
   const cta = $("#cta"); if (CTA) { cta.hidden = false; cta.innerHTML = `<button class="btn" data-act="${CTA.act}">${esc(CTA.text)}</button>`; } else cta.hidden = true;  // 폰에서는 화면 아래 고정 버튼(넓은 화면은 덩어리 안 버튼)
   $("#back").hidden = ["home", "works", "taste", "onboard", "plans", "me"].includes(name);
@@ -1849,6 +1914,7 @@ function route() {
   document.querySelectorAll("[data-tab]").forEach(a => a.classList.toggle("on", a.dataset.tab === tab));
   if (location.hash !== lastHash) window.scrollTo(0, 0);  // 화면이 바뀔 때만 맨 위로. 카드·칩을 눌러 다시 그릴 땐 스크롤을 유지한다
   lastHash = location.hash;
+  document.querySelectorAll(".prow").forEach((x, i) => { if (keepRows[i]) x.scrollLeft = keepRows[i]; });
   const bar = document.querySelector(".afilter");  // 눌린 지역 칩이 가로 스크롤 밖이면 보이는 곳까지 밀어 준다
   if (bar) { bar.scrollLeft = keepBar; const on = bar.querySelector('.chip[aria-pressed="true"]'), r = on?.getBoundingClientRect(), b = bar.getBoundingClientRect(); if (r && r.left < b.left) bar.scrollLeft += r.left - b.left - 18; else if (r && r.right > b.right) bar.scrollLeft += r.right - b.right + 18; }
   if (SCROLL_TO) { const t = document.querySelector(SCROLL_TO); SCROLL_TO = ""; if (t) t.scrollIntoView(); }
@@ -1866,6 +1932,8 @@ document.addEventListener("click", e => {
     location.hash = go.dataset.go; return; }
   const tk = e.target.closest("a[data-ticket]");  // 예매처로: 바로 열지 않고 '이 조합, 얼마나 기대돼요?' 시트를 거친다(건너뛰면 그때 연다)
   if (tk) { e.preventDefault(); const p = D.perfs.find(x => x.work === tk.dataset.work && x.date === tk.dataset.date && x.time === tk.dataset.time); if (p) openRate("ticket", p); return; }
+  if (!e.target.closest('[data-act="recMenu"],[data-act="recFb"]')) document.querySelectorAll(".pmenu").forEach(m => m.remove());  // 열린 ⋯ 메뉴는 바깥을 누르면 닫힌다
+  const vo = e.target.closest('a[data-act="vopen"]'); if (vo) { vopenTap(vo.dataset); return; }  // 영상 썸네일: 링크는 그대로 새 탭으로 열리고(막지 않는다) 그 자리에 '이 영상 어땠어요?'가 나온다
   if (e.target.closest("a[href]")) return;  // 카드 안의 출처·영상 링크는 카드 동작을 건드리지 않는다
   const act = e.target.closest("[data-act]"); if (!act) return;
   const d = act.dataset, draft = S.draft, work = CUR.args[0];
@@ -1876,7 +1944,12 @@ document.addEventListener("click", e => {
       P.axes = next; for (const st of Object.values(S.cal)) followBase(st, next);  // 안 바꾼 작품은 새 기본 취향을 따라가게 저장 값도 맞춘다
       save(); route(); break; }
     case "tasteSkipAll": { prefsOf(); save(); location.hash = "#home"; break; }  // 취향을 한 번도 안 고르고 전체 목록으로
-    case "obGo": { prefsOf(); save(); const dw = +d.to === 4 ? tasteDuelWork(D, S, today()) : null; location.hash = tasteNext(+d.to - 1, dw); if (+d.to > 3 && hasTaste(S.prefs)) toast("취향을 저장했어요"); break; }  // 건너뛰어도 S.prefs 는 만들어 둔다(다음부터는 곧바로 홈)
+    case "obGo": { prefsOf(); save(); snapTaste(); const dw = +d.to === 4 ? tasteDuelWork(D, S, today()) : null; location.hash = tasteNext(+d.to - 1, dw); if (+d.to > 3 && hasTaste(S.prefs)) toast("취향을 저장했어요"); break; }  // 건너뛰어도 S.prefs 는 만들어 둔다(다음부터는 곧바로 홈)
+    case "recMenu": { const w = [...document.querySelectorAll(".pwrap")].find(x => x.dataset.key === d.key && x.dataset.row === d.row); if (!w) break; const open = w.querySelector(".pmenu"); document.querySelectorAll(".pmenu").forEach(m => m.remove()); if (!open) w.insertAdjacentHTML("beforeend", recMenuHtml(d.key, d.row)); break; }  // 줄을 다시 그리지 않고 그 카드에만 메뉴를 붙인다(가로 스크롤 위치를 지키려고)
+    case "recFb": { if (!hideShow(S, d.key, d.row, d.a) || !showRef(D, d.key)) { if (S.proto?.hid?.[d.key] && !showRef(D, d.key)) delete S.proto.hid[d.key]; break; } track("rec_feedback", {show: d.key, row: d.row, action: d.a}); save(); route(); showUndo(d.key, d.a); break; }
+    case "recUndo": { const e = unhideShow(S, d.key); if (!e) break; track("rec_feedback", {show: d.key, row: e.row, action: "undo"}); save(); $("#undo").hidden = true; route(); break; }
+    case "vopen": vopenTap(d); break;
+    case "vreact": { if (!/^[\w-]{11}$/.test(d.vid || "")) break; const r = setVideoReaction(S, d.work, d.a, d.vid, d.r); if (r) { track("video_reaction", videoReactionRecord(d.work, d.role, d.a, d.vid, r)); save(); route(); } break; }  // 답을 바꿀 때마다 한 줄(같은 답을 또 눌러도 안 남긴다)
     case "pin": { const before = pinStateOf(S, d.work, d.a), after = togglePin(S, d.work, d.a, d.k); track("actor_pick", pickRecord(D, d.work, d.a, before, after)); save(); route(); break; }
     case "comboReset": { resetCombo(S, d.work); const P = S.proto; for (const k of Object.keys(P.sent || {})) if (k.startsWith(`combo|${d.work}|`)) { delete P.sent[k]; delete (P.msg || {})[k]; delete (P.dr || {})[k]; } delete P.flash; save(); route(); break; }
     case "rateScore": { const c = RATE_CTX[d.id]; if (c) setDr(c.key, draftScore(getDr(c.key), +d.n)); break; }
