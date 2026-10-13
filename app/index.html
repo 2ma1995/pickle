@@ -147,9 +147,6 @@ input::placeholder{color:var(--faint)}
 .rest{font-size:13px;color:var(--muted)}
 .why{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13px}
 .why li{padding-left:10px;border-left:2px solid var(--line)}
-.why .who{font-weight:700}
-.why .tg{color:var(--hl);font-weight:500}
-.why .src{color:var(--muted);font-size:12px}
 .nodata{font-size:13px;color:var(--warn)}
 /* 배역별 비교 카드: 정보 없는 배우도 같은 크기로 */
 .cands{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
@@ -406,7 +403,6 @@ main[data-view=saved],main[data-view=tag]{max-width:640px}
 .actorx{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:10px}
 .actorx .vth{max-width:280px}
 .axhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.quotes{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:13px;color:var(--muted)}
 .calnav{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .calnav .chip{min-width:44px;justify-content:center}
 .sv .month{border:0;padding:0;background:none}
@@ -445,7 +441,7 @@ button.day{font:inherit;color:inherit;text-align:center}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610131336"></script>
+<script src="data.js?v=202610131425"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -466,12 +462,12 @@ function mergeMyTags() {
     for (const tag of t.tags) {
       const rows = ((D.actorTags[t.work] ||= {})[t.actor] ||= []);  // 태그가 있을 때만 배우 항목을 만든다(빈 배열을 남기지 않게)
       if (!rows.some(r => r.tag === tag && r.src === "내 관람"))
-        rows.push({role: t.role, tag, why: t.note || "내가 보고 남긴 태그", src: "내 관람", season: "2026", link: "", show: `${t.date} ${t.time}`});
+        rows.push({role: t.role, tag, src: "내 관람", season: "2026"});
     }
     if (t.partner) for (const tag of t.combo) {
       const list = (D.comboTags[t.work] ||= []);
       if (!list.some(r => r.tag === tag && r.src === "내 관람" && r.a === t.actor && r.b === t.partner))
-        list.push({a: t.actor, b: t.partner, role: "조합", tag, why: t.note || "내가 보고 남긴 태그", src: "내 관람", season: "2026", link: "", show: ""});
+        list.push({a: t.actor, b: t.partner, role: "조합", tag, src: "내 관람", season: "2026"});
     }
   }
 }
@@ -551,9 +547,7 @@ function whenTile(p) {
   const badges = p.notes.filter(n => /첫공|막공|폐막|프리뷰|마티네|스윙/.test(n)).map(n => `<span class="badge">${esc(n.length > 14 ? n.slice(0, 12) + "…" : n)}</span>`).join("");
   return `<div class="when"><div class="d">${md(p.date)}</div><div class="w">${esc(p.dow)}요일</div><div class="t">${esc(p.time)}</div>${badges}</div>`;
 }
-// 다른 작품 리뷰에서 가져온 목소리 태그는 출처 뒤에 "OO 리뷰 기준"을 붙인다(recommend.py가 from을 단다)
-const srcLabel = r => r.src + (r.from ? `, ${r.from} 리뷰 기준` : "");
-const evidenceList = ev => (levelMix(ev) ? `<p class="tiny muted mix">출처 ${levelMix(ev)}</p>` : "") + `<ul class="why">${ev.map(e => `<li><span class="who">${esc(e.who)}</span> · <span class="tg">${esc(e.tag)}</span> — ${esc(e.why)} <span class="src">${esc(srcLabel(e))}${e.season && e.season !== "2026" ? `, ${esc(e.season)} 시즌` : ""}${e.link ? ` <a href="${esc(e.link)}" target="_blank" rel="noopener">출처</a>` : ""}</span></li>`).join("")}</ul>`;
+// 태그 근거 문장(why)·출처 이름·링크는 사용자 화면 어디에도 내지 않는다(2026-10-13 사용자 지시). data.js 에도 없다 — 서로 다른 출처를 세는 키(sk)만 있다
 const won = n => n.toLocaleString("ko-KR") + "원";
 const views = n => n >= 10000 ? `${(n / 10000).toFixed(n >= 100000 ? 0 : 1)}만` : n.toLocaleString("ko-KR");
 const videoOf = (work, a) => (((D.videos || {})[work] || {})[a] || [])[0];  // 공식 채널 우선으로 정렬돼 있어서 첫 번째가 대표 영상
@@ -645,11 +639,8 @@ const suggestTags = (text, tagNames, phrases = {}) => { const flat = String(text
 // 배우 본인·제작진의 말은 확정이어도 점수·반대 근거·내 기록에는 안 쓰고, 상세 화면에 '배우가 밝힌 해석'(제작진은 '공식 소개')으로만 보여 준다
 const OFFICIAL_LEVELS = ["배우 본인·공식", "배우 인터뷰", "제작진·공식"];
 const isOfficial = r => OFFICIAL_LEVELS.includes(r.level);
-const LEVEL_SHORT = {"전문매체·언론": "전문매체", "일반 관객 후기": "관객", "설문": "관객", "직접 관람": "관객", "관객 후기": "관객", "배우 본인·공식": "배우 본인", "배우 인터뷰": "배우 본인", "제작진·공식": "공식", "기타": "기타"};
-const LEVEL_ORDER = ["전문매체", "관객", "배우 본인", "공식", "기타"];
-const srcKey = e => e.link || e.src;  // 서로 다른 출처 = 링크(없으면 출처 이름)
-const levelMix = ev => { const by = {}; for (const e of ev) { const k = LEVEL_SHORT[e.level]; if (k) (by[k] ||= new Set()).add(srcKey(e)); } return LEVEL_ORDER.filter(k => by[k]).map(k => `${k} ${by[k].size}`).join(" · "); };  // '전문매체 1 · 관객 2' (출처 종류별, 같은 링크는 한 번)
-// 같은 축 양쪽에 근거가 있을 때의 의견 분포. 출처(링크) 수로 센다: ['맑은 음색 3 · 묵직한 음색 1']. 점수는 건드리지 않는다. 가창↔연기는 반대가 아니라서 뺀다
+const srcKey = e => e.sk || e.link || e.src;  // 서로 다른 출처를 세는 열쇠: export 가 단 sk(출처 해시, 링크는 안 실림), 옛 data.js 는 링크·출처 이름, 내 관람 기록은 src
+// 같은 축 양쪽에 근거가 있을 때의 의견 분포. 서로 다른 출처 수(srcKey)로 센다: ['맑은 음색 3 · 묵직한 음색 1']. 점수는 건드리지 않는다. 가창↔연기는 반대가 아니라서 뺀다
 const opinionDist = (rows, D) => D.axes.filter(x => x.left !== "가창").map(x => {
   const side = key => new Set(rows.filter(r => (D.axis[key] || []).includes(r.tag)).map(srcKey)).size, l = side(x.left), r = side(x.right);
   return l && r ? `${x.left} ${l} · ${x.right} ${r}` : "";
@@ -838,7 +829,7 @@ const eul = name => { const c = String(name).charCodeAt(String(name).length - 1)
 // 배우 태그 두 줄: '목소리'(다른 작품에서 온 건 작품 이름을 괄호로)와 '이 배역'. 취향과 맞는 태그를 앞에 둔다
 const tagLines = (rows, want, max = 99) => {
   const one = (label, rs) => { const items = mergeTags(rs).sort((a, b) => want.has(b.r.tag) - want.has(a.r.tag)).slice(0, max);
-    return items.length ? `<div class="tl"><span class="tlab">${label}</span><div class="chips">${items.map(g => `<span class="tag ${want.has(g.r.tag) ? "hit" : ""}" title="${esc(g.r.why)}">${esc(g.r.tag)}${!g.own && g.froms.length ? ` (${esc(g.froms.join("·"))})` : g.r.season && g.r.season !== "2026" ? ` (${esc(g.r.season)})` : ""}</span>`).join("")}</div></div>` : ""; };
+    return items.length ? `<div class="tl"><span class="tlab">${label}</span><div class="chips">${items.map(g => `<span class="tag ${want.has(g.r.tag) ? "hit" : ""}">${esc(g.r.tag)}${!g.own && g.froms.length ? ` (${esc(g.froms.join("·"))})` : g.r.season && g.r.season !== "2026" ? ` (${esc(g.r.season)})` : ""}</span>`).join("")}</div></div>` : ""; };
   const sp = voiceSplit(rows, D); return one("목소리", sp.voice) + one("이 배역", sp.role);
 };
 const distLine = rows => { const d = opinionDist(rows, D); return d.length ? `<p class="tiny muted dist">의견이 갈려요 · ${esc(d.join(" / "))}</p>` : ""; };
@@ -870,8 +861,6 @@ V.detail = (work, date, time) => {
   const w = workOf(work), run = runOf(work, date) || {}, want = S.prefs?.axes?.length ? wantSet(S.prefs.axes) : new Set();
   const planned = S.plans.some(x => x.work === work && x.date === date && x.time === time);
   const order = [...leads(work, p.cast), ...rests(work, p.cast)];
-  const allRows = order.flatMap(([role, a]) => ((D.actorTags[work] || {})[a] || []).map(r => ({who: a, role, ...r})));
-  const rows = allRows.filter(r => !isOfficial(r)), ivs = allRows.filter(r => isOfficial(r) && r.level !== "제작진·공식"), prod = allRows.filter(r => r.level === "제작진·공식");  // 배우 본인·제작진 공식은 근거·점수 밖, '배우가 밝힌 해석'·'공식 소개'로 따로
   const same = perfsOf(work).filter(x => !(x.date === date && x.time === time) && leads(work, x.cast).every(([r, a]) => p.cast[r] === a)).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const grade = S.prefs?.grade, priv = isPrivate(p);
   return `
@@ -885,9 +874,6 @@ V.detail = (work, date, time) => {
           ${rs.length ? tagLines(rs, want) + distLine(rs) : `<p class="small muted">아직 리뷰 태그가 없어요.${videoOf(work, a) ? "" : " 공식 영상으로 확인해 보세요."}</p>`}
           ${videoOf(work, a) ? videoRow(videoOf(work, a)) : ""}</div>`; }).join("")}</div>
       <p class="tiny muted">진한 태그가 내 취향과 맞는 거예요.</p></div>
-    ${rows.length ? `<div class="card"><h3>근거</h3>${evidenceList(rows)}</div>` : ""}
-    ${ivs.length ? `<div class="card"><h3>배우가 밝힌 해석</h3><p class="tiny muted">배우 본인의 말이라 추천 계산에는 쓰지 않아요.</p>${evidenceList(ivs)}</div>` : ""}
-    ${prod.length ? `<div class="card"><h3>공식 소개</h3><p class="tiny muted">제작진·공식 출처라 추천 계산에는 쓰지 않아요.</p>${evidenceList(prod)}</div>` : ""}
     </div>
     <div class="side">
     ${run.prices?.length ? `<div class="card"><h3>좌석 등급과 가격 <span class="small muted">${esc(run.label)} · 정가 · 할인 전</span></h3>
@@ -1689,11 +1675,10 @@ const summaryCard = (ref, rec) => {
 
 // ② 누구로 볼까요?: 주연 배역마다 한 줄(배우를 나란히), 추천 조합은 미리 선택 + PICK. 배우 특징은 고른 배우만 펼친다
 const actorDetail = (work, role, a, want) => {
-  const rows = roleRows(D, work, a, role), v = videoOf(work, a), pin = pinStateOf(S, work, a), qs = [...new Map(rows.filter(r => r.why).map(r => [r.why, r])).values()].slice(0, 2);
+  const rows = roleRows(D, work, a, role), v = videoOf(work, a), pin = pinStateOf(S, work, a);
   return `<div class="actorx"><div class="axhead"><b>${esc(a)}</b><span class="pins"><button class="chip x ${pin === "star" ? "on" : ""}" data-act="pin" data-work="${esc(work)}" data-a="${esc(a)}" data-k="star" title="꼭 볼 배우로">⭐ 꼭 볼 배우</button><button class="chip x ${pin === "avoid" ? "on" : ""}" data-act="pin" data-work="${esc(work)}" data-a="${esc(a)}" data-k="avoid" title="이 배우가 나오는 날짜를 빼요">이 배우 빼기</button></span></div>
     ${videoThumb(v, ytSearch(work, a, role), a)}
-    ${rows.length ? tagLines(rows, want) + distLine(rows) : `<p class="small muted">아직 리뷰 태그가 없어요.</p>`}
-    ${qs.length ? `<ul class="quotes">${qs.map(r => `<li>“${esc(r.why)}” <span class="tiny muted">${esc(r.src)}</span></li>`).join("")}</ul>` : ""}</div>`;
+    ${rows.length ? tagLines(rows, want) + distLine(rows) : `<p class="small muted">아직 리뷰 태그가 없어요.</p>`}</div>`;
 };
 const castSection = (ref, taste, want) => {
   const work = ref.key, from = today(), sel = curSel(D, S, work, from), recs = taste ? comboRecs(D, S, work, from) : [], {star, avoid} = pinsOf(S, work), cmp = S.proto?.cmp?.[work];
@@ -1750,7 +1735,7 @@ const plainCast = (ref, want) => {
   const key = ref.key, sel = S.proto?.asel?.[key] || "";
   const cands = ref.kind === "current" ? ref.s.cast : [...new Set(leadRolesOf(D, key).flatMap(r => r.cast))];
   const body = ref.kind === "current"
-    ? ref.s.cast.map(a => { const p = profileOf(D, a); return `<div class="actor"><div class="name"><span>${esc(a)}</span></div>${p.voice.length ? tagLines(p.voice.map(r => ({...r, from: r.work, why: r.work})), want) : `<p class="small muted">아직 PICKLE에 목소리 정보가 없어요.</p>`}</div>`; }).join("")
+    ? ref.s.cast.map(a => { const p = profileOf(D, a); return `<div class="actor"><div class="name"><span>${esc(a)}</span></div>${p.voice.length ? tagLines(p.voice.map(r => ({...r, from: r.work})), want) : `<p class="small muted">아직 PICKLE에 목소리 정보가 없어요.</p>`}</div>`; }).join("")
     : leadRolesOf(D, key).map(r => `<div class="rolebox"><div class="rolehead"><b>${esc(r.role)}</b> <span class="tiny muted">주연</span></div>${r.cast.map(a => { const rows = roleRows(D, key, a, r.role); return `<div class="actor"><div class="name"><span>${esc(a)}</span></div>${rows.length ? tagLines(rows, want) + distLine(rows) : `<p class="small muted">아직 리뷰 태그가 없어요.</p>`}</div>`; }).join("")}</div>`).join("");
   return `<section id="cast" class="sec"><h2>${ref.kind === "current" ? "출연진" : "주연 배우"}</h2><div class="card">${body}${ref.kind === "current" ? `<p class="tiny muted">대표 출연진 · 목소리 태그는 다른 공연 리뷰에서 온 거예요. 배우를 평가하지 않고 특징만 보여 드려요.</p>` : ""}</div>
     <details class="more" ${sel ? "open" : ""}><summary>이 배우, 내 취향이었나요? (선택)</summary><div class="morebox"><p class="small muted">날짜별 조합 정보가 없어서 배우 한 명씩 물어봐요.</p><div class="chips">${cands.map(a => `<button class="chip x ${sel === a ? "on" : ""}" data-act="actorSel" data-show="${esc(key)}" data-a="${esc(a)}">${esc(a)}</button>`).join("")}</div>
