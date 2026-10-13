@@ -218,8 +218,10 @@ button.day.has,.day.has{background:var(--soft);color:var(--fg);cursor:pointer}
 
 /* ---- 홈: 줄 설명 · 지역 칩 · 캐스팅 일정 표시 ---- */
 .hsub{margin:-6px 0 0;font-size:13px;color:var(--muted)}
-.afilter{gap:8px}
-.afilter .chip{min-height:40px;padding:8px 16px}
+/* 지역 칩: 줄바꿈 없이 한 줄 가로 스크롤(스크롤바 숨김). 화면 가장자리까지 늘려서 넘칠 때 오른쪽 끝 칩이 살짝 잘려 보이고, 다 들어가는 넓은 화면에선 그대로 보인다 */
+.chips.afilter{gap:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:calc(var(--gut) * -1);padding-inline:var(--gut);scroll-padding-inline:var(--gut);-webkit-overflow-scrolling:touch}
+.chips.afilter::-webkit-scrollbar{display:none}
+.afilter .chip{flex:none;white-space:nowrap;min-height:40px;padding:8px 16px}
 .pmark{position:absolute;left:6px;bottom:6px;max-width:calc(100% - 12px);font-size:10px;font-weight:700;line-height:1.35;padding:2px 7px;border-radius:999px;background:rgba(0,0,0,.76);color:#fff}
 
 .combochips{display:grid;gap:8px}

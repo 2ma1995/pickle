@@ -417,8 +417,8 @@ button.day{font:inherit;color:inherit;text-align:center}
 .castall b{font-size:12px;color:var(--muted);font-weight:500;margin-right:4px}
 .sheet .duel{margin:4px 0}
 </style>
-<link rel="stylesheet" href="theme.css?v=20261012a">
-<link rel="stylesheet" href="app.css?v=20261012a">  <!-- 스타일을 고칠 때마다 theme.css·app.css 의 ?v= 숫자를 같이 올린다(브라우저가 옛 스타일을 기억하지 않게) -->
+<link rel="stylesheet" href="theme.css?v=20261013a">
+<link rel="stylesheet" href="app.css?v=20261013a">  <!-- 스타일을 고칠 때마다 theme.css·app.css 의 ?v= 숫자를 같이 올린다(브라우저가 옛 스타일을 기억하지 않게) -->
 </head>
 <body>
 <div class="shell">
@@ -445,7 +445,7 @@ button.day{font:inherit;color:inherit;text-align:center}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610131328"></script>
+<script src="data.js?v=202610131336"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -1856,6 +1856,7 @@ function route() {
   CUR = {name, args};
   closeSheet();
   if (location.hash !== lastHash && S.proto?.flash) delete S.proto.flash;  // 평가 안내는 그 화면에서만
+  const keepBar = document.querySelector(".afilter")?.scrollLeft || 0;  // 지역 칩 줄의 가로 스크롤 위치(다시 그려도 그 자리 유지)
   CTA = null; const view = $("#view"); view.innerHTML = (V[name] || V.home)(...args); view.dataset.view = V[name] ? name : "home";
   const cta = $("#cta"); if (CTA) { cta.hidden = false; cta.innerHTML = `<button class="btn" data-act="${CTA.act}">${esc(CTA.text)}</button>`; } else cta.hidden = true;  // 폰에서는 화면 아래 고정 버튼(넓은 화면은 덩어리 안 버튼)
   $("#back").hidden = ["home", "works", "taste", "onboard", "plans", "me"].includes(name);
@@ -1863,6 +1864,8 @@ function route() {
   document.querySelectorAll("[data-tab]").forEach(a => a.classList.toggle("on", a.dataset.tab === tab));
   if (location.hash !== lastHash) window.scrollTo(0, 0);  // 화면이 바뀔 때만 맨 위로. 카드·칩을 눌러 다시 그릴 땐 스크롤을 유지한다
   lastHash = location.hash;
+  const bar = document.querySelector(".afilter");  // 눌린 지역 칩이 가로 스크롤 밖이면 보이는 곳까지 밀어 준다
+  if (bar) { bar.scrollLeft = keepBar; const on = bar.querySelector('.chip[aria-pressed="true"]'), r = on?.getBoundingClientRect(), b = bar.getBoundingClientRect(); if (r && r.left < b.left) bar.scrollLeft += r.left - b.left - 18; else if (r && r.right > b.right) bar.scrollLeft += r.right - b.right + 18; }
   if (SCROLL_TO) { const t = document.querySelector(SCROLL_TO); SCROLL_TO = ""; if (t) t.scrollIntoView(); }
   renderDebug();
 }
