@@ -459,7 +459,7 @@ button.day{font:inherit;color:inherit;text-align:center}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610131659"></script>
+<script src="data.js?v=202610131704"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -903,9 +903,8 @@ V.detail = (work, date, time) => {
         <p class="tiny muted">주연 ${leads(work, p.cast).map(([, a]) => esc(a)).join(" · ")}${leads(work, p.cast).length > 1 ? " 조합이" : iga(leads(work, p.cast)[0]?.[1] || "")} 그대로인 날이에요. 조연은 다를 수 있어요.</p>`
         : `<p class="small muted">이 주연 조합은 이 회차뿐이에요. 좌석이 없으면 다른 조합이나 다른 날짜를 골라 주세요.</p>`}</div>
     <div style="display:grid;gap:10px">
-    ${priv ? `<button class="btn" disabled>일반 예매 불가</button>` : run.ticket ? `<a class="btn" href="${esc(run.ticket)}" target="_blank" rel="noopener">예매처로 이동 ↗</a>
-    <p class="tiny muted">예매처에서 <b>${md(date)} ${esc(time)}</b> 날짜를 다시 골라 주세요(날짜는 자동으로 안 넘어가요).</p>` : `<button class="btn" disabled>예매 링크 준비 중</button>`}
-    <button class="btn ghost" data-act="plan" data-work="${esc(work)}" data-date="${date}" data-time="${time}" ${planned || priv ? "disabled" : ""}>${planned ? "볼 예정에 담았어요" : priv ? "볼 예정에 담을 수 없어요" : "볼 예정에 담기"}</button>
+    ${priv ? `<button class="btn" disabled>일반 예매 불가</button>` : run.ticket ? "" : `<button class="btn" disabled>예매 링크 준비 중</button>`}
+    ${planned ? `<a class="btn" href="#saved/${planIdx(work, date, time)}">볼 예정에 담았어요 · ${run.ticket ? "예매처로 가기" : "담은 공연 보기"} →</a>` : `<button class="btn ${priv || !run.ticket ? "ghost" : ""}" data-act="plan" data-work="${esc(work)}" data-date="${date}" data-time="${time}" ${priv ? "disabled" : ""}>${priv ? "볼 예정에 담을 수 없어요" : "볼 예정에 담기"}</button>`}
     <p class="tiny muted">담아 두면 공연 다음 날 관람 기록을 남길 수 있어요.</p>
     </div>
     </div>`;
@@ -941,7 +940,7 @@ V.saved = i => {
       ${run.venue ? `<p class="small muted">${esc(run.venue)}</p>` : ""}
       <div class="chips">${castChips(x.work, x.cast)}</div></div>
     <div class="svact">
-      ${run.ticket ? `<a class="btn" href="${esc(run.ticket)}" target="_blank" rel="noopener">예매처로 이동 ↗</a>
+      ${run.ticket ? `<a class="btn" data-act="ticketSaved" data-i="${+i}" href="${esc(run.ticket)}" target="_blank" rel="noopener">예매처로 이동 ↗</a>
       <p class="tiny muted">예매처에서 <b>${md(x.date)} ${esc(x.time)}</b> 날짜를 다시 골라 주세요(날짜는 자동으로 안 넘어가요).</p>` : `<button class="btn" disabled>예매 링크 준비 중</button>`}
       ${run.seatmap?.url ? `<a class="btn ghost" href="${esc(run.seatmap.url)}" target="_blank" rel="noopener">좌석 배치도 ↗</a>` : ""}
       <a class="btn ghost" download="${esc(file)}" href="${icsHref(x, run)}">내 캘린더에 추가</a>
@@ -1776,11 +1775,13 @@ const castSection = (ref, taste, want) => {
 
 // ③ 이 조합으로 볼 수 있는 날: 한 달 달력(‹ ›), 볼 수 있는 날만 진하게, 날짜를 누르면 그날 회차 카드
 const allCast = (work, cast) => [...leads(work, cast), ...rests(work, cast)].map(([r, a]) => `<span><b>${esc(r)}</b>${esc(a)}</span>`).join("");
-const sessionCard = (work, p) => { const planned = S.plans.some(x => x.work === work && x.date === p.date && x.time === p.time), run = runOf(work, p.date) || {};
+// 날짜별 회차 카드: [볼 예정에 담기] 하나(예매처 버튼은 담은 뒤 화면 #saved 에 있다). 이미 담은 회차는 그 화면으로 가는 버튼. 예매 링크가 없는 회차는 예전처럼 '예매 링크 준비 중' 안내
+const planIdx = (work, date, time) => S.plans.findIndex(x => x.work === work && x.date === date && x.time === time);
+const sessionCard = (work, p) => { const pi = planIdx(work, p.date, p.time), run = runOf(work, p.date) || {};
   return `<div class="card perf">${whenTile(p)}<p class="small muted">${esc(run.venue || "")}</p><div class="castall">${allCast(work, p.cast)}</div>
-    <div class="acts"><button class="btn" data-act="plan" data-work="${esc(work)}" data-date="${p.date}" data-time="${p.time}" ${planned ? "disabled" : ""}>${planned ? "볼 예정에 담았어요" : "볼 예정에 담기"}</button>
-      ${run.ticket ? `<a class="btn ghost" data-ticket="1" data-work="${esc(work)}" data-date="${p.date}" data-time="${p.time}" href="${esc(run.ticket)}" target="_blank" rel="noopener">예매처로 이동 ↗</a>` : `<button class="btn ghost" disabled>예매 링크 준비 중</button>`}</div>
-    <a class="tiny" href="#detail/${esc(work)}/${p.date}/${p.time}">좌석 배치도·가격 자세히 →</a>${run.ticket ? `<p class="tiny muted">예매처에서 <b>${md(p.date)} ${esc(p.time)}</b> 날짜를 다시 골라 주세요(날짜는 자동으로 안 넘어가요).</p>` : ""}</div>`; };
+    <div class="acts">${pi >= 0 ? `<a class="btn" href="#saved/${pi}">볼 예정에 담았어요 · ${run.ticket ? "예매처로 가기" : "담은 공연 보기"} →</a>`
+      : `<button class="btn" data-act="plan" data-work="${esc(work)}" data-date="${p.date}" data-time="${p.time}">볼 예정에 담기</button>${run.ticket ? "" : `<button class="btn ghost" disabled>예매 링크 준비 중</button>`}`}</div>
+    <a class="tiny" href="#detail/${esc(work)}/${p.date}/${p.time}">좌석 배치도·가격 자세히 →</a></div>`; };
 const datesSection = ref => {
   const work = ref.key, from = today(), sel = curSel(D, S, work, from), perfs = selPerfs(D, work, sel, from), dates = [...new Set(perfs.map(p => p.date))], {star, avoid} = pinsOf(S, work);
   if (!dates.length) {
@@ -1865,7 +1866,7 @@ const sheetBody = () => {
   if (SHEET.kind === "duel") { const {work, cur} = SHEET;
     return `<h3>${esc(cur.role)}, 둘 중 누가 끌려요?</h3><p class="small muted">고른 결과는 이 작품의 추천 조합에 바로 반영돼요.</p><div class="duel">${duelSide(work, cur.role, cur.left)}${duelSide(work, cur.role, cur.right)}</div>
       <div class="duelb"><button class="chip" data-act="sheetDuel" data-r="left">왼쪽</button><button class="chip" data-act="sheetDuel" data-r="tie">비슷해요</button><button class="chip" data-act="sheetDuel" data-r="right">오른쪽</button></div><button class="chip x" data-act="closeSheet">닫기</button>`; }
-  const p = SHEET.pending, go = p.action === "plan" ? "볼 예정에 담기" : "예매처로 이동", leadsA = leadsOf(D, p.work, p.cast), cast = Object.fromEntries(leadsA);
+  const p = SHEET.pending, go = "볼 예정에 담기", leadsA = leadsOf(D, p.work, p.cast), cast = Object.fromEntries(leadsA);
   const line = `<p class="small">${md(p.date)} ${esc(p.time)} · ${leadsA.map(([r, a]) => `<b>${esc(r)}</b> ${esc(a)}`).join(" · ")}</p>`;
   if (SHEET.step === 1) return `<h3>이 조합, 얼마나 기대돼요?</h3>${line}
     ${ratingBox({key: `combo|${p.work}|${comboKey(D, p.work, p.cast)}|${p.date}|${p.time}`, kind: "combo", title: "기대돼요?", bare: true, lo: "별로예요", hi: "아주 기대돼요", work: p.work, comboKey: comboKey(D, p.work, p.cast), cast, perf: {date: p.date, time: p.time}, actors: leadsA.map(([, a]) => a), sheet: true})}
@@ -1876,15 +1877,13 @@ const sheetBody = () => {
     ${low ? `<div class="card"><p class="small"><b>다른 조합 볼까요?</b> 이 조합은 추천에서 내렸어요. 다음 조합이 미리 선택돼요.</p><button class="btn ghost" data-act="sheetOther">다른 조합 보기</button></div>` : ""}
     <button class="btn ${low ? "ghost" : ""}" data-act="sheetGo">${low ? "그래도 " : ""}${go}</button>`;
 };
-const openRate = (action, p) => {  // 담기·예매처로 누르는 순간: 보여 준 추천 조합(shown)은 지금 기록해 두고, 시트를 끝까지 지나야(건너뛰기 포함) 실제로 담거나 연다
-  const run = runOf(p.work, p.date) || {};
-  SHEET = {kind: "rate", step: 1, score: 0, pending: {action, work: p.work, date: p.date, time: p.time, dow: p.dow, cast: p.cast, url: run.ticket || "", rec: comboChoiceRecord(D, S, action, p, today())}};
+const openRate = (action, p) => {  // 담기를 누르는 순간: 보여 준 추천 조합(shown)은 지금 기록해 두고, 시트를 끝까지 지나야(건너뛰기 포함) 실제로 담는다. 예매처 이동은 담은 뒤 화면(#saved)에서
+  SHEET = {kind: "rate", step: 1, score: 0, pending: {action, work: p.work, date: p.date, time: p.time, dow: p.dow, cast: p.cast, rec: comboChoiceRecord(D, S, action, p, today())}};
   renderSheet();
 };
 const finishPending = () => {
   const p = SHEET.pending; track("combo_choice", p.rec);
-  if (p.action === "plan") { S.plans.push({work: p.work, date: p.date, dow: p.dow, time: p.time, cast: p.cast, tagged: false}); save(); closeSheet(); location.hash = "#saved/" + (S.plans.length - 1); }
-  else { closeSheet(); if (/^https?:\/\//.test(p.url)) window.open(p.url, "_blank", "noopener"); route(); }
+  S.plans.push({work: p.work, date: p.date, dow: p.dow, time: p.time, cast: p.cast, tagged: false}); save(); closeSheet(); location.hash = "#saved/" + (S.plans.length - 1);
 };
 
 // ---------- 밝은/어두운 판 버튼(왼쪽 아래) ----------
@@ -1919,6 +1918,7 @@ const snapTaste = () => {
 };
 // 숨긴 뒤 잠깐 뜨는 '되돌리기'(6초). 다시 보고 싶으면 추천 줄 아래 '숨긴 공연 N개 · 되돌리기'
 let undoT; const showUndo = (key, action) => { const u = $("#undo"), ref = showRef(D, key); u.innerHTML = `<span>${esc(ref?.title || "공연")} 숨겼어요</span><button type="button" data-act="recUndo" data-key="${esc(key)}">되돌리기</button>`; u.hidden = false; clearTimeout(undoT); undoT = setTimeout(() => { u.hidden = true; }, 6000); };
+const ticketSavedTap = d => { const x = S.plans[+d.i], p = x && D.perfs.find(q => q.work === x.work && q.date === x.date && q.time === x.time); if (p) track("combo_choice", comboChoiceRecord(D, S, "ticket", p, today())); };
 const vopenTap = d => {  // 영상 ID 가 있는 썸네일을 눌렀을 때: 연 상태를 저장하고 그 자리에 질문 칸을 채운다(화면을 다시 그리지 않아 새 탭 열기를 방해하지 않는다)
   if (!/^[\w-]{11}$/.test(d.vid || "") || vrOf(S, d.work, d.a, d.vid)) return;
   openVideo(S, d.work, d.a, d.vid); save();
@@ -1954,8 +1954,7 @@ document.addEventListener("click", e => {
   if (go) {
     if (go.dataset.entry) { const en = ((S.stats ||= {}).entry ||= {rec: 0, browse: 0}); en[go.dataset.entry] = (en[go.dataset.entry] || 0) + 1; save(); }  // 홈에서 어느 입구(추천 칸/모든 작품)로 들어왔는지. 나중에 보려고 세기만 하고 화면엔 안 보인다
     location.hash = go.dataset.go; return; }
-  const tk = e.target.closest("a[data-ticket]");  // 예매처로: 바로 열지 않고 '이 조합, 얼마나 기대돼요?' 시트를 거친다(건너뛰면 그때 연다)
-  if (tk) { e.preventDefault(); const p = D.perfs.find(x => x.work === tk.dataset.work && x.date === tk.dataset.date && x.time === tk.dataset.time); if (p) openRate("ticket", p); return; }
+  const ts = e.target.closest('a[data-act="ticketSaved"]'); if (ts) { ticketSavedTap(ts.dataset); return; }  // 담은 뒤 화면의 [예매처로 이동]: 링크는 그대로 열리고(막지 않는다) combo_choice(ticket) 를 남긴다
   if (!e.target.closest('[data-act="recMenu"],[data-act="recFb"]')) document.querySelectorAll(".pmenu").forEach(m => m.remove());  // 열린 ⋯ 메뉴는 바깥을 누르면 닫힌다
   const vo = e.target.closest('a[data-act="vopen"]'); if (vo) { vopenTap(vo.dataset); return; }  // 영상 썸네일: 링크는 그대로 새 탭으로 열리고(막지 않는다) 그 자리에 '이 영상 어땠어요?'가 나온다
   if (e.target.closest("a[href]")) return;  // 카드 안의 출처·영상 링크는 카드 동작을 건드리지 않는다
@@ -1976,6 +1975,7 @@ document.addEventListener("click", e => {
     case "recMenu": { const w = [...document.querySelectorAll(".pwrap")].find(x => x.dataset.key === d.key && x.dataset.row === d.row); if (!w) break; const open = w.querySelector(".pmenu"); document.querySelectorAll(".pmenu").forEach(m => m.remove()); if (!open) w.insertAdjacentHTML("beforeend", recMenuHtml(d.key, d.row)); break; }  // 줄을 다시 그리지 않고 그 카드에만 메뉴를 붙인다(가로 스크롤 위치를 지키려고)
     case "recFb": { if (!hideShow(S, d.key, d.row, d.a) || !showRef(D, d.key)) { if (S.proto?.hid?.[d.key] && !showRef(D, d.key)) delete S.proto.hid[d.key]; break; } track("rec_feedback", {show: d.key, row: d.row, action: d.a}); save(); route(); showUndo(d.key, d.a); break; }
     case "recUndo": { const e = unhideShow(S, d.key); if (!e) break; track("rec_feedback", {show: d.key, row: e.row, action: "undo"}); save(); $("#undo").hidden = true; route(); break; }
+    case "ticketSaved": ticketSavedTap(d); break;
     case "vopen": vopenTap(d); break;
     case "vreact": { if (!/^[\w-]{11}$/.test(d.vid || "")) break; const r = setVideoReaction(S, d.work, d.a, d.vid, d.r); if (r) { track("video_reaction", videoReactionRecord(d.work, d.role, d.a, d.vid, r)); save(); route(); } break; }  // 답을 바꿀 때마다 한 줄(같은 답을 또 눌러도 안 남긴다)
     case "pin": { const before = pinStateOf(S, d.work, d.a), after = togglePin(S, d.work, d.a, d.k); track("actor_pick", pickRecord(D, d.work, d.a, before, after)); save(); route(); break; }
