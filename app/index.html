@@ -459,7 +459,7 @@ button.day{font:inherit;color:inherit;text-align:center}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610131704"></script>
+<script src="data.js?v=202610131728"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -1069,8 +1069,8 @@ const iga = n => { const c = String(n).charCodeAt(String(n).length - 1) - 0xAC00
 const wagwa = n => { const c = String(n).charCodeAt(String(n).length - 1) - 0xAC00; return c >= 0 && c % 28 ? "과" : "와"; };
 // 취향을 한 번이라도 다룬(건너뛰기 포함) 사람, 또는 예전 앱에서 쓴 기록(볼 예정·관람 기록·비교 투표·좋아하는 배우 설문)이 있는 사람은 곧바로 홈, 처음 온 사람만 취향폼
 const entryRoute = (prefs, state = null) => prefs || (state && ["plans", "tags", "votes", "likes"].some(k => (state[k] || []).length)) ? "#home" : "#taste/1";
-// 취향폼 1→2→3, 끝에 선택 단계(4: 배역 이상형 월드컵)는 이상형을 고를 작품(duelWork)이 있을 때만
-const tasteNext = (step, duelWork = null) => +step === 3 && duelWork ? "#taste/4" : +step >= 3 ? "#home" : "#taste/" + (+step + 1);
+// 취향폼 1→2→3, 3 다음은 바로 홈(추천). 끌리는 배우 고르기는 내 취향·#duel 화면에서 하고 싶은 사람만
+const tasteNext = step => +step >= 3 ? "#home" : "#taste/" + (+step + 1);
 const showRef = (D, key) => {  // 극 요약 주소의 키: 시드 작품은 작품 이름, KOPIS 공연은 mt20id
   const w = (D.works || []).find(x => x.name === key); if (w) return {kind: "seed", key, w, title: w.name};
   const s = (D.currentShows || []).find(x => x.id === key); return s ? {kind: "current", key, s, title: s.title} : null;
@@ -1255,7 +1255,6 @@ const calDayOf = (S, work, dates) => dates.includes(S.proto?.cd?.[work]) ? S.pro
 const priceMin = prices => { const n = (prices || []).map(p => Array.isArray(p) ? p[1] : 0).filter(x => x > 0); return n.length ? Math.min(...n) : 0; };
 const priceMinText = t => { const n = [...String(t || "").matchAll(/(\d{1,3}(?:,\d{3})+|\d{4,})\s*원/g)].map(m => +m[1].replace(/,/g, "")).filter(x => x >= 1000); return n.length ? Math.min(...n) : 0; };
 // 취향폼 끝 선택 단계: 추천 1순위(회차 캐스팅이 있는) 작품의 주연 배역으로 이상형 월드컵
-const tasteDuelWork = (D, S, from) => { for (const r of homeRecs(D, S, from)) { const w = D.works.find(x => x.name === r.key); if (w && w.hasSchedule && duelStatus(D, S, w.name, from).some(x => x.total > 0)) return w.name; } return null; };
 const resetCombo = (S, work) => { const P = S.proto; if (!P) return; for (const k of ["pins", "hide", "wrong", "duelCur", "duelRound", "pinAsk", "sel", "cm", "cd", "cmp"]) if (P[k]) delete P[k][work]; P.duels = (P.duels || []).filter(d => d.work !== work); };
 
 // ---- 기록 한 줄 만들기(정의서 6종). 여기서 만든 값은 기록기(track)가 한 번 더 걸러서 쌓는다
@@ -1596,7 +1595,7 @@ V.privacy = () => !trackUi() ? `<div class="one"><div class="card"><p class="sma
   ${trackSettings()}</div>`;
 
 // ---------- proto: 취향폼(1·2·3 + 건너뛰기) ----------
-V.taste = (step = "1") => step === "4" ? tasteDuel() : `<div class="one">${noticeLine()}${onboardBody(step)}${(step === "1" || !step) ? `<button class="chip x" data-act="tasteSkipAll" style="justify-self:center">취향 없이 지금 하는 공연 전체 보기</button>` : ""}</div>`;
+V.taste = (step = "1") => `<div class="one">${noticeLine()}${onboardBody(step)}${(step === "1" || !step) ? `<button class="chip x" data-act="tasteSkipAll" style="justify-self:center">취향 없이 지금 하는 공연 전체 보기</button>` : ""}</div>`;
 
 // ---------- proto: '이 조합 어때요? 1~5' + 이유 칩(점수 따라 질문이 바뀐다) ----------
 // ctx: {key(초안·보냄 표시 열쇠), kind: combo|actor|after, title, actors(칩에서 고를 배우 후보), ...기록에 쓸 것}. 화면의 버튼은 짧은 id 로 ctx 를 찾는다
@@ -1848,9 +1847,6 @@ const duelCard = ref => {
 V.duel = key => { const ref = showRef(D, key);
   if (!ref || ref.kind !== "seed") return V.me();
   return `<div class="one"><div><p class="eyebrow">끌리는 배우 고르기</p><h1>${esc(key)}</h1></div><p class="muted small">같은 배역의 두 배우 중 끌리는 쪽을 골라요. 고른 결과가 이 작품의 추천 조합에 바로 반영돼요.</p>${duelCard(ref)}<a class="btn ghost" href="#me">내 취향으로</a></div>`; };
-const tasteDuel = () => { const w = tasteDuelWork(D, S, today());
-  if (!w) return `<div class="one">${noticeLine()}<div class="card"><p class="small muted">끌리는 배우를 고를 수 있는 공연이 아직 없어요.</p><a class="btn" href="#home">추천 보러 가기</a></div></div>`;
-  return `<div class="one">${noticeLine()}<div class="onboard-head"><p class="eyebrow">선택 · 끌리는 배우 고르기</p><h1>${esc(w)}, 어떤 배우가 끌려요?</h1></div><p class="muted small">추천 작품의 주연 배역마다 한 번씩. 안 해도 돼요.</p>${duelCard({key: w})}<div class="obg"><button class="btn" data-go="#home">${duelDone(S, w) ? "추천 보러 가기" : "건너뛰고 추천 보러 가기"}</button></div></div>`; };
 const duelMeCard = () => { const ws = D.works.filter(w => w.hasSchedule && duelStatus(D, S, w.name, today()).some(x => x.total > 0));
   return !ws.length ? "" : `<div class="card"><h3>끌리는 배우 고르기 <span class="small muted">선택</span></h3><p class="small muted">같은 배역의 두 배우 중 끌리는 쪽을 골라요. 고른 결과가 그 작품의 추천 조합에 바로 반영돼요.</p><div class="chips">${ws.map(w => `<button class="chip" data-go="#duel/${esc(w.name)}">${esc(w.name)}${duelDone(S, w.name) ? ` · ${duelDone(S, w.name)}판` : ""}</button>`).join("")}</div></div>`; };
 
@@ -1926,6 +1922,7 @@ const vopenTap = d => {  // 영상 ID 가 있는 썸네일을 눌렀을 때: 연
 };
 function route() {
   const h = decodeURIComponent(location.hash.slice(1) || entryRoute(S.prefs, S).slice(1));  // 첫 화면: 취향을 한 번도 안 다룬 사람은 취향폼, 아니면 홈
+  if (/^(taste|onboard)\/(?:[4-9]|\d\d+)$/.test(h)) { history.replaceState(null, "", "#home"); return route(); }  // 옛 '선택 · 끌리는 배우 고르기' 단계(#taste/4·#onboard/4)는 없어졌다 → 홈(새로고침·저장된 주소도)
   const [name, ...args] = h.split("/");
   CUR = {name, args};
   closeSheet();
@@ -1967,7 +1964,7 @@ document.addEventListener("click", e => {
       P.axes = next; for (const st of Object.values(S.cal)) followBase(st, next);  // 안 바꾼 작품은 새 기본 취향을 따라가게 저장 값도 맞춘다
       save(); route(); break; }
     case "tasteSkipAll": { prefsOf(); save(); location.hash = "#home"; break; }  // 취향을 한 번도 안 고르고 전체 목록으로
-    case "obGo": { prefsOf(); save(); snapTaste(); const dw = +d.to === 4 ? tasteDuelWork(D, S, today()) : null; location.hash = tasteNext(+d.to - 1, dw); if (+d.to > 3 && hasTaste(S.prefs)) toast("취향을 저장했어요"); break; }  // 건너뛰어도 S.prefs 는 만들어 둔다(다음부터는 곧바로 홈)
+    case "obGo": { prefsOf(); save(); snapTaste(); location.hash = tasteNext(+d.to - 1); if (+d.to > 3 && hasTaste(S.prefs)) toast("취향을 저장했어요"); break; }  // 건너뛰어도 S.prefs 는 만들어 둔다(다음부터는 곧바로 홈)
     case "askTag": { if (!askTagList(D).includes(d.t) || !(S.prefs?.favs || []).includes(d.a)) break; if (ASK.a !== d.a) { ASK.a = d.a; ASK.sel = new Set(); } ASK.sel.has(d.t) ? ASK.sel.delete(d.t) : ASK.sel.add(d.t); route(); break; }
     case "askSkip": { if (!(S.prefs?.favs || []).includes(d.a)) break; likeGet(d.a).asked = "skip"; if (ASK.a === d.a) ASK.sel = new Set(); save(); route(); break; }
     case "askFind": { const tags = ASK.a === d.a ? [...ASK.sel].filter(t => askTagList(D).includes(t)) : []; if (!tags.length || !(S.prefs?.favs || []).includes(d.a)) break;
