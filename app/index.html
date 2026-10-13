@@ -459,7 +459,7 @@ button.day{font:inherit;color:inherit;text-align:center}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610131758"></script>
+<script src="data.js?v=202610131803"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -1222,8 +1222,11 @@ const togglePin = (S, work, actor, kind) => {
 const VIDEO_REACTIONS = [["like", "마음에 들어요"], ["unsure", "모르겠어요"], ["dislike", "취향 아니에요"]];
 const vrOf = (S, work, actor, vid) => S.proto?.vr?.[work]?.[actor]?.[vid] || null;  // null = 아직 안 연 영상
 const openVideo = (S, work, actor, vid) => { const o = (((S.proto ||= {}).vr ||= {})[work] ||= {})[actor] ||= {}; return o[vid] ||= {}; };
-const setVideoReaction = (S, work, actor, vid, r) => { if (!VIDEO_REACTIONS.some(x => x[0] === r)) return null; const e = openVideo(S, work, actor, vid); if (e.r === r) return null; e.r = r; return r; };  // 바뀌었으면 r, 같으면 null(기록도 안 남긴다)
-const videoReactionRecord = (work, role, actor, vid, r) => ({work, role, actor, video: vid, reaction: r});
+// '마음에 들어요' 뒤에만 '어떤 점이 좋았어요? (선택)' 특징 칩(e.t = 고른 태그, 최대 6): 사전 확정 목소리 태그 6개. 다른 답으로 바꾸면 고른 특징은 지운다(부정적인 답에는 특징을 모으지 않는다)
+const vrTagList = D => askTagList(D).slice(0, 6);
+const setVideoReaction = (S, work, actor, vid, r) => { if (!VIDEO_REACTIONS.some(x => x[0] === r)) return null; const e = openVideo(S, work, actor, vid); if (e.r === r) return null; e.r = r; if (r !== "like") delete e.t; return r; };  // 바뀌었으면 r, 같으면 null(기록도 안 남긴다)
+const toggleVideoTrait = (D, S, work, actor, vid, tag) => { const e = vrOf(S, work, actor, vid); if (!e || e.r !== "like" || !vrTagList(D).includes(tag)) return null; const t = e.t || []; e.t = t.includes(tag) ? t.filter(x => x !== tag) : [...t, tag].slice(0, 6); return e.t; };  // 고른 목록(비었을 수도 있음), 칩이 아니거나 like 가 아니면 null
+const videoReactionRecord = (work, role, actor, vid, r, traits) => ({work, role, actor, video: vid, reaction: r, ...(traits ? {traits} : {})});
 const pinStateOf = (S, work, actor) => { const {star, avoid} = pinsOf(S, work); return star.includes(actor) ? "star" : avoid.includes(actor) ? "avoid" : ""; };
 // ---- 공연 화면(#show): ① 요약 ② 누구로 볼까요?(주연 배역마다 배우 선택, 추천 조합은 미리 선택) ③ 이 조합으로 볼 수 있는 날(한 달 달력). 고른 조합 = 배역 → 배우
 const leadRolesOf = (D, work) => (D.roles[work] || []).filter(r => r.weight === "주연");
@@ -1467,7 +1470,7 @@ const EVENTS = {
   actor_pick: {req: ["work", "role", "actor", "action"], shape: {work: R_WORK, role: R.inSet("roles"), actor: R.inSet("actors"), action: R.oneOf(["pin", "unpin", "avoid", "unavoid"])}},
   role_duel: {req: ["work", "role", "left", "right", "result"], shape: {work: R_WORK, role: R.inSet("roles"), left: R_SIDE, right: R_SIDE, result: R.oneOf(["left", "right", "tie"])}},  // 좌우 위치는 무작위, 그때 놓인 대로 남긴다
   actor_rating: {req: ["show_id", "actor", "score"], shape: {show_id: R.inSet("shows"), actor: R.inSet("actors"), score: R.int(1, 5), chips: R_CHIPS}},
-  video_reaction: {req: ["work", "role", "actor", "video", "reaction"], shape: {work: R_WORK, role: R.inSet("roles"), actor: R.inSet("actors"), video: R.ytid, reaction: R.oneOf(["like", "unsure", "dislike"])}},  // 배우 영상 썸네일을 누른 뒤 '이 영상 어땠어요?'에 답할 때(답을 바꿀 때마다 한 줄)
+  video_reaction: {req: ["work", "role", "actor", "video", "reaction"], shape: {work: R_WORK, role: R.inSet("roles"), actor: R.inSet("actors"), video: R.ytid, reaction: R.oneOf(["like", "unsure", "dislike"]), traits: R.arr(6, R.inSet("actorTags"))}},  // 배우 영상 썸네일을 누른 뒤 '이 영상 어땠어요?'에 답할 때(답을 바꿀 때마다 한 줄). traits: '마음에 들어요'(like)일 때 '어떤 점이 좋았어요?'에서 고른 특징 태그(사전 확정 태그만, 최대 6, 칩을 바꿀 때마다 한 줄·비면 [])
   taste_snapshot: {req: ["likes", "axes", "tags"], shape: {likes: R.arr(10, R.inSet("actors")), axes: R.dict(R.inSet("axisKeys"), R.int(-2, 2), 5), tags: R.arr(12, R.inSet("tags")), likeTags: R.dict(R.inSet("actors"), R.arr(8, R.inSet("actorTags")), 10)}},  // 취향폼을 저장하거나 고칠 때·홈에서 좋아하는 배우의 특징을 골라 [찾기]를 누를 때: 좋아하는 배우(앱 데이터에 있는 이름만), 취향 5축 값, 고른 태그, 좋아하는 배우별로 고른 특징 태그(사전 확정 태그만). '왜 좋아요' 글은 안 보낸다
   rec_feedback: {req: ["show", "row", "action"], shape: {show: R.inSet("shows"), row: R.oneOf(["fav", "similar", "taste"]), action: R.oneOf(["seen", "not_interested", "undo"])}},  // 홈 추천 줄 카드의 [이미 봤어요]·[관심 없어요]·되돌리기. row: fav 좋아하는 배우 출연작 / similar 비슷한 배우 출연작 / taste 내 취향 추천
 };
@@ -1613,7 +1616,7 @@ V.privacy = () => !trackUi() ? `<div class="one"><div class="card"><p class="sma
       <tr><td>배우를 '꼭 볼'이나 '제외'로 정하거나 풀 때</td><td>작품, 배역, 배우, 정했는지 풀었는지</td></tr>
       <tr><td>끌리는 배우 고르기에서 고를 때</td><td>맞붙은 두 배우와 그때 보여 준 태그, 고른 결과</td></tr>
       <tr><td>날짜별 조합 정보가 없는 공연에서 배우가 내 취향이었는지 고를 때</td><td>공연, 배우, 점수(1~5점), 고른 이유</td></tr>
-      <tr><td>배우 영상을 눌러 본 뒤 '이 영상 어땠어요?'에 답할 때</td><td>작품, 배역, 배우, 영상 번호(유튜브 영상 ID), 고른 답(마음에 들어요·모르겠어요·취향 아니에요). 답을 바꾸면 그때마다 한 줄 더 남아요</td></tr>
+      <tr><td>배우 영상을 눌러 본 뒤 '이 영상 어땠어요?'에 답할 때</td><td>작품, 배역, 배우, 영상 번호(유튜브 영상 ID), 고른 답(마음에 들어요·모르겠어요·취향 아니에요), '마음에 들어요'일 때 고른 특징(음색·성량 같은 정해진 태그만). 답이나 특징을 바꾸면 그때마다 한 줄 더 남아요</td></tr>
       <tr><td>취향 고르기를 저장하거나 고칠 때, 홈에서 좋아하는 배우의 어떤 점이 좋은지 골라 [찾기]를 누를 때</td><td>좋아하는 배우 이름(앱에 있는 이름만), 취향 5가지 값, 고른 태그, 좋아하는 배우별로 고른 특징 태그(음색·성량 같은 정해진 태그만). 내가 직접 쓴 글은 보내지 않아요. 전에 보낸 것과 같으면 다시 보내지 않아요</td></tr>
       <tr><td>홈 추천 줄에서 [이미 봤어요]·[관심 없어요]·[되돌리기]를 누를 때</td><td>공연, 어느 추천 줄이었는지(좋아하는 배우 · 비슷한 배우 · 내 취향), 누른 것</td></tr></table>
     <p class="small">모든 기록에는 <b>이 기기의 무작위 번호 2개</b>(기기 번호, 이번 방문 번호), 앱 버전, 기록한 <b>날짜</b>(시각은 남기지 않아요), 한 방문 안에서의 순서가 같이 붙어요.</p>
@@ -1782,7 +1785,9 @@ const vqHtml = (work, role, a, vid) => {
   const next = e.r === "like" ? (pin === "star" ? `<p class="small muted">⭐ 꼭 볼 배우로 담아 뒀어요</p>` : `<p class="small">⭐ 꼭 볼 배우로 담을까요? <button type="button" class="chip x" data-act="pin" data-work="${W}" data-a="${A}" data-k="star">담기</button></p>`)
     : e.r === "dislike" ? (pin === "avoid" ? `<p class="small muted">이 배우는 빼 뒀어요</p>` : `<p class="small">이 배우 빼기 할까요? <button type="button" class="chip x" data-act="pin" data-work="${W}" data-a="${A}" data-k="avoid">빼기</button></p>`)
     : e.r === "unsure" ? `<p class="small"><a href="${esc(ytSearch(work, a, role))}" target="_blank" rel="noopener">이 배우 영상 더 찾아보기 ▶</a></p>` : "";
-  return `<p class="small">이 영상 어땠어요?</p><div class="chips">${btns}</div>${next}`;
+  const tl = e.r === "like" ? vrTagList(D) : [], mine = e.t || [];
+  const traits = tl.length ? `<p class="small vtq">어떤 점이 좋았어요? <span class="muted">(선택)</span></p><div class="chips vtr">${tl.map(t => `<button type="button" class="chip x ${mine.includes(t) ? "on" : ""}" data-act="vtrait" data-work="${W}" data-role="${R}" data-a="${A}" data-vid="${I}" data-t="${esc(t)}" aria-pressed="${mine.includes(t)}">${esc(t)}</button>`).join("")}</div>` : "";
+  return `<p class="small">이 영상 어땠어요?</p><div class="chips">${btns}</div>${next}${traits}`;
 };
 const actorDetail = (work, role, a, want) => {
   const rows = roleRows(D, work, a, role), v = videoOf(work, a), pin = pinStateOf(S, work, a), vid = ytIdOf(v);
@@ -2014,6 +2019,7 @@ document.addEventListener("click", e => {
     case "ticketSaved": ticketSavedTap(d); break;
     case "vopen": vopenTap(d); break;
     case "vreact": { if (!/^[\w-]{11}$/.test(d.vid || "")) break; const r = setVideoReaction(S, d.work, d.a, d.vid, d.r); if (r) { track("video_reaction", videoReactionRecord(d.work, d.role, d.a, d.vid, r)); save(); route(); } break; }  // 답을 바꿀 때마다 한 줄(같은 답을 또 눌러도 안 남긴다)
+    case "vtrait": { if (!/^[\w-]{11}$/.test(d.vid || "")) break; const t = toggleVideoTrait(D, S, d.work, d.a, d.vid, d.t); if (t) { track("video_reaction", videoReactionRecord(d.work, d.role, d.a, d.vid, "like", t)); save(); route(); } break; }  // 칩을 누를 때마다 한 줄(like + 지금 고른 특징 전체, 비면 []). 분석은 마지막 줄
     case "pin": { const before = pinStateOf(S, d.work, d.a), after = togglePin(S, d.work, d.a, d.k); track("actor_pick", pickRecord(D, d.work, d.a, before, after)); save(); route(); break; }
     case "comboReset": { resetCombo(S, d.work); const P = S.proto; for (const k of Object.keys(P.sent || {})) if (k.startsWith(`combo|${d.work}|`)) { delete P.sent[k]; delete (P.msg || {})[k]; delete (P.dr || {})[k]; } delete P.flash; save(); route(); break; }
     case "rateScore": { const c = RATE_CTX[d.id]; if (c) setDr(c.key, draftScore(getDr(c.key), +d.n)); break; }

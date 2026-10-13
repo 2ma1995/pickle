@@ -178,6 +178,7 @@ main:is([data-view=onboard],[data-view=taste]) .one{background:none;border:0;pad
 .actorx{border-top:1px solid var(--line);padding-top:14px;gap:12px}
 .axhead b{font-size:17px}
 .axhead .chip.x{min-height:34px;padding:5px 12px;font-size:12.5px}
+.vtr .chip.x{min-height:32px;padding:4px 11px;font-size:12px}  /* 영상 '어떤 점이 좋았어요?' 특징 칩: 작게 */
 .quotes{color:var(--muted)}
 .quotes li{line-height:1.55}
 
