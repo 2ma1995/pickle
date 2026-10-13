@@ -457,7 +457,7 @@ button.day{font:inherit;color:inherit;text-align:center}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 
-<script src="data.js?v=202610131641"></script>
+<script src="data.js?v=202610131655"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -816,11 +816,11 @@ const liveShows = (D, from) => (D.currentShows || []).filter(s => s.end >= from 
 // 좋아하는 배우 a 와 닮은 배우가 나오는 작품. 지금 하는(끝나지 않은) 작품의 주연(runningLeads)이 후보고, a 본인은 후보가 아니다. 닮은 특성이 같은 후보끼리 한 줄로 묶는다.
 // 점수·순위 없음: 작품은 a 가 나오는 작품 먼저 → 나오는 서로 다른 닮은 특성 수 → 이름. 특성이 없으면 [] (좋아하는 점을 물어봐야 한다)
 const similarWorks = (D, a, extra, from) => {
-  const fav = traitsOf(D, a, extra); if (!fav.voice.length && !fav.role.length) return [];
+  const fav = traitsOf(D, a, extra), hasTraits = fav.voice.length > 0 || fav.role.length > 0;  // 특징 태그가 없는 배우도 '출연 중(here)'은 알려 준다. 닮은 배우 묶기(groups)만 특징이 있을 때 한다
   const res = [];
   const add = (w, names, here, traitsFor) => {  // names 중 닮은 특성이 겹치는 후보를 같은 특성끼리 한 줄로 묶어 res 에 더한다
     const groups = new Map();
-    for (const c of names.filter(x => x !== a).sort((x, y) => x.localeCompare(y, "ko"))) {
+    if (hasTraits) for (const c of names.filter(x => x !== a).sort((x, y) => x.localeCompare(y, "ko"))) {
       const r = similarTo(fav, traitsFor(c)); if (r.out || !r.shared.length) continue;
       const k = r.shared.join("|"); if (!groups.has(k)) groups.set(k, {labels: r.shared, names: []}); groups.get(k).names.push(c);
     }
@@ -1147,7 +1147,8 @@ const homeRows = (D, S, from) => {
   const A = [], inA = new Set(), B = [];
   for (const r of recs) { const here = [...new Set(r.reasons.filter(x => x.type === "fav-here").map(x => x.actor))]; if (here.length) { A.push({key: r.key, title: r.title, kind: r.kind, line: `${here.join("·")} 출연`}); inA.add(r.key); } }
   for (const r of recs) { if (inA.has(r.key)) continue; const sim = r.reasons.find(x => x.type === "fav-sim"); if (sim) B.push({key: r.key, title: r.title, kind: r.kind, line: `${sim.fav}처럼 ${sim.labels.join("·")} — ${sim.names.join("·")} 출연`}); }
-  return {mode: "fav", taste: [], A, B};
+  const used = new Set([...A, ...B].map(x => x.key));
+  return {mode: "fav", taste: recs.filter(r => !used.has(r.key)).map(r => ({key: r.key, title: r.title, kind: r.kind, line: r.line})), A, B};  // 카드·축 추천 중 A·B 에 없는 공연('내 취향 추천' 줄)
 };
 
 // ---- 추천 조합(회차 캐스팅이 있는 작품): 남은 회차를 주연 배우 조합별로 묶어, 취향 근거(앱 규칙 V.when 의 hit·반대 근거·내 기록 pers)가 가장 큰 조합. ⭐ 꼭 볼 배우·🚫 뺄 배우·낮게 평가해 내린 조합·이미 본 조합·'설명이 틀렸어요'로 뺀 배우 근거·이상형 월드컵 선택은 반영한다
@@ -1649,13 +1650,16 @@ V.home = () => {
   const due = S.proto?.vd ? S.proto.vd.i : dueVisit(S, from);
   Object.keys(RATE_CTX).forEach(k => delete RATE_CTX[k]);
   const row = (list, id) => `<div class="prow">${list.slice(0, 24).map(r => recCard(r, id)).join("")}</div>`;
+  const nHid = Object.keys(hiddenShows(S)).filter(k => showRef(D, k)).length;
+  const emptyCard = (msg, go) => `<div class="card"><p class="small muted">${nHid ? "추천 줄의 공연을 모두 숨겼어요. 아래 '숨긴 공연'에서 되돌리거나, 전체 목록에서 찾아보세요." : msg}</p><button class="btn ghost" data-go="${go}">취향 다시 고르기</button></div>`;
   const recHtml = rows.mode === "fav"
-    ? (rows.A.length || rows.B.length ? `${rows.A.length ? `<section class="hsec"><h2>좋아하는 배우가 나와요</h2><p class="hsub">지금 하는 공연 중에서 좋아하는 배우가 출연하는 공연이에요</p>${row(rows.A, "fav")}</section>` : ""}
-      ${rows.B.length ? `<section class="hsec"><h2>좋아하는 배우와 비슷한 배우가 나와요</h2><p class="hsub">좋아하는 배우가 안 나와도, 목소리 특징이 비슷한 배우가 나오는 공연이에요</p>${row(rows.B, "similar")}</section>` : ""}`
-        : `<section class="hsec"><h2>좋아하는 배우가 나와요</h2><div class="card"><p class="small muted">지금 하는 공연 중에 좋아하는 배우나 비슷한 배우가 나오는 공연이 아직 없어요. 아래 전체에서 찾아보세요.</p><button class="btn ghost" data-go="#taste/3">취향 다시 고르기</button></div></section>`)
+    ? (`${rows.A.length ? `<section class="hsec"><h2>좋아하는 배우가 나와요</h2><p class="hsub">지금 하는 공연 중에서 좋아하는 배우가 출연하는 공연이에요</p>${row(rows.A, "fav")}</section>` : ""}
+      ${rows.B.length ? `<section class="hsec"><h2>좋아하는 배우와 비슷한 배우가 나와요</h2><p class="hsub">좋아하는 배우가 안 나와도, 목소리 특징이 비슷한 배우가 나오는 공연이에요</p>${row(rows.B, "similar")}</section>` : ""}
+      ${rows.taste.length ? `<section class="hsec"><h2>내 취향 추천</h2><p class="hsub">고른 취향 카드·배우 특징과 맞는 공연이에요</p>${row(rows.taste, "taste")}</section>` : ""}
+      ${rows.A.length || rows.B.length || rows.taste.length ? "" : `<section class="hsec">${emptyCard("지금 하는 공연 중에 좋아하는 배우나 비슷한 배우가 나오는 공연이 아직 없어요. 아래 전체에서 찾아보세요.", "#taste/3")}</section>`}`)
     : `<section class="hsec"><h2>내 취향 추천</h2>${rows.mode === "taste" ? row(rows.taste, "taste")
       : !taste ? `<div class="card accent"><h3>취향을 고르면 추천해 드려요</h3><p class="small muted">아직 취향을 안 골랐어요. 아래에서 지금 하는 공연 전체를 볼 수 있어요.</p><button class="btn" data-go="#taste/1">취향 고르기</button></div>`
-      : `<div class="card"><p class="small muted">아직 근거가 있는 추천이 없어요. 좋아하는 배우나 끌리는 공연을 더 고르면 이유와 함께 보여 드려요.</p><button class="btn ghost" data-go="#taste/1">취향 다시 고르기</button></div>`}</section>`;
+      : emptyCard("아직 근거가 있는 추천이 없어요. 좋아하는 배우나 끌리는 공연을 더 고르면 이유와 함께 보여 드려요.", "#taste/1")}</section>`;
   // 지금 하는 공연 전체: 인기순 한 줄 목록. 지역 칩 [전체 N][공연 많은 지역 …][그 외 지역] — 칩 안 목록도 인기순
   const tabs = regionTabs(all), tab = tabs.some(([k]) => k === S.proto?.areaTab) ? S.proto.areaTab : "all";
   const allHtml = `<div class="pgrid">${showsIn(all, tabs, tab, from).map(listCard).join("")}</div>`;
