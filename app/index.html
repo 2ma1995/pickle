@@ -428,8 +428,8 @@ button.day{font:inherit;color:inherit;text-align:center}
 .castall b{font-size:12px;color:var(--muted);font-weight:500;margin-right:4px}
 .sheet .duel{margin:4px 0}
 </style>
-<link rel="stylesheet" href="theme.css?v=20261013a">
-<link rel="stylesheet" href="app.css?v=20261013a">  <!-- 스타일을 고칠 때마다 theme.css·app.css 의 ?v= 숫자를 같이 올린다(브라우저가 옛 스타일을 기억하지 않게) -->
+<link rel="stylesheet" href="theme.css?v=20261014a">
+<link rel="stylesheet" href="app.css?v=20261014a">  <!-- 스타일을 고칠 때마다 theme.css·app.css 의 ?v= 숫자를 같이 올린다(브라우저가 옛 스타일을 기억하지 않게) -->
 </head>
 <body>
 <div class="shell">
@@ -457,7 +457,7 @@ button.day{font:inherit;color:inherit;text-align:center}
 <div class="sheet-bg" id="sheetbg"></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1"></div>
 
-<script src="data.js?v=202610141318"></script>
+<script src="data.js?v=202610141341"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -1783,17 +1783,19 @@ const summaryCard = (ref, rec) => {
 };
 
 // ② 누구로 볼까요?: 주연 배역마다 한 줄(배우를 나란히), 추천 조합은 미리 선택 + PICK. 배우 특징은 고른 배우만 펼친다
-// 영상 반응 모달(작은 시트): 썸네일을 누르면 유튜브는 새 탭으로 열리고, 앱에는 '○○ 영상 어땠어요?' 모달이 떠 있다. 마음에 들어요 → ⭐ 담을까요 + '어떤 점이 좋았어요?' 칩 / 취향 아니에요 → 빼기 할까요(기존 pin 버튼 그대로, 자동으로 걸지 않는다) / 모르겠어요 → 그 배우 유튜브 검색
+// 영상 반응 모달(작은 시트): 썸네일을 누르면 유튜브는 새 탭으로 열리고, 앱에는 '○○ 영상 어땠어요?' 모달이 떠 있다. 머리(제목·영상 한 줄·우측 위 X) → 답 3칸 → 구분선 아래 후속:
+// 마음에 들어요 → ⭐ 꼭 볼 배우로 담기(담은 뒤 '⭐ 담았어요') + '어떤 점이 좋았어요?' 토글 칩 / 취향 아니에요 → 이 배우 빼기(기존 pin 버튼 그대로, 자동으로 걸지 않는다) / 모르겠어요 → 영상 더 찾아보기 링크
+const videoMeta = (work, a, vid) => (((D.videos || {})[work] || {})[a] || []).find(v => ytIdOf(v) === vid) || null;
 const videoSheetBody = () => {
-  const {work, role, a, vid} = SHEET, e = vrOf(S, work, a, vid) || {};
+  const {work, role, a, vid} = SHEET, e = vrOf(S, work, a, vid) || {}, v = videoMeta(work, a, vid);
   const W = esc(work), R = esc(role), A = esc(a), I = esc(vid), pin = pinStateOf(S, work, a);
-  const btns = VIDEO_REACTIONS.map(([k, l]) => `<button type="button" class="chip x ${e.r === k ? "on" : ""}" data-act="vreact" data-work="${W}" data-role="${R}" data-a="${A}" data-vid="${I}" data-r="${k}" aria-pressed="${e.r === k}">${l}</button>`).join("");
-  const next = e.r === "like" ? (pin === "star" ? `<p class="small muted">⭐ 꼭 볼 배우로 담아 뒀어요</p>` : `<p class="small">⭐ 꼭 볼 배우로 담을까요? <button type="button" class="chip x" data-act="pin" data-work="${W}" data-a="${A}" data-k="star">담기</button></p>`)
-    : e.r === "dislike" ? (pin === "avoid" ? `<p class="small muted">이 배우는 빼 뒀어요</p>` : `<p class="small">이 배우 빼기 할까요? <button type="button" class="chip x" data-act="pin" data-work="${W}" data-a="${A}" data-k="avoid">빼기</button></p>`)
-    : e.r === "unsure" ? `<p class="small"><a href="${esc(ytSearch(work, a, role))}" target="_blank" rel="noopener">이 배우 영상 더 찾아보기 ▶</a></p>` : "";
+  const btns = VIDEO_REACTIONS.map(([k, l]) => `<button type="button" class="vbtn" data-act="vreact" data-work="${W}" data-role="${R}" data-a="${A}" data-vid="${I}" data-r="${k}" aria-pressed="${e.r === k}">${l}</button>`).join("");
   const tl = e.r === "like" ? vrTagList(D) : [], mine = e.t || [];
-  const traits = tl.length ? `<p class="small vtq">어떤 점이 좋았어요? <span class="muted">(선택)</span></p><div class="chips vtr">${tl.map(t => `<button type="button" class="chip x ${mine.includes(t) ? "on" : ""}" data-act="vtrait" data-work="${W}" data-role="${R}" data-a="${A}" data-vid="${I}" data-t="${esc(t)}" aria-pressed="${mine.includes(t)}">${esc(t)}</button>`).join("")}</div>` : "";
-  return `<h3>${A} 영상 어땠어요?</h3><div class="chips">${btns}</div>${next}${traits}<button type="button" class="chip x" data-act="closeSheet">닫기</button>`;
+  const follow = e.r === "like" ? (pin === "star" ? `<p class="vpin on" role="status">⭐ 담았어요</p>` : `<button type="button" class="vpin" data-act="pin" data-work="${W}" data-a="${A}" data-k="star">⭐ 꼭 볼 배우로 담기</button>`)
+      + (tl.length ? `<div class="vtw"><p class="vsub">어떤 점이 좋았어요? <span>(선택)</span></p><div class="vtr">${tl.map(t => `<button type="button" class="vtc" data-act="vtrait" data-work="${W}" data-role="${R}" data-a="${A}" data-vid="${I}" data-t="${esc(t)}" aria-pressed="${mine.includes(t)}">${esc(t)}</button>`).join("")}</div></div>` : "")
+    : e.r === "dislike" ? (pin === "avoid" ? `<p class="vpin on avoid" role="status">이 배우는 빼 뒀어요</p>` : `<button type="button" class="vpin avoid" data-act="pin" data-work="${W}" data-a="${A}" data-k="avoid">이 배우 빼기</button>`)
+    : e.r === "unsure" ? `<a class="vlink" href="${esc(ytSearch(work, a, role))}" target="_blank" rel="noopener">이 배우 영상 더 찾아보기 ↗</a>` : "";
+  return `<h3>${A} 영상 어땠어요?</h3>${v ? `<p class="ssub">${esc([v.channel, v.title].filter(Boolean).join(" · "))}</p>` : ""}<div class="vans" role="group" aria-label="영상 반응">${btns}</div>${follow ? `<div class="vfollow">${follow}</div>` : ""}`;
 };
 const actorDetail = (work, role, a, want) => {
   const rows = roleRows(D, work, a, role), v = videoOf(work, a), pin = pinStateOf(S, work, a), vid = ytIdOf(v);
@@ -1901,10 +1903,12 @@ const duelMeCard = () => { const ws = D.works.filter(w => w.hasSchedule && duelS
 
 // ---------- proto: 작은 시트(볼 예정 담기·예매처로를 누르면 '이 조합, 얼마나 기대돼요?' · 두 배우 비교) ----------
 const refresh = () => SHEET ? renderSheet() : route();
+const SHEET_X = `<button type="button" class="sx" data-act="closeSheet" aria-label="닫기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
 function renderSheet() {
   if (!SHEET) { closeSheet(); return; }
   Object.keys(RATE_CTX).forEach(k => delete RATE_CTX[k]);
-  $("#sheet").innerHTML = `<div class="grab"></div>${sheetBody().replace("<h3>", '<h3 id="sheettitle">')}`;
+  const body = sheetBody(), m = body.match(/^<h3>([\s\S]*?)<\/h3>(<p class="ssub">[\s\S]*?<\/p>)?/);  // 모든 시트 공통 머리: 제목(+작은 설명 한 줄) 오른쪽 위에 X 닫기(Esc·바깥 클릭과 같은 동작)
+  $("#sheet").innerHTML = `<div class="grab"></div><div class="shead">${m ? `<div class="stxt"><h3 id="sheettitle">${m[1]}</h3>${m[2] || ""}</div>` : ""}${SHEET_X}</div>${m ? body.slice(m[0].length) : body}`;
   $("#sheet").classList.add("on"); $("#sheetbg").classList.add("on"); document.documentElement.classList.add("lock");  // 뒤 화면 스크롤 잠금
   const to = SHEET.focus && $("#sheet").querySelector(SHEET.focus), f = to || $("#sheet"); if (f && f.focus) f.focus({preventScroll: true});  // 포커스는 시트 안으로(다시 그린 뒤엔 방금 누른 버튼으로)
 }
@@ -1912,7 +1916,7 @@ const sheetBody = () => {
   if (SHEET.kind === "video") return videoSheetBody();
   if (SHEET.kind === "duel") { const {work, cur} = SHEET;
     return `<h3>${esc(cur.role)}, 둘 중 누가 끌려요?</h3><p class="small muted">고른 결과는 이 작품의 추천 조합에 바로 반영돼요.</p><div class="duel">${duelSide(work, cur.role, cur.left)}${duelSide(work, cur.role, cur.right)}</div>
-      <div class="duelb"><button class="chip" data-act="sheetDuel" data-r="left">왼쪽</button><button class="chip" data-act="sheetDuel" data-r="tie">비슷해요</button><button class="chip" data-act="sheetDuel" data-r="right">오른쪽</button></div><button class="chip x" data-act="closeSheet">닫기</button>`; }
+      <div class="duelb"><button class="chip" data-act="sheetDuel" data-r="left">왼쪽</button><button class="chip" data-act="sheetDuel" data-r="tie">비슷해요</button><button class="chip" data-act="sheetDuel" data-r="right">오른쪽</button></div>`; }
   const p = SHEET.pending, go = "볼 예정에 담기", leadsA = leadsOf(D, p.work, p.cast), cast = Object.fromEntries(leadsA);
   const line = `<p class="small">${md(p.date)} ${esc(p.time)} · ${leadsA.map(([r, a]) => `<b>${esc(r)}</b> ${esc(a)}`).join(" · ")}</p>`;
   if (SHEET.step === 1) return `<h3>이 조합, 얼마나 기대돼요?</h3>${line}

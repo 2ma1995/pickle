@@ -1,5 +1,5 @@
 /* app.css — 앱 디자인 층. index.html 이 theme.css 다음에 읽는다(예전 앱 index_legacy_2026-10-11.html 은 이 파일을 안 읽는다).
-   구성 원칙: 포스터 중심 · 글 상자 카드는 줄이고 면(배경색)과 여백·글씨 크기로 위계 · 선은 구분선 정도 · 그림자 없음 · 강조색은 딱 세 곳(주 버튼 · 선택 상태 · 별).
+   구성 원칙: 포스터 중심 · 글 상자 카드는 줄이고 면(배경색)과 여백·글씨 크기로 위계 · 선은 구분선 정도 · 그림자 없음 · 강조색은 딱 세 곳(주 버튼 · 선택 상태 · 별. 영상 모달의 ⭐ 담기 버튼 테두리는 주 버튼으로 본다).
    판: 주소 뒤 ?theme=light(기본, 밝은 판) / ?theme=dark(어두운 판). <html data-theme> 는 index.html 맨 위 작은 스크립트가 정한다(우선순위: 주소 ?theme= > 저장한 값 > 밝은 판).
 
    ★ 강조색(사용자가 정함): 예전 주 색 #B23A48(hover #982F3B). 바꾸려면 아래 두 블록(밝은 판 · 어두운 판)의 --accent 계열만 바꾼다.
@@ -103,9 +103,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--fg);outline:none}
 .sheet{background:var(--bg);box-shadow:none;border-top:1px solid var(--line)}
 @media (min-width:900px){.sheet{border:1px solid var(--line)}}
 .sheet .grab{background:var(--dash)}
-.sheet:focus{outline:none}
-.sheet{overscroll-behavior:contain}
-html.lock,html.lock body{overflow:hidden}  /* 시트(모달)가 열려 있는 동안 뒤 화면 스크롤 잠금 */
 .dbgb,.dbgp{background:var(--surface);color:var(--muted);border-color:var(--line)}
 
 /* ---- 취향폼 ---- */
@@ -181,7 +178,6 @@ main:is([data-view=onboard],[data-view=taste]) .one{background:none;border:0;pad
 .actorx{border-top:1px solid var(--line);padding-top:14px;gap:12px}
 .axhead b{font-size:17px}
 .axhead .chip.x{min-height:34px;padding:5px 12px;font-size:12.5px}
-.vtr .chip.x{min-height:32px;padding:4px 11px;font-size:12px}  /* 영상 '어떤 점이 좋았어요?' 특징 칩: 작게 */
 .quotes{color:var(--muted)}
 .quotes li{line-height:1.55}
 
@@ -229,3 +225,45 @@ button.day.has,.day.has{background:var(--soft);color:var(--fg);cursor:pointer}
 .pmark{position:absolute;left:6px;bottom:6px;max-width:calc(100% - 12px);font-size:10px;font-weight:700;line-height:1.35;padding:2px 7px;border-radius:999px;background:rgba(0,0,0,.76);color:#fff}
 
 .combochips{display:grid;gap:8px}
+
+/* ---- 시트(모달): 영상 반응·'얼마나 기대돼요?' 평가·두 배우 비교가 같이 쓴다. 머리(제목·작은 설명·우측 위 X) → 본문 ---- */
+html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤 화면 스크롤 잠금 */
+.sheet{gap:14px;padding:10px 18px max(22px,calc(14px + env(safe-area-inset-bottom)));max-height:min(88vh,calc(100dvh - 16px));overscroll-behavior:contain}
+.sheet:focus{outline:none}
+.sheet .grab{margin:0 auto -4px}  /* 끌기 손잡이는 휴대폰 시트에서만 */
+.shead{display:flex;align-items:flex-start;gap:8px}
+.shead .stxt{flex:1;min-width:0;display:grid;gap:3px;padding-top:4px}
+.sheet h3{margin:0;font-size:19px;line-height:1.35;letter-spacing:-.03em}
+.ssub{margin:0;font-size:12.5px;line-height:1.4;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sx{flex:none;width:44px;height:44px;margin:-2px -8px 0 0;border:0;border-radius:50%;background:transparent;color:var(--fg);display:grid;place-items:center;cursor:pointer}
+.sx:hover{background:var(--soft)}
+.sx svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+@media (min-width:900px){.sheet{max-width:420px;width:calc(100% - 32px);padding:18px 20px 22px;border-radius:20px}.sheet .grab{display:none}.sx{margin:-4px -10px 0 0}}
+/* 답 버튼(영상 반응·두 배우 비교): 한 줄 3칸, 안 고른 건 바탕+테두리, 고른 건 강조색 채움. 아래 토글 칩과 확실히 다르게 크고 네모나게 */
+.vans,.sheet .duelb{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.vbtn,.sheet .duelb .chip{min-height:48px;padding:6px 4px;border:1px solid var(--star-off);border-radius:12px;background:var(--bg);color:var(--fg);font-family:inherit;font-weight:600;font-size:15px;line-height:1.25;letter-spacing:-.03em;word-break:keep-all;display:flex;align-items:center;justify-content:center;gap:5px;text-align:center;cursor:pointer}
+.vbtn:hover,.sheet .duelb .chip:hover{border-color:var(--fg)}
+.vbtn::before{font-size:13px;line-height:1}
+.vbtn[data-r="like"]::before{content:"♥"}
+.vbtn[data-r="unsure"]::before{content:"?"}
+.vbtn[data-r="dislike"]::before{content:"✕"}
+.vbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.vbtn[aria-pressed="true"]:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+/* 후속(구분선 아래): 담기·빼기는 진짜 버튼, 특징은 작은 토글 칩, 더 찾아보기는 글 링크 */
+.vfollow{display:grid;gap:14px;border-top:1px solid var(--line);padding-top:14px}
+.vpin{width:100%;min-height:44px;margin:0;padding:0 14px;border:1.5px solid var(--accent);border-radius:10px;background:transparent;color:var(--fg);font-family:inherit;font-weight:700;font-size:14.5px;line-height:1.3;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.vpin:hover{background:var(--accent-soft)}
+.vpin.avoid{border-color:var(--star-off)}
+.vpin.avoid:hover{background:var(--soft)}
+.vpin.on{cursor:default;background:var(--accent-soft)}
+.vpin.on.avoid{background:var(--soft)}
+.vtw{display:grid;gap:8px}
+.vsub{margin:0;font-size:13px;font-weight:700;color:var(--fg)}
+.vsub span{font-weight:500;color:var(--muted)}
+.vtr{display:flex;flex-wrap:wrap;gap:8px}
+.vtc,.sheet .chsec .chip.x{min-height:34px;padding:0 12px;border:1px solid var(--star-off);border-radius:999px;background:transparent;color:var(--fg);font-family:inherit;font-weight:500;font-size:13px;line-height:1.2;display:inline-flex;align-items:center;cursor:pointer}
+.vtc:hover,.sheet .chsec .chip.x:hover{border-color:var(--fg)}
+.vtc[aria-pressed="true"],.sheet .chsec .chip.x.on{background:var(--accent-soft);border-color:var(--accent);color:var(--fg);font-weight:600}
+.vtc[aria-pressed="true"]::before,.sheet .chsec .chip.x.on::before{content:"✓";margin-right:4px}
+.vlink{justify-self:start;font-size:14px;color:var(--fg);text-decoration:underline;text-underline-offset:3px}
+
