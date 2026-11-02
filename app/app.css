@@ -7,12 +7,12 @@
    버전: index.html 이 이 파일을 ?v= 로 부른다. 고칠 때마다 그 숫자를 올려야 브라우저가 옛 걸 안 쓴다. */
 :root{
   color-scheme:dark;
-  --accent:#BD3E4C; --accent-hover:#A83643; --accent-soft:#2B1B20; --accent-tint:#3A2229; --on-accent:#FFFFFF;
+  --accent:#BD3E4C; --accent-hover:#A83643; --accent-soft:#2B1B20; --accent-tint:#3A2229; --on-accent:#FFFFFF; --accent-paper:#FBEFF1; --on-paper:#5C4A4F;
   --bg:#12171C; --surface:#1B2128; --soft:#262E37; --line:#2D3640; --divider:#2D3640; --outside:#1B2128; --dash:#4B5663;
   --fg:#E8ECF0; --muted:#A5AFBA; --faint:#A5AFBA; --ok:#5FCB95; --warn:#E0B060; --star-off:#6F7B88;
   --veil:rgba(18,23,28,.78); --scrim:rgba(0,0,0,.62);
 }
-/* 옛 규칙이 쓰던 강조 토큰은 중립 토큰(--hl*)으로 돌렸다. 강조색(--accent 계열)은 주 버튼·선택 상태·별만 직접 쓴다 */
+/* 옛 규칙이 쓰던 강조 토큰은 중립 토큰(--hl*)으로 돌렸다. 강조색(--accent 계열)은 주 버튼·선택 상태·별과 추천 조합의 배우 이름만 직접 쓴다 */
 :root{--hl:var(--fg);--hl-soft:var(--soft);--hl-tint:var(--soft)}
 
 /* ---- 바탕·글씨 ---- */
@@ -416,10 +416,17 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
 /* 폰(600px 미만)은 원래대로 한 줄 3개(사용자 요청 2026-10-29: 한 줄 5개는 넓은 화면만) */
 @media (max-width:599px){.pgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 10px}.pgrid .pcard{gap:8px}.pgrid .pt{font-size:12.5px;line-height:1.35}.pgrid .pw{font-size:12px;line-height:1.45}.pgrid .prank{font-size:34px}}
 /* 동그란 배우 사진(위키미디어 공용, 없으면 이름 첫 글자) — 추천 조합 카드: 날짜·시간 밑에 사진 → 이름 → 배역 */
-.rcast{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:12px 6px;margin:4px 0 2px}
-.rca{display:grid;justify-items:center;gap:3px;text-align:center;min-width:0}
-.rca b{font-size:13px;line-height:1.25;word-break:keep-all}
-.rca span{font-size:11px;line-height:1.25;color:var(--muted);word-break:keep-all}
+/* 추천 조합 카드의 배역·배우 칸(결정 81): 카드에서 가장 눈에 띄는 줄. 버건디는 어두운 면에서 대비가 3:1 남짓이라 밝은 칸 위에 올린다(대비 4.8:1) */
+.rcast{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:6px 0 4px}
+.rca{box-sizing:border-box;flex:0 0 calc((100% - 16px)/3);display:grid;justify-items:center;align-content:center;gap:3px;min-width:0;min-height:68px;padding:8px 6px;border-radius:12px;background:var(--accent-paper);text-align:center}
+.rca b{font-size:16px;font-weight:800;line-height:1.25;color:var(--accent);word-break:keep-all}
+.rca span{font-size:12.5px;font-weight:600;line-height:1.25;color:var(--on-paper);word-break:keep-all}
+@media (min-width:600px){.rca{flex-basis:calc((100% - 24px)/4)}}
+/* 추천 조합 화면 위 베타 후기 버튼(결정 82): 넓으면 제목 오른쪽, 좁으면 제목 아래 한 줄 */
+.rchead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px}
+.rchead>div{flex:1 1 240px;min-width:0}
+.betabtn{flex:0 1 auto;width:auto;min-height:44px;padding:10px 18px;font-size:14px;line-height:1.3;text-align:center;word-break:keep-all}
+@media (max-width:599px){.betabtn{flex:1 1 100%;width:100%}}
 
 /* ---- 2026-10-29 사용자 요청: 판 하나(어두운 바탕 + 버건디) · 홈 정리 ---- */
 /* 버튼·칩은 둥근 알약 모양, 카드는 면(surface)으로만 구분(참고: 테마 블랙1 · 테마2) */
