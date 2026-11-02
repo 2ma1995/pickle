@@ -416,12 +416,13 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
 /* 폰(600px 미만)은 원래대로 한 줄 3개(사용자 요청 2026-10-29: 한 줄 5개는 넓은 화면만) */
 @media (max-width:599px){.pgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 10px}.pgrid .pcard{gap:8px}.pgrid .pt{font-size:12.5px;line-height:1.35}.pgrid .pw{font-size:12px;line-height:1.45}.pgrid .prank{font-size:34px}}
 /* 동그란 배우 사진(위키미디어 공용, 없으면 이름 첫 글자) — 추천 조합 카드: 날짜·시간 밑에 사진 → 이름 → 배역 */
-/* 추천 조합 카드의 배역·배우 칸(결정 81): 카드에서 가장 눈에 띄는 줄. 버건디는 어두운 면에서 대비가 3:1 남짓이라 밝은 칸 위에 올린다(대비 4.8:1) */
-.rcast{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:6px 0 4px}
-.rca{box-sizing:border-box;flex:0 0 calc((100% - 16px)/3);display:grid;justify-items:center;align-content:center;gap:3px;min-width:0;min-height:68px;padding:8px 6px;border-radius:12px;background:var(--accent-paper);text-align:center}
-.rca b{font-size:16px;font-weight:800;line-height:1.25;color:var(--accent);word-break:keep-all}
-.rca span{font-size:12.5px;font-weight:600;line-height:1.25;color:var(--on-paper);word-break:keep-all}
-@media (min-width:600px){.rca{flex-basis:calc((100% - 24px)/4)}}
+/* 추천 조합 카드의 배역·배우 칸(결정 81): 카드에서 가장 눈에 띄는 줄. 버건디는 어두운 면에서 대비가 3:1 남짓이라 밝은 칸 위에 올린다(대비 4.8:1)
+   인원수와 상관없이 늘 한 줄. --n(칸 수)으로 너비를 똑같이 나누고, --cell(칸 안쪽 너비)과 --m(배우 이름 길이)으로 글자 크기를 정해 줄인다. 좁은 화면은 카드 안쪽 여백까지 쓴다 */
+.rcast{--gap:3px;--pad:1px;container-type:inline-size;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:var(--gap);justify-content:center;margin:6px -14px 4px}
+.rca{--cell:calc((100cqw - (var(--n) - 1)*var(--gap))/var(--n) - 2*var(--pad));box-sizing:border-box;display:grid;justify-items:center;align-content:center;gap:3px;min-width:0;min-height:56px;padding:8px var(--pad);border-radius:10px;background:var(--accent-paper);text-align:center}
+.rca b{max-width:100%;font-size:min(16px,calc(var(--cell)/(var(--m)*.94)));font-weight:800;letter-spacing:-.03em;line-height:1.25;color:var(--accent);white-space:nowrap}
+.rca span{max-width:100%;font-size:min(12.5px,calc(var(--cell)/3.2));font-weight:600;line-height:1.25;color:var(--on-paper);word-break:keep-all;overflow-wrap:anywhere}
+@media (min-width:600px){.rcast{--gap:8px;--pad:6px;margin-inline:0}.rca{min-height:68px;border-radius:12px}}
 /* 추천 조합 화면 위 베타 후기 버튼(결정 82): 넓으면 제목 오른쪽, 좁으면 제목 아래 한 줄 */
 .rchead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px}
 .rchead>div{flex:1 1 240px;min-width:0}
