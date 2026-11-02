@@ -259,6 +259,12 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
 /* ==== 무대 층(2026-10-28 사용자 요청: 뮤지컬 예매 서비스처럼, 포스터가 주인공) ==== */
 /* 머리줄: 판 버튼은 떠 있는 동그라미 대신 오른쪽 칸 */
 .top .brand{letter-spacing:.02em}
+/* 로고 옆 X 계정 링크(결정 84): 로고 링크 밖에 따로 두고, 로고보다 눈에 덜 띄게 muted. @pickle_musical 은 줄바꿈 없이 전부 보인다 */
+.top .brand{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0}
+.top .brand .xlink{flex:none;display:inline-flex;align-items:center;gap:3px;min-height:40px;color:var(--muted);font-size:11.5px;font-weight:500;letter-spacing:0;white-space:nowrap;text-decoration:none}
+.top .brand .xlink:hover{color:var(--fg)}
+.top .brand .xlink svg{margin:0;vertical-align:baseline}
+@media (min-width:600px){.top .brand{justify-content:flex-start}.top .brand .xlink{font-size:13px;gap:4px}}
 @media (min-width:900px){.top{grid-template-columns:40px auto 1fr 40px}.top:has(#back[hidden]){grid-template-columns:auto 1fr 40px}.pcal{max-width:560px;width:100%;justify-self:center}}
 /* 하단 탭: 선 아이콘 */
 .tabs a{display:grid;justify-items:center;gap:3px;font-weight:600;letter-spacing:-.01em}
