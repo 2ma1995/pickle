@@ -510,8 +510,8 @@ a.wcard:hover{border-color:var(--hl)}
 .favrow .tiny{font-size:11px;word-break:keep-all}
 @media (min-width:600px){.favrow{gap:12px}.favrow>.card{padding:18px 16px}}
 </style>
-<link rel="stylesheet" href="theme.css?v=20261103r">
-<link rel="stylesheet" href="app.css?v=20261103r">  <!-- 스타일을 고칠 때마다 theme.css·app.css 의 ?v= 숫자를 같이 올린다(브라우저가 옛 스타일을 기억하지 않게) -->
+<link rel="stylesheet" href="theme.css?v=20261103s">
+<link rel="stylesheet" href="app.css?v=20261103s">  <!-- 스타일을 고칠 때마다 theme.css·app.css 의 ?v= 숫자를 같이 올린다(브라우저가 옛 스타일을 기억하지 않게) -->
 </head>
 <body>
 <div class="shell">
@@ -539,7 +539,7 @@ a.wcard:hover{border-color:var(--hl)}
 <div class="sheet-bg" id="sheetbg" data-noshot></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" data-noshot></div>
 
-<script src="data.js?v=202611032126"></script>
+<script src="data.js?v=202611032150"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -2597,8 +2597,7 @@ const satCards = (work, sel, inDates = null, nav = false) => {  // nav: 배우 �
   const recBy = new Map(comboRecs(D, S, work, from, inDates).map(r => [r.key, r]));
   const kinds = wantKinds(D, S, work), pk = S.proto?.pick?.[work + (inDates ? "#날짜" : "")], recOf = sh.list.map(c => recBy.get(c.key) || null);  // kinds: 꼭 보고 싶은 배우(이름 상자 양쪽 커튼) · pk: 사용자가 [이 조합 고르기]를 눌러 고른 조합(흐름별 기억)
   const whyLines = c => { const r = recBy.get(c.key); if (!r) return "";  // 왜 맞는지 사용자 친화 문장(reasonLines): 본진·애정 배우 → 취향에 맞는 배우의 특징 → 조합 평가, 근거가 없으면 배우 조건 문장
-    const few = Object.values(c.cast).filter(a => !tagsOfActor(D, work, a).length).slice(0, 2);
-    return `<ul class="why">${reasonLines(D, S, work, r).map(l => `<li class="small">${esc(l)}</li>`).join("")}</ul>${few.length ? `<p class="tiny muted">${few.map(esc).join("·")} 배우는 아직 모인 정보가 적어요</p>` : ""}`; };
+    return `<ul class="why">${reasonLines(D, S, work, r).map(l => `<li class="small">${esc(l)}</li>`).join("")}</ul>`; };  // 정보가 적은 배우를 따로 적지 않는다(사용자 요청 2026-11-03 저녁)
   const perfsOfKey = key => D.perfs.filter(p => p.work === work && p.date >= from && !isPrivate(p) && (!inDates || inDates.includes(p.date)) && comboKey(D, work, p.cast) === key).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const nPerf = key => perfsOfKey(key).length;
   // 카드 왼쪽 위: 이 조합으로 볼 수 있는 가장 가까운 날짜·시간(크게), 그 밑에 다음 회차 3개와 개수(사용자 요청 2026-10-28: 고르기 전에도 날짜를 안다)
