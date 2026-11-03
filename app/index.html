@@ -512,8 +512,8 @@ a.wcard:hover{border-color:var(--hl)}
 .howlist .btn{display:grid;gap:2px;justify-items:start;text-align:left;padding:16px}
 .howlist .btn small{font-weight:400;opacity:.85}
 </style>
-<link rel="stylesheet" href="theme.css?v=20261103a">
-<link rel="stylesheet" href="app.css?v=20261103a">  <!-- 스타일을 고칠 때마다 theme.css·app.css 의 ?v= 숫자를 같이 올린다(브라우저가 옛 스타일을 기억하지 않게) -->
+<link rel="stylesheet" href="theme.css?v=20261103b">
+<link rel="stylesheet" href="app.css?v=20261103b">  <!-- 스타일을 고칠 때마다 theme.css·app.css 의 ?v= 숫자를 같이 올린다(브라우저가 옛 스타일을 기억하지 않게) -->
 </head>
 <body>
 <div class="shell">
@@ -541,7 +541,7 @@ a.wcard:hover{border-color:var(--hl)}
 <div class="sheet-bg" id="sheetbg" data-noshot></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" data-noshot></div>
 
-<script src="data.js?v=202611031819"></script>
+<script src="data.js?v=202611031846"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -1122,7 +1122,8 @@ const pcalCell = (d, from) => {
   const ps = plansOn(S, d), x = ps[0]?.[0], poster = x && planPoster(x), n = +d.slice(8), dw = new Date(d + "T00:00:00").getDay();
   const cls = ["cday", ps.length ? `has ${planStatus(x)}` : "", d === from ? "today" : "", d < from ? "past" : "", redDay(d) ? "sun" : ""].filter(Boolean).join(" ");
   const label = `${+d.slice(5, 7)}월 ${n}일${ps.length ? " · " + ps.map(([y]) => `${y.work} ${y.time} ${PLAN_STATUS[planStatus(y)]}`).join(", ") : ""}`;
-  return `<a class="${cls}" href="#plans/${d}" aria-label="${esc(label)}">${poster ? `<img src="${esc(poster)}" alt="" loading="lazy">` : x ? `<span class="cw">${esc(x.work)}</span>` : ""}<span class="cn">${n}</span>${ps.length > 1 ? `<span class="cmore">+${ps.length - 1}</span>` : ""}</a>`;
+  const href = !ps.length && d <= from ? `#log/d/${d}` : `#plans/${d}`;  // 일정이 없는 지난 날짜 → 그날 본 공연 기록하기(2026-11-03)
+  return `<a class="${cls}" href="${href}" aria-label="${esc(label)}${href.startsWith("#log") ? " · 본 공연 기록하기" : ""}">${poster ? `<img src="${esc(poster)}" alt="" loading="lazy">` : x ? `<span class="cw">${esc(x.work)}</span>` : ""}<span class="cn">${n}</span>${ps.length > 1 ? `<span class="cmore">+${ps.length - 1}</span>` : ""}</a>`;
 };
 const agendaRow = ([x, i]) => { const pp = planPoster(x);
   return `<a class="agrow ${planStatus(x)}" href="#plans/${x.date}">${pp ? `<img src="${esc(pp)}" referrerpolicy="no-referrer" alt="" loading="lazy">` : `<span class="agph"></span>`}
@@ -1236,9 +1237,10 @@ V.log = (work, id) => {
   const from = today(), w = work && workOf(work);
   if (work === "k") return logKopis(id);
   if (work === "m") return logManual();
+  if (work === "d") { if (/^\d{4}-\d{2}-\d{2}$/.test(id || "") && id <= from) LOG_DATE = id; return V.log(); }  // 캘린더 날짜에서 왔다: 그 날짜를 기록 화면에 미리 채운다
   if (!w) { const seeds = D.works.filter(x => logPerfs(D, x.name, from).length), cur = logShows(from);
     const card = (href, poster, title, sub) => `<a class="wcard" href="${href}" data-t="${esc(title.toLowerCase())}">${poster}<span class="winfo"><b>${esc(title)}</b>${sub ? `<span class="tiny muted">${esc(sub)}</span>` : ""}</span></a>`;
-    return `<div class="one"><div><p class="eyebrow">본 공연 기록하기</p><h1>어떤 작품을 봤어요?</h1></div>
+    return `<div class="one"><div><p class="eyebrow">본 공연 기록하기</p><h1>어떤 작품을 봤어요?</h1></div>${LOG_DATE ? `<p class="small muted">${ymdDot(LOG_DATE)} (${dowOf(LOG_DATE)})에 본 공연을 기록해요. 작품을 고르면 날짜가 채워져 있어요.</p>` : ""}
       <input id="logq" class="logq" type="search" placeholder="작품 이름으로 찾기" aria-label="작품 이름으로 찾기" autocomplete="off">
       <div class="wlist p5" id="loglist">${seeds.map(x => card(`#log/${esc(x.name)}`, posterEl(x, "wposter"), x.name, runsOf(x.name)[0]?.venue || "")).join("")}${cur.map(s => card(`#log/k/${esc(s.id)}`, curPoster(s, "wposter", true), s.title, s.past ? `${s.venue} · ${s.end.slice(0, 4)}.${s.end.slice(5, 7)} 종료` : s.venue)).join("")}</div>
       <p class="small muted" id="lognone" hidden>찾는 작품이 없어요. 서울에서 최근 1년 안에 공연했거나 지금 공연 중인 작품만 있어요.</p>
@@ -1248,29 +1250,31 @@ V.log = (work, id) => {
   return `<div class="one"><div><p class="eyebrow">본 공연 기록하기 · ${esc(work)}</p><h1>언제 봤어요?</h1></div><p class="small muted">관람일이 지난 회차만 기록할 수 있어요.</p>
     ${ps.map(p => `<a class="card perf" style="text-decoration:none;color:inherit" href="#review/${esc(work)}/${p.date}/${p.time}">${whenTile(p)}<p class="tiny muted">${reviewRoles(D, work, p.cast).map(r => `${esc(r)} ${esc(p.cast[r])}`).join(" · ")}</p>${reviewOf(S, work, p.date, p.time) ? `<p class="small" style="color:var(--ok)">기록 남김 · 눌러서 고치기</p>` : ""}</a>`).join("") || `<div class="card"><p class="small muted">아직 지난 회차가 없어요.</p></div>`}</div>`;
 };
-const ampm = t => { const [h, m] = String(t || "").split(":").map(Number); return Number.isFinite(h) ? `${h < 12 ? "오전" : "오후"} ${h % 12 || 12}:${String(m || 0).padStart(2, "0")}` : ""; };
-const HALF_HOURS = Array.from({length: 29}, (_, i) => `${String(9 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`);  // 09:00 ~ 23:00, 30분 단위
-// 회차표가 없는 공연의 시각: 오후 2:00 · 오후 7:00 칩 + 30분 단위 고르기(사용자 요청 2026-11-03). act: 칩을 누를 때 동작, sel: 고르기 칸 id
-const timePick = (cur, act, sel) => `<div class="lkt"><span class="tiny muted">시각 <span class="muted">(선택)</span></span><div class="chips">${["14:00", "19:00"].map(v => `<button type="button" class="chip x ${cur === v ? "on" : ""}" data-act="${act}" data-t="${v}" aria-pressed="${cur === v}">${ampm(v)}</button>`).join("")}
-  <select id="${sel}" aria-label="다른 시각(30분 단위)"><option value="">다른 시각</option>${HALF_HOURS.map(v => `<option value="${v}"${cur === v && !["14:00", "19:00"].includes(v) ? " selected" : ""}>${ampm(v)}</option>`).join("")}</select></div></div>`;
-let LM = {title: "", venue: "", date: "", time: "", cast: []};  // 직접 기록 초안(저장 안 함)
-const logManual = () => { const from = today(), n = LM.cast.length;
+const HOURS = Array.from({length: 15}, (_, i) => String(9 + i).padStart(2, "0"));  // 오전 9시 ~ 오후 11시
+const hourLabel = h => { const n = +h; return `${n < 12 ? "오전" : "오후"} ${n % 12 || 12}시`; };
+// 회차표가 없는 공연의 시각: 시(1시간 단위)·분(30분 단위) 고르기, 기본 오후 7:00(사용자 요청 2026-11-03). sel: 칸 id 앞부분(sel+h, sel+m)
+const timePick = (cur, sel) => { const [h, m] = (cur || "19:00").split(":");
+  return `<div class="lkt"><span class="tiny muted">시각</span><div class="tpick"><select id="${sel}h" aria-label="시">${HOURS.map(x => `<option value="${x}"${x === h ? " selected" : ""}>${hourLabel(x)}</option>`).join("")}</select>
+    <select id="${sel}m" aria-label="분">${["00", "30"].map(x => `<option value="${x}"${x === m ? " selected" : ""}>${x}분</option>`).join("")}</select></div></div>`; };
+let LOG_DATE = "";  // 캘린더 날짜에서 들어온 본 공연 기록하기의 날짜(저장 안 함)
+let LM = {title: "", venue: "", date: "", time: "19:00", cast: []};  // 직접 기록 초안(저장 안 함). 시각 기본 오후 7:00
+const logManual = () => { const from = today(), n = LM.cast.length; if (!LM.date && LOG_DATE) LM.date = LOG_DATE;
   return `<div class="one"><div><p class="eyebrow">본 공연 기록하기</p><h1>공연 정보를 적어 주세요</h1></div><p class="small muted">목록에 없는 공연도 기록할 수 있어요. 기록은 이 기기에만 남아요.</p>
     <div class="card lmform"><label>공연 이름<input id="lmTitle" value="${esc(LM.title)}" placeholder="예: 레베카" maxlength="60" autocomplete="off"></label>
       <label><span>공연장 <span class="muted">(선택)</span></span><input id="lmVenue" value="${esc(LM.venue)}" placeholder="예: 충무아트센터 대극장" maxlength="60" autocomplete="off"></label>
-      <label>본 날짜<input type="date" id="lmDate" max="${from}" value="${esc(LM.date)}"></label>${timePick(LM.time, "lmTime", "lmt")}</div>
+      <label>본 날짜<input type="date" id="lmDate" max="${from}" value="${esc(LM.date)}"></label>${timePick(LM.time, "lmt")}</div>
     <div class="card"><h3>누가 나왔어요?</h3><div class="chips">${LM.cast.map(a => `<button type="button" class="chip x on" data-act="lmDel" data-a="${esc(a)}" aria-label="${esc(a)} 빼기">${esc(a)} ×</button>`).join("")}</div>
       <div class="lkadd"><input id="lmadd" list="lmactors" placeholder="배우 이름" autocomplete="off" maxlength="20" aria-label="본 배우 이름"><button type="button" class="chip" data-act="lmAdd">추가</button></div>
       <datalist id="lmactors">${allActors().map(a => `<option value="${esc(a)}">`).join("")}</datalist></div>
     <button class="btn" data-act="lmGo" ${n ? "" : "disabled"}>${n ? `배우 ${n}명 평가하기` : "본 배우를 추가해 주세요"}</button></div>`; };
 const logKopis = id => {
   const s = kopisShow(id), from = today(), lc = logCastOf(id); if (!s) return V.log();
-  if (LK.id !== id) LK = {id, date: "", time: "", cast: [], rc: {}, auto: false};
+  if (LK.id !== id) { LK = {id, date: LOG_DATE && LOG_DATE >= s.start && LOG_DATE <= s.end ? LOG_DATE : "", time: "19:00", cast: [], rc: {}, auto: false}; if (lc && LK.date) lkFill(lc); }  // 시각 기본 오후 7:00
   const max = s.end && s.end < from ? s.end : from, day = lc ? lc.perfs.filter(([d]) => d === LK.date) : [];
   const n = lc ? Object.keys(LK.rc).length : LK.cast.length;
   const chip = (on, attrs, label) => `<button type="button" class="chip x ${on ? "on" : ""}" ${attrs} aria-pressed="${on}">${esc(label)}</button>`;
   const timeBox = day.length ? `<div class="lkt"><span class="tiny muted">시각</span><div class="chips">${day.map(([, t]) => chip(LK.time === t, `data-act="lkTime" data-t="${esc(t)}"`, t)).join("")}</div></div>`
-    : timePick(LK.time, "lkTime", "lkt");
+    : timePick(LK.time, "lkt");
   const who = lc
     ? `${lc.roles.map(([r, as]) => `<div class="lkrole"><b>${esc(r)}</b><div class="chips">${as.map(a => chip(LK.rc[r] === a, `data-act="lkRole" data-r="${esc(r)}" data-a="${esc(a)}"`, a)).join("")}</div></div>`).join("")}
       <p class="tiny muted">${LK.auto ? "그날 회차표대로 채웠어요. 다르면 바꿔 주세요." : "날짜와 시각을 고르면 그 회차 출연진으로 채워져요. 배역마다 한 명을 골라 주세요."}</p>`
@@ -2884,16 +2888,15 @@ document.addEventListener("click", e => {
     case "rvPub": { const dr = S.proto?.rdraft; if (!dr) return; dr.rv.pub = d.v === "1"; save(); route(); break; }
     case "lkCast": LK.cast = LK.cast.includes(d.a) ? LK.cast.filter(a => a !== d.a) : [...LK.cast, d.a]; route(); break;
     case "lkRole": { if (LK.rc[d.r] === d.a) delete LK.rc[d.r]; else LK.rc[d.r] = d.a; LK.auto = false; route(); break; }  // 배역마다 한 명(다시 누르면 뺀다)
-    case "lkTime": { const lc = logCastOf(LK.id); LK.time = !lc && LK.time === d.t ? "" : d.t; if (lc) lkFill(lc); route(); break; }  // 기본 후보 칩은 다시 누르면 풀린다
+    case "lkTime": { const lc = logCastOf(LK.id); LK.time = d.t; if (lc) lkFill(lc); route(); break; }  // 회차표의 그날 회차 시각 칩
     case "lkAdd": { const el = $("#lkadd"), a = (el?.value || "").trim().slice(0, 20); if (!a) { el?.focus(); return; } if (!LK.cast.includes(a)) LK.cast = [...LK.cast, a]; route(); $("#lkadd")?.focus(); break; }
-    case "lmTime": LM.time = LM.time === d.t ? "" : d.t; route(); break;
     case "lmAdd": { const el = $("#lmadd"), a = (el?.value || "").trim().slice(0, 20); if (!a) { el?.focus(); return; } if (!LM.cast.includes(a)) LM.cast = [...LM.cast, a]; route(); $("#lmadd")?.focus(); break; }
     case "lmDel": LM.cast = LM.cast.filter(a => a !== d.a); route(); break;
     case "lmGo": { const title = LM.title.trim(), from = today(); if (!LM.cast.length) return;
       if (!title) { toast("공연 이름을 적어 주세요"); $("#lmTitle")?.focus(); return; }
       if (!/^\d{4}-\d{2}-\d{2}$/.test(LM.date) || LM.date > from) { toast("본 날짜를 골라 주세요"); $("#lmDate")?.focus(); return; }
       const rv = reviewOf(S, title, LM.date, LM.time) || {work: title, manual: true, venue: LM.venue.trim(), date: LM.date, time: LM.time, cast: Object.fromEntries(LM.cast.map(a => [a, a])), rows: {}, combo: [], note: "", pub: false}; RV_MORE = {};
-      S.proto.rdraft = {k: [title, LM.date, LM.time].join("|"), entry: "log", rv: JSON.parse(JSON.stringify(rv)), swap: "", done: false, picks: []}; LM = {title: "", venue: "", date: "", time: "", cast: []}; save(); location.hash = "#review"; break; }
+      S.proto.rdraft = {k: [title, LM.date, LM.time].join("|"), entry: "log", rv: JSON.parse(JSON.stringify(rv)), swap: "", done: false, picks: []}; LM = {title: "", venue: "", date: "", time: "19:00", cast: []}; LOG_DATE = ""; save(); location.hash = "#review"; break; }
     case "lkGo": { const s = kopisShow(LK.id), from = today(), lc = logCastOf(LK.id), picked = lc ? Object.fromEntries(lc.roles.map(([r]) => [r, LK.rc[r]]).filter(([, a]) => a)) : LK.cast;
       if (!s || !Object.keys(picked).length) return;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(LK.date) || LK.date < s.start || LK.date > from) { toast("본 날짜를 골라 주세요"); $("#lkd")?.focus(); return; }
@@ -2911,8 +2914,7 @@ document.addEventListener("click", e => {
 // 캘린더 날짜 화면의 좌석·금액: 쓰는 동안 저장하고(다시 그리지 않아 커서가 안 튄다), 금액은 칸을 떠날 때 쉼표를 붙여 다시 보여 준다
 document.addEventListener("input", e => {
   if (e.target.id === "lkd") { LK.date = e.target.value; const lc = logCastOf(LK.id); if (lc) { LK.time = ""; if (LK.auto) LK.rc = {}; LK.auto = false; lkFill(lc); route(); } }  // 회차표가 있으면 그날 시각 칩·출연진을 다시 그린다(회차표로 채운 출연진은 비우고, 직접 고른 건 둔다)
-  else if (e.target.id === "lkt") { LK.time = e.target.value; route(); }  // 30분 단위 고르기(칩 표시를 맞추려고 다시 그린다)
-  else if (e.target.id === "lmt") { LM.time = e.target.value; route(); }
+  else if (/^(lk|lm)t[hm]$/.test(e.target.id)) { const st = e.target.id.startsWith("lk") ? LK : LM, [h, m] = (st.time || "19:00").split(":"); st.time = e.target.id.endsWith("h") ? `${e.target.value}:${m}` : `${h}:${e.target.value}`; }  // 시·분 고르기
   else if (["lmTitle", "lmVenue", "lmDate"].includes(e.target.id)) LM[{lmTitle: "title", lmVenue: "venue", lmDate: "date"}[e.target.id]] = e.target.value;
   if (e.target.id === "logq") { const q = e.target.value.trim().toLowerCase().replace(/\s+/g, ""); let n = 0;  // 다시 그리지 않고 카드만 숨긴다(입력 중 커서 유지)
     document.querySelectorAll("#loglist [data-t]").forEach(c => { const on = !q || c.dataset.t.replace(/\s+/g, "").includes(q); c.hidden = !on; n += on; }); const none = $("#lognone"); if (none) none.hidden = n > 0; } });

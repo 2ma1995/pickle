@@ -504,3 +504,11 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
 .lmform label{display:grid;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
 .lmform input{min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);font:inherit;font-size:15px}
 .pseg button{white-space:nowrap;font-size:12.5px;padding:0 4px;letter-spacing:-.02em}
+/* 레드 커튼(2026-11-03 수정): 안쪽 가장자리를 곡선으로 — 위·아래는 넓고 가운데는 묶인 듯 좁게 */
+.pimg .pkc{clip-path:none;-webkit-mask:radial-gradient(ellipse 75% 46% at var(--cx) 50%,transparent 98%,#000 100%);mask:radial-gradient(ellipse 75% 46% at var(--cx) 50%,transparent 98%,#000 100%);width:18%}
+.pimg .pkc.l{--cx:100%}
+.pimg .pkc.r{--cx:0%}
+.pimg.pkcur .prank{left:calc(8% + 4px)}
+.tpick{display:flex;gap:8px;flex-wrap:wrap}
+.tpick select{min-height:40px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);font:inherit;font-size:14px}
+.tpick{flex-wrap:nowrap}.tpick select{width:auto;flex:1 1 0;min-width:0}
