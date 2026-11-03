@@ -512,8 +512,8 @@ a.wcard:hover{border-color:var(--hl)}
 .howlist .btn{display:grid;gap:2px;justify-items:start;text-align:left;padding:16px}
 .howlist .btn small{font-weight:400;opacity:.85}
 </style>
-<link rel="stylesheet" href="theme.css?v=20261102e">
-<link rel="stylesheet" href="app.css?v=20261102e">  <!-- 스타일을 고칠 때마다 theme.css·app.css 의 ?v= 숫자를 같이 올린다(브라우저가 옛 스타일을 기억하지 않게) -->
+<link rel="stylesheet" href="theme.css?v=20261103a">
+<link rel="stylesheet" href="app.css?v=20261103a">  <!-- 스타일을 고칠 때마다 theme.css·app.css 의 ?v= 숫자를 같이 올린다(브라우저가 옛 스타일을 기억하지 않게) -->
 </head>
 <body>
 <div class="shell">
@@ -541,7 +541,7 @@ a.wcard:hover{border-color:var(--hl)}
 <div class="sheet-bg" id="sheetbg" data-noshot></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" data-noshot></div>
 
-<script src="data.js?v=202611031521"></script>
+<script src="data.js?v=202611031819"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -1028,8 +1028,8 @@ const actorCredits = a => { const out = new Map();
   for (const s of shows) if ((s.cast || []).includes(a)) add(showTitle(s.title));
   return [...out.values()]; };
 // 좋아하는 배우마다 접히는 설문 상자(내 취향 · 첫 화면 3/3 단계 공용)
-const likeBoxes = favs => `<datalist id="worksdl">${D.works.map(w => `<option value="${esc(w.name)}">`).join("")}</datalist>${favs.map(a => { const l = likeOf(a) || {why: "", tags: [], roles: []}, A = esc(a);
-        return `<details class="likebox" data-a="${A}" ${!likeEmpty(l) || likeOpen.has(a) ? "open" : ""} ontoggle="this.open?likeOpen.add(this.dataset.a):likeOpen.delete(this.dataset.a)"><summary>${A}</summary>
+const likeBoxes = favs => `<datalist id="worksdl">${D.works.map(w => `<option value="${esc(w.name)}">`).join("")}</datalist><div class="likelist">${favs.map(a => { const l = likeOf(a) || {why: "", tags: [], roles: []}, A = esc(a);
+        return `<details class="likebox" data-a="${A}" ${likeOpen.has(a) ? "open" : ""} ontoggle="this.open?likeOpen.add(this.dataset.a):likeOpen.delete(this.dataset.a)"><summary>${A}</summary>
           <label class="small" for="lw-${A}">이 배우의 어떤 점이 좋아요?</label>
           <textarea id="lw-${A}" rows="2" data-like="why" data-a="${A}" placeholder="예: 성량이 크고 고음이 시원해요">${esc(l.why)}</textarea>
           <div class="chips" data-sg="-1">${lkChips(l.why, l.tags, a, -1)}</div>
@@ -1041,7 +1041,7 @@ const likeBoxes = favs => `<datalist id="worksdl">${D.works.map(w => `<option va
             <textarea rows="2" data-like="rwhy" data-a="${A}" data-ri="${ri}" aria-label="그 배역에서 좋았던 점" placeholder="그 배역에서 좋았던 점">${esc(r.why)}</textarea>
             <div class="chips" data-sg="${ri}">${lkChips(r.why, r.tags, a, ri)}</div>
             <button type="button" class="chip x" data-act="likeRoleDel" data-a="${A}" data-ri="${ri}">이 배역 지우기</button></div>`; }).join("")}
-          <button type="button" class="chip x" data-act="likeRoleAdd" data-a="${A}">+ 배역 추가</button></details>`; }).join("")}`;
+          <button type="button" class="chip x" data-act="likeRoleAdd" data-a="${A}">+ 배역 추가</button></details>`; }).join("")}</div>`;
 
 V.detail = (work, date, time) => {
   const p = D.perfs.find(x => x.work === work && x.date === date && x.time === time);
@@ -1075,7 +1075,7 @@ V.detail = (work, date, time) => {
         : `<p class="small muted">이 조합은 이 회차뿐이에요. 좌석이 없으면 다른 조합이나 다른 날짜를 골라 주세요.</p>`}</div>
     <div style="display:grid;gap:10px">
     ${priv ? `<button class="btn" disabled>일반 예매 불가</button>` : run.ticket ? "" : `<button class="btn" disabled>예매 링크 준비 중</button>`}
-    ${planned ? `<a class="btn" href="#saved/${planIdx(work, date, time)}">볼 예정에 담았어요 · ${run.ticket ? "예매처로 가기" : "담은 공연 보기"} →</a>` : `<button class="btn ${priv || !run.ticket ? "ghost" : ""}" data-act="plan" data-work="${esc(work)}" data-date="${date}" data-time="${time}" ${priv ? "disabled" : ""}>${priv ? "볼 예정에 담을 수 없어요" : "볼 예정에 담기"}</button>`}
+    ${planned ? `<a class="btn" href="#saved/${planIdx(work, date, time)}">보고 싶은 조합에 담았어요 · ${run.ticket ? "예매처로 가기" : "담은 공연 보기"} →</a>` : `<button class="btn ${priv || !run.ticket ? "ghost" : ""}" data-act="plan" data-work="${esc(work)}" data-date="${date}" data-time="${time}" ${priv ? "disabled" : ""}>${priv ? "담을 수 없는 회차예요" : "보고 싶은 조합에 담기"}</button>`}
     <p class="tiny muted">담아 두면 공연 다음 날 관람 기록을 남길 수 있어요.</p>
     </div>
     </div>`;
@@ -1090,8 +1090,8 @@ V.saved = i => {
   const run = runOf(x.work, x.date) || {}, w = workOf(x.work), booked = planStatus(x) === "booked";
   return `
     <div class="svtop">${w?.poster ? `<img class="svposter${booked ? "" : " gray"}" src="${esc(w.poster)}" alt="${esc(x.work)} 포스터">` : ""}
-      <p class="eyebrow">${booked ? "관람예정" : "미정일정"}</p><h1 class="svh">캘린더에 담았어요</h1>
-      <p class="small muted">${booked ? "관람예정으로 표시돼 있어요." : "아직 예매 전이라 포스터를 흑백으로 표시해요. 예매하고 나면 관람예정으로 바꿔 주세요."}</p></div>
+      <p class="eyebrow">${PLAN_STATUS[planStatus(x)]}</p><h1 class="svh">캘린더에 담았어요</h1>
+      <p class="small muted">${booked ? "예매했어요로 표시돼 있어요." : "보고싶어요로 담았어요. 아직 예매 전이라 포스터를 흑백으로 표시해요. 예매하고 나면 예매했어요로 바꿔 주세요."}</p></div>
     <div class="card">
       <div class="between"><b>${esc(x.work)}</b><span class="small muted">${md(x.date)}(${esc(x.dow)}) ${esc(x.time)}</span></div>
       ${run.venue ? `<p class="small muted">${esc(run.venue)}</p>` : ""}
@@ -1099,11 +1099,11 @@ V.saved = i => {
     <div class="svact">
       ${run.ticket ? `<a class="btn${booked ? " ghost" : ""}" data-act="ticketSaved" data-i="${+i}" href="${esc(run.ticket)}" target="_blank" rel="noopener">예매처로 이동 ↗</a>
       <p class="tiny muted">예매처에서 <b>${md(x.date)} ${esc(x.time)}</b> 날짜를 다시 골라 주세요(날짜는 자동으로 안 넘어가요).</p>` : `<button class="btn" disabled>예매 링크 준비 중</button>`}
-      ${booked ? "" : `<button class="btn ghost" data-act="planStatus" data-i="${+i}" data-s="booked">예매했어요 · 관람예정으로 바꾸기</button>`}
+      ${booked ? "" : `<button class="btn ghost" data-act="planStatus" data-i="${+i}" data-s="booked">예매했어요로 바꾸기</button>`}
       <a class="btn ghost" href="#plans/${x.date}">캘린더에서 보기</a>
       <button class="btn ghost" data-go="#home">홈으로</button>
     </div>
-    <p class="tiny muted" style="text-align:center">${booked ? "관람일이 지나면" : "관람예정으로 바꿔 두면 관람일이 지난 뒤"} 홈에서 '어땠어요?'를 물어볼게요.</p>`;
+    <p class="tiny muted" style="text-align:center">${booked ? "관람일이 지나면" : "예매했어요로 바꿔 두면 관람일이 지난 뒤"} 홈에서 '어땠어요?'를 물어볼게요.</p>`;
 };
 
 const likedCard = () => { const L = likedCombos(S); return L.length ? `<div class="card"><h3>좋아한 조합 <span class="small muted">${L.length}개</span></h3>${L.map(x => `<p class="small"><b>${esc(x.work)}</b> · ${Object.entries(x.cast).map(([r, a]) => `${esc(r)} ${esc(a)}`).join(" · ")} <a href="#find/${esc(x.work)}/actor">다시 찾기</a></p>`).join("")}</div>` : ""; };
@@ -1115,7 +1115,7 @@ const dowOf = d => DOWS[new Date(d + "T00:00:00").getDay()];
 const ymdDot = d => `${d.slice(0, 4)}.${d.slice(5, 7)}.${d.slice(8, 10)}`;
 const statusPill = x => `<span class="spill ${planStatus(x)}">${PLAN_STATUS[planStatus(x)]}</span>`;
 const planPoster = x => workOf(x.work)?.poster || kopisShow(x.kopis)?.poster || "";  // MVP 작품은 앱 포스터, 본 공연 기록하기로 남긴 KOPIS 공연은 KOPIS 포스터
-const planVenue = x => runOf(x.work, x.date)?.venue || kopisShow(x.kopis)?.venue || "";
+const planVenue = x => runOf(x.work, x.date)?.venue || kopisShow(x.kopis)?.venue || x.venue || "";
 const planCast = x => { const ls = leads(x.work, x.cast); return ls.length ? ls : Object.values(x.cast || {}).map(a => ["", a]); };  // 배역을 모르는 공연은 배우만
 const pcalCell = (d, from) => {
   if (!d) return `<span class="cday out" aria-hidden="true"></span>`;
@@ -1135,15 +1135,15 @@ V.plans = day => {
   const nB = inMonth.filter(([x]) => planStatus(x) === "booked").length;
   return `
   <div class="pchead"><div><p class="eyebrow">내 공연</p><h1>관극 캘린더</h1></div>
-    <div class="pclegend"><span><i class="lg booked"></i>관람예정</span><span><i class="lg tentative"></i>미정일정</span></div></div>
+    <div class="pclegend"><span><i class="lg tentative"></i>보고싶어요</span><span><i class="lg booked"></i>예매했어요</span><span><i class="lg seen"></i>관람했어요</span></div></div>
   <section class="pcal" aria-label="${+ym.slice(0, 4)}년 ${+ym.slice(5)}월 캘린더">
     <div class="pcnav"><button type="button" data-act="pcalMove" data-n="-1" aria-label="이전 달">‹</button><b>${+ym.slice(0, 4)}. ${ym.slice(5)}</b><button type="button" data-act="pcalMove" data-n="1" aria-label="다음 달">›</button></div>
     <div class="pcgrid">${DOWS.map((d, k) => `<span class="pcdow${k === 0 || k === 6 ? " sun" : ""}">${d}</span>`).join("")}${pcalWeeks(ym).flat().map(d => pcalCell(d, from)).join("")}</div>
     ${ym !== from.slice(0, 7) ? `<button type="button" class="pctoday" data-act="pcalMove" data-n="0">오늘로</button>` : ""}
   </section>
-  ${S.plans.length ? `<section class="hsec"><h2>${+ym.slice(5)}월 일정 <span class="count">관람예정 ${nB} · 미정일정 ${inMonth.length - nB}</span></h2>
+  ${S.plans.length ? `<section class="hsec"><h2>${+ym.slice(5)}월 일정 <span class="count">${Object.entries(PLAN_STATUS).map(([k, l]) => `${l} ${inMonth.filter(([x]) => planStatus(x) === k).length}`).join(" · ")}</span></h2>
     ${inMonth.length ? `<div class="agenda">${inMonth.map(agendaRow).join("")}</div>` : `<p class="small muted">이 달에는 담은 공연이 없어요.</p>`}</section>`
-    : `<div class="card"><p><b>아직 담은 공연이 없어요</b></p><p class="small muted">추천받은 조합에서 회차를 담으면 캘린더에 미정일정으로 들어가요. 예매한 뒤 관람예정으로 바꾸면 포스터가 컬러로 바뀌어요.</p><a class="btn" href="#find">배우 조합 추천받기</a></div>`}
+    : `<div class="card"><p><b>아직 담은 공연이 없어요</b></p><p class="small muted">추천받은 조합에서 회차를 담으면 캘린더에 보고싶어요(흑백 포스터)로 들어가요. 예매한 뒤 예매했어요로 바꾸면 포스터가 컬러로 바뀌어요.</p><a class="btn" href="#find">배우 조합 추천받기</a></div>`}
   ${likedCard()}${seenProgress()}
   <a class="btn ghost" href="#log">본 공연 기록하기</a>`;
 };
@@ -1163,8 +1163,8 @@ const planDay = d => { PCAL_M = d.slice(0, 7);  // 캘린더로 돌아가면 이
     return `<article class="pday ${st}">
       <div class="pdtop">${pp ? `<img class="pdposter" src="${esc(pp)}" referrerpolicy="no-referrer" alt="${esc(x.work)} 포스터">` : ""}
         <div class="pdst"><div class="pseg" role="group" aria-label="일정 상태">${Object.entries(PLAN_STATUS).map(([k, l]) => `<button type="button" class="${k === st ? "on" : ""}" data-act="planStatus" data-i="${i}" data-s="${k}" aria-pressed="${k === st}">${l}</button>`).join("")}</div>
-          <p class="tiny muted">${st === "booked" ? "예매한 공연이에요." : "예매하고 나면 관람예정으로 바꿔 주세요."}</p>
-          ${run.ticket && st !== "booked" && x.date >= from ? `<a class="btn" data-act="ticketSaved" data-i="${i}" href="${esc(run.ticket)}" target="_blank" rel="noopener">예매처로 이동 ↗</a>` : ""}</div></div>
+          <p class="tiny muted">${st === "seen" ? "본 공연이에요." : st === "booked" ? "예매한 공연이에요." : "예매하고 나면 예매했어요로 바꿔 주세요."}</p>
+          ${run.ticket && st === "tentative" && x.date >= from ? `<a class="btn" data-act="ticketSaved" data-i="${i}" href="${esc(run.ticket)}" target="_blank" rel="noopener">예매처로 이동 ↗</a>` : ""}</div></div>
       <dl class="pinfo">
         <div><dt>공연명</dt><dd><b>${esc(x.work)}</b></dd></div>
         <div><dt>날짜</dt><dd>${ymdDot(x.date)} (${esc(x.dow || dowOf(x.date))})</dd></div>
@@ -1195,7 +1195,7 @@ const rvDraft = (work, date, time, entry) => {  // 이어서 쓰는 초안. 이�
 V.review = (work, date, time, entry = "log") => {
   if (work === undefined && S.proto?.rdraft) [work, date, time] = S.proto.rdraft.k.split("|");  // #review: KOPIS 공연 기록(제목에 '/'가 있을 수 있어 주소에 안 넣는다)
   const dr = rvDraft(work, date, time, entry); if (!dr) return V.plans();
-  const rv = dr.rv, W = esc(work), venue = runOf(work, date)?.venue || kopisShow(rv.kopis)?.venue || "", head = `<div><p class="eyebrow">관람 기록</p><h1>${W} 공연 어땠어요?</h1></div><p class="muted small">${md(date)}${time ? ` ${esc(time)}` : ""}${venue ? ` · ${esc(venue)}` : ""}</p>`;
+  const rv = dr.rv, W = esc(work), venue = runOf(work, date)?.venue || kopisShow(rv.kopis)?.venue || rv.venue || "", head = `<div><p class="eyebrow">관람 기록</p><h1>${W} 공연 어땠어요?</h1></div><p class="muted small">${md(date)}${time ? ` ${esc(time)}` : ""}${venue ? ` · ${esc(venue)}` : ""}</p>`;
   if (dr.done) { const sug = reviewSuggest(S, rv);  // 7단계: 저장 뒤 배우 조건 제안(체크한 것만, 기본은 선택 안 됨)
     return `<div class="one">${head}<div class="card"><h3>저장했어요</h3><p class="small muted">남긴 기록은 배우 정보로 쓰이고, 취향 카드는 바뀌지 않아요.</p></div>
       ${sug.length ? `<div class="card"><h3>배우 조건에 넣을까요? <span class="small muted">고른 것만</span></h3><div class="chips">${sug.map(s => { const on = dr.picks.some(x => x.actor === s.actor); return `<button type="button" class="chip x ${on ? "on" : ""}" data-act="rvPick" data-a="${esc(s.actor)}" data-k="${s.kind}" aria-pressed="${on}">${esc(s.actor)} 배우를 ${s.kind === "fav" ? "애정 배우" : "피하고 싶은 배우"}에 넣기</button>`; }).join("")}</div>
@@ -1235,17 +1235,34 @@ const lkFill = lc => {  // 고른 날짜(·시각)의 회차표 출연진으로 
 V.log = (work, id) => {
   const from = today(), w = work && workOf(work);
   if (work === "k") return logKopis(id);
+  if (work === "m") return logManual();
   if (!w) { const seeds = D.works.filter(x => logPerfs(D, x.name, from).length), cur = logShows(from);
     const card = (href, poster, title, sub) => `<a class="wcard" href="${href}" data-t="${esc(title.toLowerCase())}">${poster}<span class="winfo"><b>${esc(title)}</b>${sub ? `<span class="tiny muted">${esc(sub)}</span>` : ""}</span></a>`;
     return `<div class="one"><div><p class="eyebrow">본 공연 기록하기</p><h1>어떤 작품을 봤어요?</h1></div>
       <input id="logq" class="logq" type="search" placeholder="작품 이름으로 찾기" aria-label="작품 이름으로 찾기" autocomplete="off">
       <div class="wlist p5" id="loglist">${seeds.map(x => card(`#log/${esc(x.name)}`, posterEl(x, "wposter"), x.name, runsOf(x.name)[0]?.venue || "")).join("")}${cur.map(s => card(`#log/k/${esc(s.id)}`, curPoster(s, "wposter", true), s.title, s.past ? `${s.venue} · ${s.end.slice(0, 4)}.${s.end.slice(5, 7)} 종료` : s.venue)).join("")}</div>
       <p class="small muted" id="lognone" hidden>찾는 작품이 없어요. 서울에서 최근 1년 안에 공연했거나 지금 공연 중인 작품만 있어요.</p>
+      <a class="btn ghost" href="#log/m">목록에 없는 공연 직접 기록하기</a><p class="tiny muted">1년보다 전에 본 공연이나 지방 공연은 공연 정보를 직접 적어 기록해요.</p>
       <p class="tiny muted">공연 정보·포스터: 공연예술통합전산망(KOPIS) · 데이터 기준 ${esc(D.generated)}</p></div>`; }
   const ps = logPerfs(D, work, from);
   return `<div class="one"><div><p class="eyebrow">본 공연 기록하기 · ${esc(work)}</p><h1>언제 봤어요?</h1></div><p class="small muted">관람일이 지난 회차만 기록할 수 있어요.</p>
     ${ps.map(p => `<a class="card perf" style="text-decoration:none;color:inherit" href="#review/${esc(work)}/${p.date}/${p.time}">${whenTile(p)}<p class="tiny muted">${reviewRoles(D, work, p.cast).map(r => `${esc(r)} ${esc(p.cast[r])}`).join(" · ")}</p>${reviewOf(S, work, p.date, p.time) ? `<p class="small" style="color:var(--ok)">기록 남김 · 눌러서 고치기</p>` : ""}</a>`).join("") || `<div class="card"><p class="small muted">아직 지난 회차가 없어요.</p></div>`}</div>`;
 };
+const ampm = t => { const [h, m] = String(t || "").split(":").map(Number); return Number.isFinite(h) ? `${h < 12 ? "오전" : "오후"} ${h % 12 || 12}:${String(m || 0).padStart(2, "0")}` : ""; };
+const HALF_HOURS = Array.from({length: 29}, (_, i) => `${String(9 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`);  // 09:00 ~ 23:00, 30분 단위
+// 회차표가 없는 공연의 시각: 오후 2:00 · 오후 7:00 칩 + 30분 단위 고르기(사용자 요청 2026-11-03). act: 칩을 누를 때 동작, sel: 고르기 칸 id
+const timePick = (cur, act, sel) => `<div class="lkt"><span class="tiny muted">시각 <span class="muted">(선택)</span></span><div class="chips">${["14:00", "19:00"].map(v => `<button type="button" class="chip x ${cur === v ? "on" : ""}" data-act="${act}" data-t="${v}" aria-pressed="${cur === v}">${ampm(v)}</button>`).join("")}
+  <select id="${sel}" aria-label="다른 시각(30분 단위)"><option value="">다른 시각</option>${HALF_HOURS.map(v => `<option value="${v}"${cur === v && !["14:00", "19:00"].includes(v) ? " selected" : ""}>${ampm(v)}</option>`).join("")}</select></div></div>`;
+let LM = {title: "", venue: "", date: "", time: "", cast: []};  // 직접 기록 초안(저장 안 함)
+const logManual = () => { const from = today(), n = LM.cast.length;
+  return `<div class="one"><div><p class="eyebrow">본 공연 기록하기</p><h1>공연 정보를 적어 주세요</h1></div><p class="small muted">목록에 없는 공연도 기록할 수 있어요. 기록은 이 기기에만 남아요.</p>
+    <div class="card lmform"><label>공연 이름<input id="lmTitle" value="${esc(LM.title)}" placeholder="예: 레베카" maxlength="60" autocomplete="off"></label>
+      <label><span>공연장 <span class="muted">(선택)</span></span><input id="lmVenue" value="${esc(LM.venue)}" placeholder="예: 충무아트센터 대극장" maxlength="60" autocomplete="off"></label>
+      <label>본 날짜<input type="date" id="lmDate" max="${from}" value="${esc(LM.date)}"></label>${timePick(LM.time, "lmTime", "lmt")}</div>
+    <div class="card"><h3>누가 나왔어요?</h3><div class="chips">${LM.cast.map(a => `<button type="button" class="chip x on" data-act="lmDel" data-a="${esc(a)}" aria-label="${esc(a)} 빼기">${esc(a)} ×</button>`).join("")}</div>
+      <div class="lkadd"><input id="lmadd" list="lmactors" placeholder="배우 이름" autocomplete="off" maxlength="20" aria-label="본 배우 이름"><button type="button" class="chip" data-act="lmAdd">추가</button></div>
+      <datalist id="lmactors">${allActors().map(a => `<option value="${esc(a)}">`).join("")}</datalist></div>
+    <button class="btn" data-act="lmGo" ${n ? "" : "disabled"}>${n ? `배우 ${n}명 평가하기` : "본 배우를 추가해 주세요"}</button></div>`; };
 const logKopis = id => {
   const s = kopisShow(id), from = today(), lc = logCastOf(id); if (!s) return V.log();
   if (LK.id !== id) LK = {id, date: "", time: "", cast: [], rc: {}, auto: false};
@@ -1253,7 +1270,7 @@ const logKopis = id => {
   const n = lc ? Object.keys(LK.rc).length : LK.cast.length;
   const chip = (on, attrs, label) => `<button type="button" class="chip x ${on ? "on" : ""}" ${attrs} aria-pressed="${on}">${esc(label)}</button>`;
   const timeBox = day.length ? `<div class="lkt"><span class="tiny muted">시각</span><div class="chips">${day.map(([, t]) => chip(LK.time === t, `data-act="lkTime" data-t="${esc(t)}"`, t)).join("")}</div></div>`
-    : `<label>시각 <span class="muted">(선택)</span><input type="time" id="lkt" value="${esc(LK.time)}"></label>`;
+    : timePick(LK.time, "lkTime", "lkt");
   const who = lc
     ? `${lc.roles.map(([r, as]) => `<div class="lkrole"><b>${esc(r)}</b><div class="chips">${as.map(a => chip(LK.rc[r] === a, `data-act="lkRole" data-r="${esc(r)}" data-a="${esc(a)}"`, a)).join("")}</div></div>`).join("")}
       <p class="tiny muted">${LK.auto ? "그날 회차표대로 채웠어요. 다르면 바꿔 주세요." : "날짜와 시각을 고르면 그 회차 출연진으로 채워져요. 배역마다 한 명을 골라 주세요."}</p>`
@@ -1271,6 +1288,7 @@ const logKopis = id => {
 V.me = (step = "1") => {
   const rows = exportRows();
   return `<div class="one">${noticeLine()}${onboardBody(step === "2" ? "2" : "1", false, "", "#me")}
+    ${privacyLink() ? `<p class="tiny muted mepriv">${privacyLink().replace(/^\s*·\s*/, "")}</p>` : ""}
     ${rows.length && debugOn() ? `<div class="card"><h3>팀 시트로 내보내기</h3><p class="small muted">'태그 기록' 탭 맨 아래에 붙여 넣는 TSV ${rows.length}줄이에요.</p><button class="btn ghost" data-act="copyTsv">TSV 복사</button><pre>${esc(rows.map(r => r.join("\t")).join("\n"))}</pre></div>` : ""}
    </div>`;
 };
@@ -1751,8 +1769,8 @@ const saveReview = (D, S, rv, entry = "plan", at = "") => {  // 한 회차에 �
   const out = {...JSON.parse(JSON.stringify(rv)), entry, at};
   S.reviews = (S.reviews || []).filter(r => !(r.work === rv.work && r.date === rv.date && r.time === rv.time)); S.reviews.push(out);
   const plans = (S.plans ||= []), x = plans.find(y => y.work === rv.work && y.date === rv.date && y.time === rv.time);
-  if (x) { x.tagged = true; x.asked = true; }
-  else { const p = (D.perfs || []).find(q => q.work === rv.work && q.date === rv.date && q.time === rv.time); plans.push({work: rv.work, date: rv.date, dow: p?.dow || "일월화수목금토"[new Date(rv.date + "T00:00:00").getDay()], time: rv.time, cast: p ? {...p.cast} : {...rv.cast}, tagged: true, asked: true, status: "booked", ...(rv.kopis ? {kopis: rv.kopis} : {})}); }
+  if (x) { x.tagged = true; x.asked = true; x.status = "seen"; }  // 관람 기록을 남기면 관람했어요(2026-11-03)
+  else { const p = (D.perfs || []).find(q => q.work === rv.work && q.date === rv.date && q.time === rv.time); plans.push({work: rv.work, date: rv.date, dow: p?.dow || "일월화수목금토"[new Date(rv.date + "T00:00:00").getDay()], time: rv.time, cast: p ? {...p.cast} : {...rv.cast}, tagged: true, asked: true, status: "seen", ...(rv.kopis ? {kopis: rv.kopis} : {}), ...(rv.venue ? {venue: rv.venue} : {})}); }
   return out;
 };
 const reviewRows = (reviews, user = "me") => (reviews || []).flatMap(rv => Object.entries(rv.rows || {}).flatMap(([role, r]) =>
@@ -1786,15 +1804,15 @@ const fitPairs = (D, S) => (S.reviews || []).flatMap(rv => {
   return e ? [{work: rv.work, date: rv.date, time: rv.time, sat: e.a, rates: Object.values(rv.rows || {}).map(r => r.rate)}] : []; });
 const logPerfs = (D, work, from) => (D.perfs || []).filter(p => p.work === work && p.date < from && !isPrivate(p)).sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));  // 본 공연 기록하기: 지난 회차만(최근 순)
 // 내 공연 캘린더(사용자 요청 2026-10-28): 담은 회차는 '미정일정'(흑백 포스터)으로 들어가고, 예매한 뒤 '관람예정'으로 바꾸면 컬러 포스터. 좌석·금액은 사용자가 적는다
-const PLAN_STATUS = {tentative: "미정일정", booked: "관람예정"};
-const planStatus = x => x?.status === "booked" ? "booked" : "tentative";  // 상태가 없는 예전 기록은 미정일정
+const PLAN_STATUS = {tentative: "보고싶어요", booked: "예매했어요", seen: "관람했어요"};  // 화면 이름만 바꿨다(2026-11-03, 예전 미정일정·관람예정). 저장 값은 그대로
+const planStatus = x => x?.status === "booked" || x?.status === "seen" ? x.status : "tentative";  // 상태가 없는 예전 기록은 보고싶어요
 const setPlanStatus = (S, i, st) => { const x = S.plans[i]; if (!x || !PLAN_STATUS[st]) return false; x.status = st; return true; };
 const setPlanField = (S, i, k, v) => { const x = S.plans[i]; if (!x) return false;
   if (k === "price") { const n = parseInt(String(v ?? "").replace(/\D/g, ""), 10); if (n > 0) x.price = Math.min(n, 9999999); else delete x.price; return true; }  // 숫자만 남긴다(쉼표·'원' 허용)
   if (k === "seat") { const s = String(v ?? "").trim().slice(0, 40); if (s) x.seat = s; else delete x.seat; return true; }
   return false; };
 const plansOn = (S, date) => (S.plans || []).map((x, i) => [x, i]).filter(([x]) => x.date === date)
-  .sort(([a], [b]) => (planStatus(a) === "booked" ? 0 : 1) - (planStatus(b) === "booked" ? 0 : 1) || a.time.localeCompare(b.time));  // 관람예정이 앞(칸 포스터는 첫째 것)
+  .sort(([a], [b]) => (planStatus(a) === "tentative" ? 1 : 0) - (planStatus(b) === "tentative" ? 1 : 0) || a.time.localeCompare(b.time));  // 관람예정이 앞(칸 포스터는 첫째 것)
 const pcalShift = (ym, n) => { const m = +ym.slice(0, 4) * 12 + (+ym.slice(5, 7) - 1) + n; return `${Math.floor(m / 12)}-${String(m % 12 + 1).padStart(2, "0")}`; };
 const pcalWeeks = ym => {  // 일요일부터 한 주. 그달이 아닌 칸은 ""
   const y = +ym.slice(0, 4), m = +ym.slice(5, 7), lead = new Date(y, m - 1, 1).getDay(), days = new Date(y, m, 0).getDate();
@@ -1818,11 +1836,11 @@ const CHIPS = [["voice", "목소리"], ["vocal", "성량·가창"], ["acting", "
 const CHIP_CODES = CHIPS.map(c => c[0]);
 // 화면 이름(방문·화면 진입 기록). 주소(#…)를 이 목록으로 바꿔 보낸다 — 주소 안 작품 제목·날짜 같은 글자는 보내지 않는다
 const SCREENS = ["home", "taste", "find", "find_taste", "find_how", "find_actor", "find_actor_recs", "find_actor_cal", "find_date", "find_date_recs", "find_date_cal",
-  "show", "detail", "saved", "plans", "plans_day", "review", "log", "log_work", "log_kopis", "me", "privacy", "photos", "browse", "other"];
+  "show", "detail", "saved", "plans", "plans_day", "review", "log", "log_work", "log_kopis", "log_manual", "me", "privacy", "photos", "browse", "other"];
 const screenOf = (name, args = []) => {
   if (name === "find") { const [w, how, step] = args; if (!w) return "find"; if (!how) return "find_taste"; if (how === "actor" || how === "date") return `find_${how}${step === "recs" || step === "cal" ? "_" + step : ""}`; return "find_how"; }
   if (name === "plans") return args[0] ? "plans_day" : "plans";
-  if (name === "log") return args[0] === "k" ? "log_kopis" : args[0] ? "log_work" : "log";
+  if (name === "log") return args[0] === "k" ? "log_kopis" : args[0] === "m" ? "log_manual" : args[0] ? "log_work" : "log";
   if (name === "tag" || name === "review") return "review";
   if (name === "onboard") return "taste";
   return SCREENS.includes(name) ? name : "other"; };
@@ -1878,7 +1896,7 @@ const EVENTS = {
   after_review: {req: ["work", "date", "time", "actors"], shape: {work: R_WORK, run: R_RUN, date: R.date, time: R.time, entry: R.oneOf(["plan", "log"]),
     actors: R.arr(8, R.obj({role: R.inSet("roles"), actor: R.inSet("actors"), rate: R.oneOf(["good", "meh", "bad"]), tags: R.arr(3, R.inSet("actorTags"))}, ["role", "actor", "rate"])),
     combo: R.arr(3, R.inSet("comboTags"))}},  // 관람 후 리뷰(11.1절)를 저장할 때. 주관식 원문은 보내지 않는다
-  plan_status: {req: ["work", "date", "time", "status"], shape: {work: R_WORK, run: R_RUN, date: R.date, time: R.time, cast: R_CAST, status: R.oneOf(["tentative", "booked"])}},  // 내 공연 캘린더에서 미정일정 ↔ 관람예정을 바꿀 때(예매 전환). 좌석·금액은 보내지 않는다
+  plan_status: {req: ["work", "date", "time", "status"], shape: {work: R_WORK, run: R_RUN, date: R.date, time: R.time, cast: R_CAST, status: R.oneOf(["tentative", "booked", "seen"])}},  // 내 공연 캘린더에서 미정일정 ↔ 관람예정을 바꿀 때(예매 전환). 좌석·금액은 보내지 않는다
   visit: {req: ["entry"], shape: {entry: R.oneOf(SCREENS), returning: R.bool}},  // 앱을 열 때 한 번: 들어온 화면, 전에 이 기기에서 온 적이 있는지(기기 번호가 이미 있었는지)
   screen_view: {req: ["screen"], shape: {screen: R.oneOf(SCREENS), work: R_WORK}},  // 화면을 옮길 때마다 한 줄: 화면 이름(정해 둔 목록), MVP 작품 화면이면 작품
 };
@@ -2017,7 +2035,7 @@ const trackSettings = () => { const off = TRK.isOff();
     <p class="tiny muted"><b>기록 끄기</b> 지금부터 보내지 않고 이 기기의 번호를 지워요. 이미 보낸 기록은 6개월 뒤 지워져요.</p>
     <p class="tiny muted"><b>이 기기 기록 지우기</b> 이 기기의 번호만 지워요. 켜 둔 상태면 다음 기록부터 새 번호예요.</p>
     <a class="small" href="#privacy">기록·개인정보 안내 보기</a>
-    ${CLR_ASK ? `<div class="ask"><p class="small"><b>기록을 지웠어요.</b> 이 기기에 저장된 취향·볼 예정도 지울까요?</p><div class="nbgrid"><button class="nb" data-act="clearAppData">취향·볼 예정도 지우기</button><button class="nb" data-act="clearAppKeep">그대로 두기</button></div></div>` : ""}</div>`; };
+    ${CLR_ASK ? `<div class="ask"><p class="small"><b>기록을 지웠어요.</b> 이 기기에 저장된 취향·내 공연 일정도 지울까요?</p><div class="nbgrid"><button class="nb" data-act="clearAppData">취향·볼 예정도 지우기</button><button class="nb" data-act="clearAppKeep">그대로 두기</button></div></div>` : ""}</div>`; };
 // 안내 화면(임시 문안: docs/privacy_notice_draft_2026-10-10.md 3장). 초안·법률 검토 전이라 대괄호 자리는 그대로 둔다
 V.privacy = () => !trackUi() ? `<div class="one"><div class="card"><p class="small">이 앱은 지금 아무 기록도 서버로 보내지 않아요.</p><a class="btn ghost" href="#home">홈으로</a></div></div>` : `<div class="one prv">
   <div><h1>기록·개인정보 안내</h1></div>
@@ -2025,7 +2043,7 @@ V.privacy = () => !trackUi() ? `<div class="one"><div class="card"><p class="sma
   <div class="card"><h3>1) 어떤 기록을 남기나요?</h3>
     <table class="prt"><tr><th>이럴 때</th><th>이런 것이 기록돼요</th></tr>
       <tr><td>조합에 점수를 줄 때 (추천을 받은 직후, 공연을 본 뒤)</td><td>점수(1~5점), 고른 이유, 그 조합(작품·회차·출연 배우), 추천 방식, 그때의 취향 설정(취향 5가지 값, 좋아하는 배우, 고른 태그)</td></tr>
-      <tr><td>'볼 예정에 담기'나 '예매처로 이동'을 누를 때</td><td>고른 회차와 조합, 그때 보여 준 추천 조합 3개, 걸어 둔 기간·꼭 볼 배우·뺀 배우</td></tr>
+      <tr><td>'보고 싶은 조합에 담기'나 '예매처로 이동'을 누를 때</td><td>고른 회차와 조합, 그때 보여 준 추천 조합 3개, 걸어 둔 기간·꼭 볼 배우·뺀 배우</td></tr>
       <tr><td>배우를 '꼭 볼'이나 '제외'로 정하거나 풀 때</td><td>작품, 배역, 배우, 정했는지 풀었는지</td></tr>
       <tr><td>끌리는 배우 고르기에서 고를 때</td><td>맞붙은 두 배우와 그때 보여 준 태그, 고른 결과</td></tr>
       <tr><td>날짜별 조합 정보가 없는 공연에서 배우가 내 취향이었는지 고를 때</td><td>공연, 배우, 점수(1~5점), 고른 이유</td></tr>
@@ -2034,7 +2052,7 @@ V.privacy = () => !trackUi() ? `<div class="one"><div class="card"><p class="sma
       <tr><td>홈 추천 줄에서 [이미 봤어요]·[관심 없어요]·[되돌리기]를 누를 때</td><td>공연, 어느 추천 줄이었는지(좋아하는 배우 · 비슷한 배우 · 내 취향), 누른 것</td></tr>
       <tr><td>추천 조합 카드의 '이 조합 어때요?'에 답할 때</td><td>작품, 그 조합, 고른 답(마음에 들어요·별로예요·모르겠어요), 몇 번째 카드였는지, '누구 때문인가요?'에서 고른 것</td></tr>
       <tr><td>본 공연의 관람 기록을 저장할 때</td><td>작품, 회차, 배우마다 고른 평가(좋았어요·그저 그랬어요·아쉬웠어요)와 태그, 두 배우의 합 태그. 직접 쓴 글은 보내지 않아요</td></tr>
-      <tr><td>내 공연 캘린더에서 미정일정·관람예정을 바꿀 때</td><td>작품, 회차와 조합, 바꾼 상태. 적어 둔 좌석·금액은 보내지 않아요</td></tr>
+      <tr><td>내 공연 캘린더에서 보고싶어요·예매했어요·관람했어요를 바꿀 때</td><td>작품, 회차와 조합, 바꾼 상태. 적어 둔 좌석·금액은 보내지 않아요</td></tr>
       <tr><td>앱을 열 때</td><td>처음 들어온 화면 이름(예: 홈), 이 기기에서 전에 온 적이 있는지</td></tr>
       <tr><td>화면을 옮길 때</td><td>옮긴 화면 이름(예: 추천 조합, 내 공연 캘린더), 작품 화면이면 작품. 주소에 든 날짜·제목 같은 글자는 보내지 않아요</td></tr></table>
     <p class="small">모든 기록에는 <b>이 기기의 무작위 번호 2개</b>(기기 번호, 이번 방문 번호), 앱 버전, 기록한 <b>날짜</b>(시각은 남기지 않아요), 한 방문 안에서의 순서가 같이 붙어요.</p>
@@ -2262,29 +2280,29 @@ V.home = () => {
         <div class="tkperf" aria-hidden="true"></div>
         <div class="tkbtns" data-noshot><button type="button" class="tkedit" data-go="#taste/1">수정하기</button><button type="button" class="tkedit" data-act="tkShare">공유하기</button><button type="button" class="tkedit" data-act="tkSave">저장하기</button></div>${foot}</div>`;
   if (!CARD_BACK) prepCardImg();
-  return `${visit}${tkFan(from)}<div class="tcwrap">${card}</div></div></div>${homeWorks(from)}
-    ${privacyLink() ? `<p class="tiny muted">${privacyLink().replace(/^\s*·\s*/, "")}</p>` : ""}`;
+  return `${visit}${tkFan(from)}<div class="tcwrap">${card}</div></div></div>${homeWorks(from)}`;
 };
 // 홈 아래 작품 목록(사용자 요청 2026-10-28: 홈이 비어 보이지 않게). ① 배우 조합을 추천받을 수 있는 작품(#find/작품) ② 지금 하는 공연 전체(KOPIS, 인기순·지역 칩, #show/…)
-const rankCard = (x, k) => { const ref = showRef(D, x.key); if (!ref) return "";  // 인기순 위 10개는 포스터에 순위 숫자
-  return `<a class="pcard" href="#show/${esc(x.key)}" data-go="#show/${esc(x.key)}" data-entry="browse"><div class="pimg">${posterOf(ref, "pi")}${k < 10 && x.pop != null ? `<span class="prank">${k + 1}</span>` : ""}${castMark(ref)}</div><span class="pt">${esc(x.title)}</span><span class="pw">${periodOf(ref).split(" / ")[0]}</span></a>`; };
+const rankCard = (x, k) => { const ref = showRef(D, x.key); if (!ref) return ""; const pk = x.kind === "seed" && x.sched;  // 피클이 배우 조합을 추천하는 공연: 포스터 양쪽 레드 커튼(2026-11-03, 「날짜별 캐스팅 있음」 표시 대신)  // 인기순 위 10개는 포스터에 순위 숫자
+  return `<a class="pcard" href="#show/${esc(x.key)}" data-go="#show/${esc(x.key)}" data-entry="browse"><div class="pimg${pk ? " pkcur" : ""}">${posterOf(ref, "pi")}${k < 10 && x.pop != null ? `<span class="prank">${k + 1}</span>` : ""}${pk ? `<span class="pkc l" aria-hidden="true"></span><span class="pkc r" aria-hidden="true"></span><span class="sr-only">피클 조합 추천</span>` : ""}</div><span class="pt">${esc(x.title)}</span><span class="pw">${periodOf(ref).split(" / ")[0]}</span></a>`; };
 // 지금 하는 공연 전체(사용자 요청 2026-10-29): 제목 검색, 처음엔 5줄만 보이고 '더보기'마다 5줄씩. 한 줄 칸 수는 화면 너비(폰 3 · 넓은 화면 5)
 let HOME_ROWS = 5, HOME_Q = "";
 const homeCols = () => window.matchMedia && window.matchMedia("(max-width:599px)").matches ? 3 : 5;
 const qNorm = t => String(t || "").toLowerCase().replace(/\s+/g, "");
 const homeGrid = from => {
-  const all = allShows(D, from), tabs = regionTabs(all), tab = tabs.some(([k]) => k === S.proto?.areaTab) ? S.proto.areaTab : "all", q = qNorm(HOME_Q);
-  const list = q ? byPopularity(all, from).filter(x => qNorm(x.title).includes(q)) : showsIn(all, tabs, tab, from), n = HOME_ROWS * homeCols();
+  const all = allShows(D, from), tabs = regionTabs(all), tab = tabs.some(([k]) => k === S.proto?.areaTab) || S.proto?.areaTab === "pickle" ? S.proto.areaTab : "all", q = qNorm(HOME_Q);
+  const list = q ? byPopularity(all, from).filter(x => qNorm(x.title).includes(q)) : tab === "pickle" ? byPopularity(all.filter(pickleShow), from) : showsIn(all, tabs, tab, from), n = HOME_ROWS * homeCols();
   if (!list.length) return `<p class="small muted">'${esc(HOME_Q.trim())}' 검색 결과가 없어요. 지금 공연 중인 작품만 찾을 수 있어요.</p>`;
-  return `<div class="pgrid">${list.slice(0, n).map(rankCard).join("")}</div>${list.length > n ? `<button type="button" class="btn ghost hmore" data-act="homeMore">더보기 <span class="small muted">${n} / ${list.length}</span></button>` : ""}`;
+  return `<div class="pgrid">${list.slice(0, n).map(rankCard).join("")}</div>${list.length > n ? `<button type="button" class="btn ghost hmore" data-act="homeMore">더보기<span class="small muted">${n} / ${list.length}</span></button>` : ""}`;
 };
+const pickleShow = x => x.kind === "seed" && x.sched;  // 피클 조합 추천 가능한 공연(회차 캐스팅이 있는 MVP 작품) — 홈 지역 칩 줄의 필터
 const homeWorks = from => {
   const ws = MVP_WORKS(from).filter(w => workState(w, from).ok);
-  const all = allShows(D, from), tabs = regionTabs(all), tab = tabs.some(([k]) => k === S.proto?.areaTab) ? S.proto.areaTab : "all";
+  const all = allShows(D, from), tabs = regionTabs(all), tab = tabs.some(([k]) => k === S.proto?.areaTab) || S.proto?.areaTab === "pickle" ? S.proto.areaTab : "all";
   return `${ws.length ? `<section class="hsec"><div class="hhead"><h2>배우 조합 추천받기</h2><a class="small" href="#find">전체</a></div><p class="hsub">회차별 캐스팅이 공개된 작품이에요. 누르면 나에게 맞는 조합을 찾아 드려요</p>
     <div class="pgrid">${ws.map(w => `<a class="pcard" href="#find/${esc(w.name)}"><div class="pimg">${posterEl(w, "pi")}${workState(w, from).text ? `<span class="pstate">${esc(workState(w, from).text)}</span>` : ""}</div><span class="pt">${esc(w.name)}</span><span class="pw">${esc(runsOf(w.name)[0]?.venue || "")}</span></a>`).join("")}</div></section>` : ""}
   ${all.length ? `<section class="hsec hall"><div class="hhead"><h2>지금 하는 공연 전체<span class="count">${all.length}개</span></h2><input id="homeq" class="homeq" type="search" placeholder="공연 제목 검색" aria-label="공연 제목으로 찾기" autocomplete="off" value="${esc(HOME_Q)}"></div>
-    ${tabs.length > 1 ? `<div class="chips afilter" role="group" aria-label="지역">${tabs.map(([k, l, n]) => `<button type="button" class="chip ${tab === k ? "on" : ""}" data-act="areaTab" data-t="${esc(k)}" aria-pressed="${tab === k}">${esc(l)} ${n}</button>`).join("")}</div>` : ""}
+    ${tabs.length > 1 || all.some(pickleShow) ? `<div class="chips afilter" role="group" aria-label="지역">${[tabs[0], ["pickle", "피클 조합 추천 가능한 공연", all.filter(pickleShow).length], ...tabs.slice(1)].map(([k, l, n]) => `<button type="button" class="chip ${tab === k ? "on" : ""}${k === "pickle" ? " pkchip" : ""}" data-act="areaTab" data-t="${esc(k)}" aria-pressed="${tab === k}">${esc(l)} ${n}</button>`).join("")}</div>` : ""}
     <p class="tiny muted hsort">인기순${HOME_Q.trim() ? " · 검색은 전체 지역에서 찾아요" : ""}</p><div id="homegrid">${homeGrid(from)}</div></section>
   <p class="tiny muted">공연 정보·포스터: 공연예술통합전산망(KOPIS) · 데이터 기준 ${esc(D.generated)}</p>` : ""}`;
 };
@@ -2548,8 +2566,8 @@ const allCast = (work, cast) => [...leads(work, cast), ...rests(work, cast)].map
 const planIdx = (work, date, time) => S.plans.findIndex(x => x.work === work && x.date === date && x.time === time);
 const sessionCard = (work, p) => { const pi = planIdx(work, p.date, p.time), run = runOf(work, p.date) || {};
   return `<div class="card perf">${whenTile(p)}<p class="small muted">${esc(run.venue || "")}</p><div class="castall">${allCast(work, p.cast)}</div>
-    <div class="acts">${pi >= 0 ? `<a class="btn" href="#saved/${pi}">볼 예정에 담았어요 · ${run.ticket ? "예매처로 가기" : "담은 공연 보기"} →</a>`
-      : `<button class="btn" data-act="plan" data-work="${esc(work)}" data-date="${p.date}" data-time="${p.time}">볼 예정에 담기</button>${run.ticket ? "" : `<button class="btn ghost" disabled>예매 링크 준비 중</button>`}`}</div>
+    <div class="acts">${pi >= 0 ? `<a class="btn" href="#saved/${pi}">보고 싶은 조합에 담았어요 · ${run.ticket ? "예매처로 가기" : "담은 공연 보기"} →</a>`
+      : `<button class="btn" data-act="plan" data-work="${esc(work)}" data-date="${p.date}" data-time="${p.time}">보고 싶은 조합에 담기</button>${run.ticket ? "" : `<button class="btn ghost" disabled>예매 링크 준비 중</button>`}`}</div>
     <a class="tiny" href="#detail/${esc(work)}/${p.date}/${p.time}">좌석 배치도·가격 자세히 →</a></div>`; };
 const datesSection = ref => {
   const work = ref.key, from = today(), sel = curSel(D, S, work, from), perfs = selPerfs(D, work, sel, from), dates = [...new Set(perfs.map(p => p.date))], {star, avoid} = pinsOf(S, work);
@@ -2815,9 +2833,9 @@ document.addEventListener("click", e => {
     case "clearAppData": { CLR_ASK = false; try { localStorage.removeItem(KEY); } catch (e) {} location.hash = "#taste/1"; location.reload(); break; }  // 취향·볼 예정(앱 사용 데이터)은 따로 물어서만 지운다
     case "clearAppKeep": CLR_ASK = false; route(); break;
     case "dbgToggle": DBG_OPEN = !DBG_OPEN; renderDebug(); break;
-    case "areaTab": { if (regionTabs(allShows(D, today())).some(([k]) => k === d.t)) { (S.proto ||= {}).areaTab = d.t; HOME_ROWS = 5; HOME_Q = ""; save(); route(); } break; }  // 홈 전체 목록의 구분 버튼(검색어는 비운다)
+    case "areaTab": { if (d.t === "pickle" || regionTabs(allShows(D, today())).some(([k]) => k === d.t)) { (S.proto ||= {}).areaTab = d.t; HOME_ROWS = 5; HOME_Q = ""; save(); route(); } break; }  // 홈 전체 목록의 구분 버튼(검색어는 비운다)
     case "homeMore": { HOME_ROWS += 5; const g = $("#homegrid"); if (g) g.innerHTML = homeGrid(today()); break; }  // 5줄씩 더(화면 전체를 다시 그리지 않아 스크롤 위치 그대로)
-    case "addFav": { const id = d.k === "b" ? "#favB" : "#fav", [v, born] = actorPick($(id)?.value), P = prefsOf(); if (!v) return; if (born) (P.born ||= {})[v] = born; if (P.avoid) P.avoid = P.avoid.filter(a => a !== v); if (!P.favs.includes(v)) { P.favs.push(v); likeOpen.add(v); if (!knownActor(D, v)) noteRequest(v); }
+    case "addFav": { const id = d.k === "b" ? "#favB" : "#fav", [v, born] = actorPick($(id)?.value), P = prefsOf(); if (!v) return; if (born) (P.born ||= {})[v] = born; if (P.avoid) P.avoid = P.avoid.filter(a => a !== v); if (!P.favs.includes(v)) { P.favs.push(v); if (!knownActor(D, v)) noteRequest(v); }
       P.bonjin = (P.bonjin || []).filter(a => a !== v); if (d.k === "b") P.bonjin.push(v); if (!P.bonjin.length) delete P.bonjin;  // 같은 배우를 다른 칸에 넣으면 그 칸으로 옮긴다
       save(); route(); $(id)?.focus(); break; }
     case "likeAsk": likeOpen.add(d.a); location.hash = "#me"; setTimeout(() => [...document.querySelectorAll(".likebox")].find(x => x.dataset.a === d.a)?.scrollIntoView(), 60); break;  // 홈의 '어떤 점이 좋아요?' → 내 취향의 그 배우 입력 칸을 열어 둔다
@@ -2866,15 +2884,23 @@ document.addEventListener("click", e => {
     case "rvPub": { const dr = S.proto?.rdraft; if (!dr) return; dr.rv.pub = d.v === "1"; save(); route(); break; }
     case "lkCast": LK.cast = LK.cast.includes(d.a) ? LK.cast.filter(a => a !== d.a) : [...LK.cast, d.a]; route(); break;
     case "lkRole": { if (LK.rc[d.r] === d.a) delete LK.rc[d.r]; else LK.rc[d.r] = d.a; LK.auto = false; route(); break; }  // 배역마다 한 명(다시 누르면 뺀다)
-    case "lkTime": { const lc = logCastOf(LK.id); LK.time = d.t; if (lc) lkFill(lc); route(); break; }
+    case "lkTime": { const lc = logCastOf(LK.id); LK.time = !lc && LK.time === d.t ? "" : d.t; if (lc) lkFill(lc); route(); break; }  // 기본 후보 칩은 다시 누르면 풀린다
     case "lkAdd": { const el = $("#lkadd"), a = (el?.value || "").trim().slice(0, 20); if (!a) { el?.focus(); return; } if (!LK.cast.includes(a)) LK.cast = [...LK.cast, a]; route(); $("#lkadd")?.focus(); break; }
+    case "lmTime": LM.time = LM.time === d.t ? "" : d.t; route(); break;
+    case "lmAdd": { const el = $("#lmadd"), a = (el?.value || "").trim().slice(0, 20); if (!a) { el?.focus(); return; } if (!LM.cast.includes(a)) LM.cast = [...LM.cast, a]; route(); $("#lmadd")?.focus(); break; }
+    case "lmDel": LM.cast = LM.cast.filter(a => a !== d.a); route(); break;
+    case "lmGo": { const title = LM.title.trim(), from = today(); if (!LM.cast.length) return;
+      if (!title) { toast("공연 이름을 적어 주세요"); $("#lmTitle")?.focus(); return; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(LM.date) || LM.date > from) { toast("본 날짜를 골라 주세요"); $("#lmDate")?.focus(); return; }
+      const rv = reviewOf(S, title, LM.date, LM.time) || {work: title, manual: true, venue: LM.venue.trim(), date: LM.date, time: LM.time, cast: Object.fromEntries(LM.cast.map(a => [a, a])), rows: {}, combo: [], note: "", pub: false}; RV_MORE = {};
+      S.proto.rdraft = {k: [title, LM.date, LM.time].join("|"), entry: "log", rv: JSON.parse(JSON.stringify(rv)), swap: "", done: false, picks: []}; LM = {title: "", venue: "", date: "", time: "", cast: []}; save(); location.hash = "#review"; break; }
     case "lkGo": { const s = kopisShow(LK.id), from = today(), lc = logCastOf(LK.id), picked = lc ? Object.fromEntries(lc.roles.map(([r]) => [r, LK.rc[r]]).filter(([, a]) => a)) : LK.cast;
       if (!s || !Object.keys(picked).length) return;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(LK.date) || LK.date < s.start || LK.date > from) { toast("본 날짜를 골라 주세요"); $("#lkd")?.focus(); return; }
       const rv = reviewOf(S, s.title, LK.date, LK.time) || newKopisReview(s, LK.date, LK.time, picked); RV_MORE = {};
       S.proto.rdraft = {k: [s.title, LK.date, LK.time].join("|"), entry: "log", rv: JSON.parse(JSON.stringify(rv)), swap: "", done: false, picks: []}; save(); location.hash = "#review"; break; }
     case "rvSave": { const dr = S.proto?.rdraft; if (!dr) return; dr.rv.note = ($("#rvnote")?.value || "").trim(); const out = saveReview(D, S, dr.rv, dr.entry, today());
-      if (Object.keys(out.rows).length && !out.kopis) track("after_review", reviewRecord(D, out)); dr.done = true; save(); route(); break; }  // 저장 뒤 같은 화면에서 배우 조건 제안(결정 51). KOPIS 공연 리뷰는 기록 표의 작품 목록 밖이라 이 기기에만 남는다
+      if (Object.keys(out.rows).length && workOf(out.work)) track("after_review", reviewRecord(D, out)); dr.done = true; save(); route(); break; }  // 저장 뒤 같은 화면에서 배우 조건 제안(결정 51). KOPIS 공연 리뷰는 기록 표의 작품 목록 밖이라 이 기기에만 남는다
     case "rvSkip": { const dr = S.proto?.rdraft; if (!dr) return; const [w, dt, tm] = dr.k.split("|"), x = S.plans.find(y => y.work === w && y.date === dt && y.time === tm); if (x) x.asked = true; S.proto.rdraft = null; save(); location.hash = "#plans"; break; }  // 건너뛰면 관람 이력만 남고 다시 묻지 않는다
     case "rvPick": { const dr = S.proto?.rdraft; if (!dr?.done) return; dr.picks = dr.picks.some(x => x.actor === d.a) ? dr.picks.filter(x => x.actor !== d.a) : [...dr.picks, {actor: d.a, kind: d.k}]; save(); route(); break; }
     case "rvSug": { const dr = S.proto?.rdraft; if (!dr) return; if (d.y === "1" && dr.picks.length) applySuggest(S, dr.picks); const n = d.y === "1" ? dr.picks.length : 0; S.proto.rdraft = null; save(); location.hash = "#plans"; if (n) toast("배우 조건에 넣었어요"); break; }
@@ -2885,7 +2911,9 @@ document.addEventListener("click", e => {
 // 캘린더 날짜 화면의 좌석·금액: 쓰는 동안 저장하고(다시 그리지 않아 커서가 안 튄다), 금액은 칸을 떠날 때 쉼표를 붙여 다시 보여 준다
 document.addEventListener("input", e => {
   if (e.target.id === "lkd") { LK.date = e.target.value; const lc = logCastOf(LK.id); if (lc) { LK.time = ""; if (LK.auto) LK.rc = {}; LK.auto = false; lkFill(lc); route(); } }  // 회차표가 있으면 그날 시각 칩·출연진을 다시 그린다(회차표로 채운 출연진은 비우고, 직접 고른 건 둔다)
-  else if (e.target.id === "lkt") LK.time = e.target.value;
+  else if (e.target.id === "lkt") { LK.time = e.target.value; route(); }  // 30분 단위 고르기(칩 표시를 맞추려고 다시 그린다)
+  else if (e.target.id === "lmt") { LM.time = e.target.value; route(); }
+  else if (["lmTitle", "lmVenue", "lmDate"].includes(e.target.id)) LM[{lmTitle: "title", lmVenue: "venue", lmDate: "date"}[e.target.id]] = e.target.value;
   if (e.target.id === "logq") { const q = e.target.value.trim().toLowerCase().replace(/\s+/g, ""); let n = 0;  // 다시 그리지 않고 카드만 숨긴다(입력 중 커서 유지)
     document.querySelectorAll("#loglist [data-t]").forEach(c => { const on = !q || c.dataset.t.replace(/\s+/g, "").includes(q); c.hidden = !on; n += on; }); const none = $("#lognone"); if (none) none.hidden = n > 0; } });
 document.addEventListener("input", e => { const el = e.target.closest?.("[data-pf]"); if (el && setPlanField(S, +el.dataset.i, el.dataset.pf, el.value)) save(); });
@@ -2916,7 +2944,8 @@ document.addEventListener("keydown", e => {  // 시트(모달)가 열려 있을 
   if (!f.length) { e.preventDefault(); return; }
   if (e.shiftKey && (on === f[0] || on === $("#sheet"))) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && on === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
 });
-document.addEventListener("keydown", e => { if (e.key === "Enter" && ["fav", "avoidIn"].includes(e.target.id)) { e.preventDefault(); $(`[data-act=${e.target.id === "fav" ? "addFav" : "addAvoid"}]`).click(); } });
+const ENTER_ADD = {favB: '[data-act="addFav"][data-k="b"]', fav: '[data-act="addFav"]:not([data-k])', avoidIn: '[data-act="addAvoid"]', lkadd: '[data-act="lkAdd"]', lmadd: '[data-act="lmAdd"]'};  // 배우 검색 칸에서 엔터 = 그 칸의 [추가]
+document.addEventListener("keydown", e => { const sel = e.key === "Enter" && !e.isComposing && ENTER_ADD[e.target.id]; if (sel) { e.preventDefault(); $(sel)?.click(); } });
 if (!location.hash) history.replaceState(null, "", entryRoute(S.prefs, S));  // 처음 온 사람(취향 없음)의 첫 화면은 3단계 취향. #pick/… 같은 주소로 바로 들어온 사람은 그대로 둔다
 route();
 renderDebug();
