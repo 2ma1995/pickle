@@ -12,6 +12,7 @@
   --fg:#E8ECF0; --muted:#A5AFBA; --faint:#A5AFBA; --ok:#5FCB95; --warn:#E0B060; --star-off:#6F7B88;
   --veil:rgba(18,23,28,.78); --scrim:rgba(0,0,0,.62);
   --curtain:#B3202E; --curtain-dark:#7E121D;
+  --seal:url("img/seal.webp");  /* 붉은 실링왁스 + 장식 P(2026-11-04, 사용자가 만든 sealing-wax-web-kit 의 seal-realistic.webp 를 그림은 그대로 가로 320px 로만 줄임, 투명 배경): 피클 조합 추천 가능한 포스터 · 꼭 보고 싶은 배우 이름 상자 · 본진 배우 칸 · 취향 카드 */
   --curtain-pair:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='f' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%233d0a12'/%3E%3Cstop offset='.1' stop-color='%238e1c2c'/%3E%3Cstop offset='.19' stop-color='%234f0f19'/%3E%3Cstop offset='.3' stop-color='%23a8263c'/%3E%3Cstop offset='.41' stop-color='%2356101b'/%3E%3Cstop offset='.53' stop-color='%239c2337'/%3E%3Cstop offset='.64' stop-color='%234a0e17'/%3E%3Cstop offset='.76' stop-color='%238d1d2e'/%3E%3Cstop offset='.88' stop-color='%23430c15'/%3E%3Cstop offset='1' stop-color='%237a1828'/%3E%3C/linearGradient%3E%3ClinearGradient id='g' x1='1' x2='0'%3E%3Cstop offset='0' stop-color='%233d0a12'/%3E%3Cstop offset='.1' stop-color='%238e1c2c'/%3E%3Cstop offset='.19' stop-color='%234f0f19'/%3E%3Cstop offset='.3' stop-color='%23a8263c'/%3E%3Cstop offset='.41' stop-color='%2356101b'/%3E%3Cstop offset='.53' stop-color='%239c2337'/%3E%3Cstop offset='.64' stop-color='%234a0e17'/%3E%3Cstop offset='.76' stop-color='%238d1d2e'/%3E%3Cstop offset='.88' stop-color='%23430c15'/%3E%3Cstop offset='1' stop-color='%237a1828'/%3E%3C/linearGradient%3E%3ClinearGradient id='s' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23000' stop-opacity='.35'/%3E%3Cstop offset='.25' stop-color='%23000' stop-opacity='0'/%3E%3Cstop offset='.85' stop-color='%23000' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='%23000' stop-opacity='.3'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 0H22C20.9 22 17.05 48 8.8 70C11 86 13.2 104 13.75 120H0Z' fill='url(%23f)'/%3E%3Cpath d='M0 0H22C20.9 22 17.05 48 8.8 70C11 86 13.2 104 13.75 120H0Z' fill='url(%23s)'/%3E%3Cpath d='M100 0H78C79.1 22 82.95 48 91.2 70C89 86 86.8 104 86.25 120H100Z' fill='url(%23g)'/%3E%3Cpath d='M100 0H78C79.1 22 82.95 48 91.2 70C89 86 86.8 104 86.25 120H100Z' fill='url(%23s)'/%3E%3C/svg%3E");  /* 홈 포스터용: 양쪽 커튼을 포스터 너비 한 장에(왼쪽 22%, 오른쪽은 거울) */
   --curtain-img:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 120' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='f' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%233d0a12'/%3E%3Cstop offset='.1' stop-color='%238e1c2c'/%3E%3Cstop offset='.19' stop-color='%234f0f19'/%3E%3Cstop offset='.3' stop-color='%23a8263c'/%3E%3Cstop offset='.41' stop-color='%2356101b'/%3E%3Cstop offset='.53' stop-color='%239c2337'/%3E%3Cstop offset='.64' stop-color='%234a0e17'/%3E%3Cstop offset='.76' stop-color='%238d1d2e'/%3E%3Cstop offset='.88' stop-color='%23430c15'/%3E%3Cstop offset='1' stop-color='%237a1828'/%3E%3C/linearGradient%3E%3ClinearGradient id='s' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23000' stop-opacity='.35'/%3E%3Cstop offset='.25' stop-color='%23000' stop-opacity='0'/%3E%3Cstop offset='.85' stop-color='%23000' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='%23000' stop-opacity='.3'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 0H40C38 22 31 48 16 70C20 86 24 104 25 120H0Z' fill='url(%23f)'/%3E%3Cpath d='M0 0H40C38 22 31 48 16 70C20 86 24 104 25 120H0Z' fill='url(%23s)'/%3E%3C/svg%3E");  /* 홈 포스터·추천 조합 이름 상자가 같이 쓰는 레드 커튼(왼쪽 모양, 오른쪽은 뒤집어 쓴다) */  /* 추천 조합 이름 상자의 붉은 커튼·테두리(강조색과 따로) */
 }
@@ -272,13 +273,12 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
 .favrow .card.favbox input::placeholder{color:var(--paper-muted)}
 .favrow .card.favbox .row .chip{background:var(--paper);border:1px solid var(--paper-line);color:var(--on-paper)}
 .favbox::before,.favbox::after{content:"";position:absolute;pointer-events:none}
-.favrow>.card.favbox.bon{padding-inline:14px}
-.favbox.bon::before,.favbox.bon::after{top:0;bottom:0;width:9px;background:repeating-linear-gradient(90deg,#7A1E2C 0 3px,#A32A3D 3px 7px)}
-.favbox.bon::before{left:0;clip-path:polygon(0 0,100% 0,45% 55%,100% 100%,0 100%)}
-.favbox.bon::after{right:0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,55% 55%)}
+.favrow>.card.favbox.bon{padding-top:36px}
+.favbox.bon::before{top:8px;left:8px;width:26px;height:26px;background:var(--seal) no-repeat center/contain}  /* 본진 칸: 왼쪽 위 실링왁스(2026-11-04, 양쪽 커튼 대신) */
+.favbox.bon::after{content:none}
 .favrow>.card.favbox.love{padding-top:30px}
 .favbox.love::before{left:0;right:0;top:0;height:20px;background:radial-gradient(circle at 8px 0,#A32A3D 8px,transparent 8.5px) 0 12px/16px 8px repeat-x,repeating-linear-gradient(90deg,#7A1E2C 0 3px,#A32A3D 3px 7px) 0 0/100% 12px no-repeat}
-@media (min-width:600px){.favrow>.card.favbox.bon{padding-inline:26px}.favbox.bon::before,.favbox.bon::after{width:18px}}
+
 /* 내 취향 줄글 요약(사용자 요청 2026-11-03) */
 .mesum{gap:12px}
 .mesent{margin:0;font-size:18px;font-weight:700;line-height:1.5;letter-spacing:-.02em;word-break:keep-all;color:var(--fg)}
@@ -482,10 +482,8 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
 .rca span{font-size:12.5px;font-weight:600;line-height:1.25;color:var(--on-paper);word-break:keep-all}
 /* 꼭 보고 싶은 배우(2026-11-03): 이름 상자 양쪽에 붉은 커튼(그림 없이 CSS 로). 취향 태그와 맞는 배우: 테두리가 붉다. 둘 다 해당하면 둘 다. 커튼은 패딩 안쪽을 쓰고 안쪽 여백만 키운다 */
 .rca.want,.rca.fit{position:relative}
-.rca.want{padding-inline:20px;overflow:hidden}
-.rca.want::before,.rca.want::after{content:"";position:absolute;top:0;bottom:0;width:18px;pointer-events:none;background:var(--curtain-img) no-repeat center/100% 100%}  /* 홈 포스터 커튼과 같은 모양: 위아래는 넓고 가운데는 묶인 듯 좁다(사용자 요청 2026-11-03 저녁) */
-.rca.want::before{left:0}
-.rca.want::after{right:0;transform:scaleX(-1)}
+.rca.want{overflow:hidden}
+.rca.want::before{content:"";position:absolute;top:4px;left:4px;width:22px;height:22px;pointer-events:none;background:var(--seal) no-repeat center/contain}  /* 꼭 보고 싶은 배우(본진·애정·★·✓): 왼쪽 위 실링왁스(2026-11-04, 커튼 대신) */
 .rca.fit{outline:4px solid var(--curtain);outline-offset:-4px}  /* 테두리 두께 두 배(사용자 요청 2026-11-03 저녁). 테두리는 커튼 위에 그려져 둘 다 해당해도 보인다 */
 /* 웹(600px 이상): 인원수와 상관없이 늘 한 줄. --n(칸 수)으로 너비를 똑같이 나누고, --cell(칸 안쪽 너비)과 --m(배우 이름 길이)으로 글자 크기를 정해 줄인다 */
 @media (min-width:600px){
@@ -493,7 +491,7 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
   .rca{--cell:calc((100cqw - (var(--n) - 1)*var(--gap))/var(--n) - 2*var(--pad))}
   .rca b{max-width:100%;font-size:min(16px,calc(var(--cell)/(var(--m)*.94)));letter-spacing:-.03em;white-space:nowrap}
   .rca span{max-width:100%;font-size:min(12.5px,calc(var(--cell)/3.2));overflow-wrap:anywhere}
-  .rca.want{--pad:20px}
+  .rca.want{--pad:6px}
 }
 /* 추천 조합 화면 위 베타 후기 버튼(결정 82): 넓으면 제목 오른쪽, 좁으면 제목 아래 한 줄 */
 .rchead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px}
@@ -543,7 +541,7 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
 .pimg .pkc{position:absolute;top:0;bottom:0;width:15%;z-index:2;pointer-events:none;background:repeating-linear-gradient(90deg,#5C1521 0 3px,#8E2335 3px 7px,#B23A48 7px 9px,#7A1E2C 9px 12px)}
 .pimg .pkc.l{left:0;clip-path:polygon(0 0,100% 0,62% 45%,100% 100%,0 100%)}
 .pimg .pkc.r{right:0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,38% 45%)}
-.pimg.pkcur .prank{left:calc(15% + 4px)}
+.pimg.pkcur .prank{left:8px}
 .chip.pkchip{border-color:#B23A48;color:var(--fg)}
 /* 폰: 검색창은 '지금 하는 공연 전체' 제목 아래·지역 칩 위 한 줄 */
 @media (max-width:599px){.hall .hhead{flex-wrap:wrap}.hall .hhead .homeq{order:2;flex:1 0 100%;max-width:none}}
@@ -576,7 +574,7 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
 .pimg .pkc{clip-path:none;-webkit-mask:radial-gradient(ellipse 75% 46% at var(--cx) 50%,transparent 98%,#000 100%);mask:radial-gradient(ellipse 75% 46% at var(--cx) 50%,transparent 98%,#000 100%);width:18%}
 .pimg .pkc.l{--cx:100%}
 .pimg .pkc.r{--cx:0%}
-.pimg.pkcur .prank{left:calc(8% + 4px)}
+.pimg.pkcur .prank{left:8px}
 .tpick{display:flex;gap:8px;flex-wrap:wrap}
 .tpick select{min-height:40px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);font:inherit;font-size:14px}
 .tpick{flex-wrap:nowrap}.tpick select{width:auto;flex:1 1 0;min-width:0}
@@ -584,9 +582,9 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
 /* 레드 커튼(2026-11-03 참고 이미지): 주름진 벨벳이 위는 넓고, 가운데보다 조금 아래에서 묶인 듯 좁아지고, 아래로 다시 퍼진다. 오른쪽은 왼쪽을 뒤집어 쓴다. 가운데 끈은 뺐다(사용자 요청 2026-11-03 저녁) */
 .pimg .pkc{width:22%;clip-path:none;-webkit-mask:none;mask:none;background:var(--curtain-img) no-repeat center/100% 100%}
 .pimg .pkc.l,.pimg .pkc.r{clip-path:none;display:none}
-.pimg.pkcur::after{content:"";position:absolute;inset:0 -1px;z-index:2;pointer-events:none;background:var(--curtain-pair) no-repeat center/100% 100%}  /* 커튼은 포스터 가로 길이에 맞춘 한 장(양 끝 1px 더 덮어 끝에 포스터가 비치지 않게, 사용자 요청 2026-11-03 저녁). 둥근 모서리는 .pimg 가 잘라 준다 */  /* 예전 다각형 자르기가 뒤집힌 오른쪽 커튼의 바깥쪽을 파서 포스터와 커튼 사이가 비어 보였다(사용자 요청 2026-11-03: 빈 공간을 커튼으로 채움) */
+.pimg.pkcur::after{content:"";position:absolute;top:6px;left:6px;width:30%;aspect-ratio:1;z-index:2;pointer-events:none;background:var(--seal) no-repeat center/contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}  /* 커튼은 포스터 가로 길이에 맞춘 한 장(양 끝 1px 더 덮어 끝에 포스터가 비치지 않게, 사용자 요청 2026-11-03 저녁). 둥근 모서리는 .pimg 가 잘라 준다 */  /* 예전 다각형 자르기가 뒤집힌 오른쪽 커튼의 바깥쪽을 파서 포스터와 커튼 사이가 비어 보였다(사용자 요청 2026-11-03: 빈 공간을 커튼으로 채움) */
 .pimg .pkc.r{transform:scaleX(-1)}
-.pimg.pkcur .prank{left:calc(12% + 4px)}
+.pimg.pkcur .prank{left:8px}
 /* 볼 수 있는 조합이 없을 때(2026-11-04): 안내 문구는 가운데, 제안은 그 아래 줄마다, 버튼 둘은 한 줄 */
 .nocombo .ctr{text-align:center;word-break:keep-all}
 .nocombo .rlx{margin:2px 0 6px;padding-left:20px;display:grid;gap:6px;line-height:1.5;word-break:keep-all}
@@ -621,3 +619,7 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
 .pinfo>.pmemo{align-items:start}
 .pdnone{display:block;background:var(--soft);border:1px dashed var(--line)}
 .pdpick{cursor:pointer}
+
+/* 취향 카드 머리줄(PICKLE · MY PICKLE TASTE) 오른쪽 끝 실링왁스(사용자 요청 2026-11-04) */
+.tkhead{position:relative}
+.tkseal{position:absolute;right:10px;top:50%;width:34px;height:34px;transform:translateY(-50%);background:var(--seal) no-repeat center/contain;pointer-events:none}
