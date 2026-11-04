@@ -542,7 +542,7 @@ a.wcard:hover{border-color:var(--hl)}
 <div class="sheet-bg" id="sheetbg" data-noshot></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" data-noshot></div>
 
-<script src="data.js?v=202611041520"></script>
+<script src="data.js?v=202611041550"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -1427,7 +1427,7 @@ const comboEvidence = (D, prefs, work, cast, skip = [], w = () => 1) => {
   });
   return {ev, hit, bad};
 };
-const pinsOf = (S, work) => { const P = S.proto?.pins?.[work] || {}; return {star: P.star || [], avoid: P.avoid || []}; };
+const pinsOf = (S, work) => { const ac = S.cal?.[work]?.ac, P = S.proto?.pins?.[work] || {}, star = [...new Set([...(ac?.pick || []).filter(x => !x.src).map(x => x.a), ...(P.star || [])])], avoid = [...new Set([...(ac?.extra || []), ...(P.avoid || [])])].filter(a => !(P.star || []).includes(a)); return {star: star.filter(a => !(P.avoid || []).includes(a)), avoid}; };  // 아직 옮기지 않은 S.proto.pins(평가 뒤 물음 setPin)도 같이 본다. 다음 actorConds 때 배우 조건으로 옮겨진다  // 공연 화면 ⭐/🚫 = 배우 먼저의 ✓ 가능하면 포함 / 이 작품에서 피할 배우(2026-11-04)
 // 이상형 월드컵 반영: 고른 배우가 나오는 조합 +1, 진 배우가 나오는 조합 -1(비슷해요는 무효), 합은 ±2 까지
 const duelsOf = (S, work) => (S.proto?.duels || []).filter(d => d.work === work);
 const duelBonus = (S, work, cast) => { let n = 0; for (const d of duelsOf(S, work)) { if (d.result === "tie") continue; const a = cast[d.role]; if (a === d.win) n++; else if (a === d.lose) n--; } return Math.max(-2, Math.min(2, n)); };
@@ -1455,9 +1455,9 @@ const COMBO_WORDS = {
 };
 const tagWord = t => { const w = TAG_WORDS[t] || COMBO_WORDS[t]; return w ? {n: w[0], c: w[1]} : {n: t, c: `${t} 특징이 돋보이는`}; };  // 사전에 없는 태그는 일반형
 // 꼭 보고 싶은 배우: 이 작품의 배우 조건(반드시·가능하면 포함)과 ⭐. 본진 > 애정 > 고른 배우 순으로 종류를 붙인다
-const wantKinds = (D, S, work) => {
-  const ac = actorConds(D, S, work), [bon, love] = favSplit(S.prefs || {}), m = new Map();
-  for (const a of [...ac.must, ...ac.maybe, ...pinsOf(S, work).star]) m.set(a, bon.includes(a) ? "bon" : love.includes(a) ? "love" : "pick");
+const wantKinds = (D, S, work, mode = "actor") => {
+  const ac = actorConds(D, S, work, mode), [bon, love] = favSplit(S.prefs || {}), m = new Map();
+  for (const a of [...ac.must, ...ac.maybe]) m.set(a, bon.includes(a) ? "bon" : love.includes(a) ? "love" : "pick");
   return m;
 };
 const WANT_LEAD = {bon: "당신의 본진", love: "당신이 아끼는", pick: "꼭 보고 싶다고 고른"}, WANT_NAME = {bon: "본진", love: "아끼는", pick: "꼭 보고 싶은"};
@@ -1466,7 +1466,7 @@ const tagRank = (D, S, work) => { const idx = {}; workPrefs(S, work).axes.flatMa
 const evTags = r => [...new Set((r.ev || []).map(x => x.tag))];
 // 한 조합이 왜 맞는지: 줄 목록(최대 3줄, 글자만). ① 본진·애정·고른 배우 ② 고른 취향과 맞는 배우의 특징 ③ 조합 평가 ④ 월드컵·마음에 들어요. 근거가 없으면 배우 조건 문장
 const reasonLines = (D, S, work, r) => {
-  const names = Object.values(r.cast), kinds = wantKinds(D, S, work), rank = tagRank(D, S, work), lines = [];
+  const names = Object.values(r.cast), kinds = wantKinds(D, S, work, r.mode), rank = tagRank(D, S, work), lines = [];
   for (const k of ["bon", "love", "pick"]) { const xs = names.filter(a => kinds.get(a) === k); if (xs.length) lines.push(`${WANT_LEAD[k]} ${xs.join("·")} 배우가 나와요`); }
   const per = names.map(a => ({a, tags: [...new Set((r.evByActor || {})[a] || [])].sort((x, y) => rank(x) - rank(y))})).filter(x => x.tags.length)
     .sort((x, y) => y.tags.length - x.tags.length || rank(x.tags[0]) - rank(y.tags[0]));
@@ -1480,12 +1480,13 @@ const reasonLines = (D, S, work, r) => {
   for (const t of (r.comboTags || []).slice(0, 1)) lines.push(`당신이 선호하는 ${tagWord(t).c} 조합이에요`);
   if (r.duelNames?.length) lines.push(`이상형 월드컵에서 고른 ${r.duelNames.join("·")} 배우가 나와요`);
   if (r.liked > 0) lines.push("마음에 들어 한 조합의 배우가 나와요");
-  return lines.length ? lines.slice(0, 3) : [actorConds(D, S, work).pick.length ? "고른 배우 조건에 맞는 조합이에요" : "고른 조건에 맞는 조합이에요"];
+  return lines.length ? lines.slice(0, 3) : [actorConds(D, S, work, r.mode).pick.length ? "고른 배우 조건에 맞는 조합이에요" : "고른 조건에 맞는 조합이에요"];
 };
 // 순위 설명 한 줄: 1순위는 무엇을 더 충족했는지(2순위와 비교), 2순위 이후는 1순위와 무엇이 다른지. recs = 보여 주는 카드의 조합 기록(순서대로, 없으면 null)
 const rankNote = (D, S, work, recs, i) => {
   const r = recs[i], o = i === 0 ? recs[1] : recs[0]; if (!r) return "";
-  const kinds = wantKinds(D, S, work), rank = tagRank(D, S, work), wantIn = x => Object.values(x.cast).filter(a => kinds.has(a));
+  const ts = x => x.score - (x.actorPts || 0);  // 취향 점수만 비교(배우 점수는 '꼭 보고 싶은 배우' 문장이 말한다)
+  const kinds = wantKinds(D, S, work, r.mode), rank = tagRank(D, S, work), wantIn = x => Object.values(x.cast).filter(a => kinds.has(a));
   if (!o) return `${i + 1}순위: 고른 조건에 가장 잘 맞는 조합이에요`;
   const mine = new Set(evTags(r)), his = new Set(evTags(o)), by = (x, y) => rank(x) - rank(y);
   const gain = [...mine].filter(t => !his.has(t)).sort(by), lost = [...his].filter(t => !mine.has(t)).sort(by);
@@ -1496,54 +1497,54 @@ const rankNote = (D, S, work, recs, i) => {
     if (gain.length) parts.push(`${other}보다 ${josa(tagWord(gain[0]).n, "이", "가")} 더 잘 맞는 조합이에요`);
     else if (extra.length) parts[0] = `${wantPhrase(extra, kinds)}가 나오는 조합이라 가장 앞에 뒀어요`;
     else if (fitN(r) > fitN(o)) parts.push(`${other}보다 취향에 맞는 배우가 더 많은 조합이에요`);
-    else parts.push(r.score > o.score ? `${other}보다 취향에 조금 더 잘 맞는 조합이에요` : `${share.length ? `${basis}도 비슷해서` : `${other}와 ${josa(basis, "이", "가")} 비슷해서`} 날짜가 더 가까운 조합을 앞에 뒀어요`);
+    else parts.push(ts(r) > ts(o) ? `${other}보다 취향에 조금 더 잘 맞는 조합이에요` : `${share.length ? `${basis}도 비슷해서` : `${other}와 ${josa(basis, "이", "가")} 비슷해서`} 날짜가 더 가까운 조합을 앞에 뒀어요`);
   } else {  // 2순위 이후
     if (share.length) parts.push(`${wantPhrase(share, kinds)}는 같고`);
     if (miss.length) parts.push(`${other}에 나오는 ${wantPhrase(miss, kinds)}는 빠지고`);
     if (gain.length && lost.length) parts.push(`${tagWord(lost[0]).n} 대신 ${josa(tagWord(gain[0]).n, "이", "가")} 돋보이는 조합이에요`);
     else if (gain.length) parts.push(`${other}에 없는 ${josa(tagWord(gain[0]).n, "이", "가")} 돋보이는 조합이에요`);
     else if (lost.length) parts.push(`${josa(tagWord(lost[0]).n, "은", "는")} ${other}보다 덜 맞는 조합이에요`);
-    else if (miss.length) parts.push(r.score > o.score ? `취향에는 ${other}보다 더 잘 맞는 조합이에요` : r.score < o.score ? `${other}보다 취향 근거가 조금 적은 조합이에요` : `${josa(basis, "은", "는")} ${other}와 비슷한 조합이에요`);
+    else if (miss.length) parts.push(ts(r) > ts(o) ? `취향에는 ${other}보다 더 잘 맞는 조합이에요` : ts(r) < ts(o) ? `${other}보다 취향 근거가 조금 적은 조합이에요` : `${josa(basis, "은", "는")} ${other}와 비슷한 조합이에요`);
     else if (fitN(r) < fitN(o)) parts.push(`${other}보다 취향에 맞는 배우가 적은 조합이에요`);
-    else parts.push(r.score < o.score ? `${other}보다 취향 근거가 조금 적은 조합이에요` : `${share.length ? `${basis}도 비슷해서` : `${josa(basis, "이", "가")} ${other}와 비슷해서`} 날짜 순으로 뒤에 뒀어요`);
+    else parts.push(ts(r) < ts(o) ? `${other}보다 취향 근거가 조금 적은 조합이에요` : `${share.length ? `${basis}도 비슷해서` : `${josa(basis, "이", "가")} ${other}와 비슷해서`} 날짜 순으로 뒤에 뒀어요`);
   }
   return `${i + 1}순위: ${parts.join(", ")}`;
 };
+const SYNC_PTS = 0.3;
 const comboRecs = (D, S, work, from, inDates = null) => {  // inDates: 날짜 먼저 경로에서 고른 날짜(그 안의 회차로만 조합을 만든다)
-  const wp = workPrefs(S, work), prefs = wp.axes, pw = personalWeights(S, D), hasPW = Object.keys(pw).length > 0, {star, avoid} = pinsOf(S, work), hide = new Set(S.proto?.hide?.[work] || []), wrong = wrongOf(S, work);
-  const ac = actorConds(D, S, work), prio = wp.prio, must = ac.must, never = [...ac.avoid, ...ac.extra], noTaste = !prefs.length;  // 배우 조건은 작품별 값(없으면 온보딩 기본값, 9.1절). must 는 배역과 상관없이(결정 12)  // 취향폼 1/3: '반드시 볼 배우'는 ⭐처럼, '피하고 싶은 배우'는 조연이어도 그 회차를 뺀다
+  const mode = inDates ? "date" : "actor", wp = workPrefs(S, work), prefs = wp.axes, pw = personalWeights(S, D), hasPW = Object.keys(pw).length > 0, hide = new Set(S.proto?.hide?.[work] || []), wrong = wrongOf(S, work);
+  const ac = actorConds(D, S, work, mode), prio = wp.prio, must = ac.must, ptsOf = new Map(ac.pick.map(x => [x.a, pickPts(x)])), never = [...ac.avoid, ...ac.extra], noTaste = !prefs.length;  // 배우 조건은 작품별 값(없으면 온보딩 기본값, 9.1절). must 는 배역과 상관없이(결정 12)  // 취향폼 1/3: '반드시 볼 배우'는 ⭐처럼, '피하고 싶은 배우'는 조연이어도 그 회차를 뺀다
   const seen = new Set((S.plans || []).filter(x => x.work === work && (x.tagged || x.date < from)).map(x => comboKey(D, work, x.cast)));
-  const starByRole = {};  // 같은 배역의 ⭐는 '또는', 배역끼리는 '그리고'
-  for (const r of unitRoles(D, work)) for (const a of r.cast) if (star.includes(a)) (starByRole[r.role] ||= []).push(a);
+  const roleIdx = Object.fromEntries(unitRoles(D, work).map((r, i) => [r.role, i]));  // 화면 위쪽 배역일수록 주연(사용자 요청 2026-11-04: 배우 순위 대신 배역 순서)
   const groups = new Map();
   for (const p of D.perfs) {
     if (p.work !== work || p.date < from || isPrivate(p) || (inDates && !inDates.includes(p.date)) || Object.values(p.cast).some(a => never.includes(a))) continue;
     const k = comboKey(D, work, p.cast), g = groups.get(k) || {key: k, cast: Object.fromEntries(leadsOf(D, work, p.cast)), perfs: []};
     g.perfs.push(p); groups.set(k, g);
   }
-  const won = new Set(duelsOf(S, work).filter(d => d.result !== "tie").map(d => d.win)), wk = wantKinds(D, S, work), out = [];
+  const won = new Set(duelsOf(S, work).filter(d => d.result !== "tie").map(d => d.win)), wk = wantKinds(D, S, work, mode), out = [];
   for (const g of groups.values()) {
     const names = Object.values(g.cast);
-    if (seen.has(g.key) || hide.has(g.key) || satBlocked(S, work, g.key, runLabelOf(D, work, g.perfs[0].date)) || names.some(a => avoid.includes(a)) || !must.every(a => names.includes(a)) || Object.entries(starByRole).some(([r, as]) => !as.includes(g.cast[r]))) continue;
+    if (seen.has(g.key) || hide.has(g.key) || satBlocked(S, work, g.key, runLabelOf(D, work, g.perfs[0].date)) || !must.every(a => names.includes(a))) continue;
     const e = comboEvidence(D, prefs, work, g.cast, wrong, p => prefWeight(prio, p));
     const pc = hasPW ? names.flatMap(a => [...new Set(tagsOfActor(D, work, a).map(x => x.tag))].filter(tg => pw[tg]).map(tg => pw[tg])) : [];
-    // 배역 싱크로는 묻지 않고 기본 가산점(배우마다 0.5). 취향 근거가 있는 조합끼리 순서만 바꾸고, 이것만으로는 추천하지 않는다
-    const sync = e.hit > 0 ? names.filter(a => !wrong.includes(a) && tagsOfActor(D, work, a).some(x => x.tag === "배역 싱크로")).length * 0.5 : 0;
-    const pers = Math.max(-2, Math.min(2, pc.reduce((n, x) => n + x, 0))), duel = duelBonus(S, work, g.cast), liked = likeBonus(S, work, names), score = e.hit + sync + pers + duel + liked;  // liked: '마음에 들어요' 조합의 배우(결정 41·45)
-    if (!noTaste && !(score > 0 && (e.hit > 0 || pers > 0 || duel > 0 || liked > 0))) continue;  // 기대 답이 있는데 근거가 없으면 빼고, 기대 답을 모두 '상관없어요'로 비운 사람은 배우 조건만으로 추천한다(결정 21)
+    // 배역 싱크로는 묻지 않고 기본 가산점(배우마다 0.3, 2026-11-04 0.5 → 0.3). 취향 근거가 있는 조합끼리 순서만 바꾸고, 이것만으로는 추천하지 않는다
+    const sync = e.hit > 0 ? names.filter(a => !wrong.includes(a) && tagsOfActor(D, work, a).some(x => x.tag === "배역 싱크로")).length * SYNC_PTS : 0;
+    const actorPts = names.reduce((n, a) => n + (ptsOf.get(a) || 0), 0);  // 본진 5 · 애정 3 · ★ 5 · ✓ 3
+    const pers = Math.max(-2, Math.min(2, pc.reduce((n, x) => n + x, 0))), duel = duelBonus(S, work, g.cast), liked = likeBonus(S, work, names), score = e.hit + sync + actorPts + pers + duel + liked;  // liked: '마음에 들어요' 조합의 배우(결정 41·45)
+    if (!noTaste && !(score > 0 && (e.hit > 0 || actorPts > 0 || pers > 0 || duel > 0 || liked > 0))) continue;  // 취향 근거가 없어도 본진·애정·고른 배우가 나오면 추천한다(2026-11-04)  // 기대 답이 있는데 근거가 없으면 빼고, 기대 답을 모두 '상관없어요'로 비운 사람은 배우 조건만으로 추천한다(결정 21)
     const dates = [...new Set(g.perfs.map(p => p.date))].sort();
-    const maybeRank = Math.min(...ac.maybe.map((a, i) => names.includes(a) ? i : Infinity));  // 가능하면 포함: 순위가 높은 배우가 나오는 조합을 앞에(5.1절·결정 29)
-    out.push({...g, ...e, pers, duel, liked, score, maybeRank, cover: names.filter(a => wk.has(a)).length, dates, duelNames: names.filter(a => won.has(a)), evByActor: Object.fromEntries(names.map(a => [a, [...new Set(e.ev.filter(x => x.who === a).map(x => x.tag))]])), comboTags: [...new Set(e.ev.filter(x => x.role === "조합").map(x => x.tag))]});
+    const roleRank = Math.min(...Object.entries(g.cast).filter(([, a]) => ptsOf.has(a)).map(([r]) => roleIdx[r] ?? 99), 99);  // 꼭 보고 싶은 배우가 나오는 가장 위쪽 배역(주연일수록 작다)
+    out.push({...g, ...e, mode, pers, duel, liked, actorPts, score, roleRank, cover: names.filter(a => wk.has(a)).length, dates, duelNames: names.filter(a => won.has(a)), evByActor: Object.fromEntries(names.map(a => [a, [...new Set(e.ev.filter(x => x.who === a).map(x => x.tag))]])), comboTags: [...new Set(e.ev.filter(x => x.role === "조합").map(x => x.tag))]});
   }
-  // 순서(2026-11-03): ① 꼭 보고 싶은 배우(배우 조건·⭐)를 더 많이 채운 조합 → 그 안에서 순위가 높은 배우 먼저 ② 취향 근거(score) ③ 반대 근거가 적은 쪽·회차가 많은 쪽 ④ 날짜는 앞 기준이 모두 같을 때만
-  return out.sort((x, y) => y.cover - x.cover || (x.maybeRank === y.maybeRank ? 0 : x.maybeRank - y.maybeRank) || y.score - x.score || x.bad.length - y.bad.length || y.perfs.length - x.perfs.length || x.dates[0].localeCompare(y.dates[0]));
+  // 순서(2026-11-04): ① 점수(취향 태그 + 배우 점수 + 배역 싱크로 + 내 기록) ② 꼭 보고 싶은 배우가 위쪽 배역(주연)에 나오는 쪽 ③ 반대 근거가 적은 쪽·회차가 많은 쪽 ④ 날짜는 앞 기준이 모두 같을 때만
+  return out.sort((x, y) => y.score - x.score || x.roleRank - y.roleRank || x.bad.length - y.bad.length || y.perfs.length - x.perfs.length || x.dates[0].localeCompare(y.dates[0]));
 };
 // ⭐/🚫: 같은 배우에 둘 중 하나. 다시 누르면 해제. 지금 상태('star'/'avoid'/'')를 돌려준다
-const togglePin = (S, work, actor, kind) => {
-  const P = ((S.proto ||= {}).pins ||= {})[work] ||= {star: [], avoid: []}, had = P[kind].includes(actor);
-  P.star = P.star.filter(a => a !== actor); P.avoid = P.avoid.filter(a => a !== actor);
-  if (!had) P[kind].push(actor);
-  return P.star.includes(actor) ? "star" : P.avoid.includes(actor) ? "avoid" : "";
+const togglePin = (D, S, work, actor, kind) => {  // ⭐ → 가능하면 포함, 🚫 → 이 작품에서 피할 배우(배우 먼저 화면과 같은 값)
+  const had = pinStateOf(S, work, actor) === kind;
+  setActorCond(D, S, work, actor, had ? "" : kind === "star" ? "maybe" : "avoid");
+  return pinStateOf(S, work, actor);
 };
 // 영상 반응(공연 화면 ② 배우 칸): 썸네일(영상 ID 있는 것만)을 누르면 '이 영상 어땠어요?'가 나온다. (작품, 배우, 영상 ID)별로 S.proto.vr[작품][배우][ID] = {r?} — 있으면 연 상태, r 은 마지막 답
 const VIDEO_REACTIONS = [["like", "마음에 들어요"], ["unsure", "모르겠어요"], ["dislike", "취향 아니에요"]];
@@ -1746,11 +1747,19 @@ const addAgain = (S, i, again) => {  // 또 보고 싶은 배우는 좋아하는
 const favSplit = p => { const favs = p.favs || [], bon = (p.bonjin || []).filter(a => favs.includes(a)); return [bon, favs.filter(a => !bon.includes(a))]; };
 // ---- 배우 조건(docs/261027_2 9절): pick = 꼭 보고 싶은 배우를 순위대로 [{a, must}], extra = 이 작품에 한해 더 피하는 배우. 공통 피하고 싶은 배우(S.prefs.avoid)는 여기서 못 푼다
 const workCastSet = (D, work) => new Set(unitRoles(D, work).flatMap(r => r.cast));
-const actorConds = (D, S, work) => {
-  const p = S.prefs || {}, here = workCastSet(D, work), must0 = p.must || [], own = S.cal?.[work]?.ac;
-  const pick = own ? own.pick : favSplit(p).flat().filter(a => here.has(a)).map(a => ({a, must: must0.includes(a)}));  // 기본 순위: 본진 배우 → 애정 배우(각각 넣은 순서)
+// 배우 점수(사용자 요청 2026-11-04): 취향 태그 한 쌍 1점 기준으로 본진 5 · 애정 3, 배우 먼저에서 고른 ★ 꼭(반드시) 5 · ✓ 가능하면 3. 배우 먼저에서 바꾼 배우는 그 상태가 최종
+const ACTOR_PTS = {bon: 5, love: 3, must: 5, maybe: 3};  // 2026-11-04: 1.5·1.2 → 5·3(실제 데이터에서 본진 조합이 1순위 64% → 96%, 1순위의 태그 점수 손해 평균 1.1)
+const pickPts = x => x.must ? ACTOR_PTS.must : x.src === "bon" ? ACTOR_PTS.bon : x.src === "love" ? ACTOR_PTS.love : ACTOR_PTS.maybe;
+// 예전 공연 화면 ⭐/🚫(S.proto.pins)는 배우 조건으로 옮긴다(2026-11-04): ⭐ → 가능하면 포함, 🚫 → 이 작품에서 피할 배우
+const migratePins = (D, S, work) => { const P = S.proto?.pins?.[work]; if (!P) return; delete S.proto.pins[work];
+  for (const a of P.star || []) if (!(S.cal?.[work]?.ac?.pick || []).some(x => x.a === a)) setActorCond(D, S, work, a, "maybe");
+  for (const a of P.avoid || []) setActorCond(D, S, work, a, "avoid"); };
+const actorConds = (D, S, work, mode = "actor") => {  // mode "date": 날짜 먼저는 취향 카드 기본값(본진·애정·피하고 싶은 배우)만 쓴다(사용자 요청 2026-11-04)
+  if (mode !== "date") migratePins(D, S, work);
+  const p = S.prefs || {}, here = workCastSet(D, work), must0 = mode === "date" ? [] : p.must || [], own = mode === "date" ? null : S.cal?.[work]?.ac, [bon] = favSplit(p);
+  const pick = own ? own.pick : favSplit(p).flat().filter(a => here.has(a)).map(a => ({a, must: must0.includes(a), src: bon.includes(a) ? "bon" : "love"}));  // 기본: 본진 배우 → 애정 배우(각각 넣은 순서)
   return {pick, must: pick.filter(x => x.must).map(x => x.a), maybe: pick.filter(x => !x.must).map(x => x.a), avoid: p.avoid || [], extra: own?.extra || [],
-    missing: must0.filter(a => !here.has(a)), edited: !!own};  // missing: 이 작품에 안 나오는 '반드시 포함' 배우(거르지 않고 안내만, 결정 12)
+    missing: must0.filter(a => !here.has(a)), edited: !!own, mode};  // missing: 이 작품에 안 나오는 '반드시 포함' 배우(거르지 않고 안내만, 결정 12)
 };
 const acEdit = (D, S, work) => { const st = ((S.cal ||= {})[work] ||= {actors: [], period: "all"}); if (!st.ac) { const c = actorConds(D, S, work); st.ac = {pick: c.pick.map(x => ({...x})), extra: [...c.extra]}; } return st.ac; };
 const setActorCond = (D, S, work, actor, kind) => {  // kind: must | maybe | avoid | "" (빼기). 공통 피하고 싶은 배우를 보고 싶은 배우로 고르면 false(한쪽만, '내 취향'에서 바꾼다)
@@ -1758,7 +1767,7 @@ const setActorCond = (D, S, work, actor, kind) => {  // kind: must | maybe | avo
   if ((S.prefs?.avoid || []).includes(actor) && kind !== "avoid" && kind !== "") return false;
   const ac = acEdit(D, S, work), had = ac.pick.find(x => x.a === actor);
   ac.extra = ac.extra.filter(a => a !== actor);
-  if (kind === "must" || kind === "maybe") { if (had) had.must = kind === "must"; else ac.pick.push({a: actor, must: kind === "must"}); }
+  if (kind === "must" || kind === "maybe") { if (had) { had.must = kind === "must"; delete had.src; } else ac.pick.push({a: actor, must: kind === "must"}); }  // 배우 먼저에서 정한 상태가 최종(본진이어도 ✓ 이면 1.2)
   else ac.pick = ac.pick.filter(x => x.a !== actor);
   if (kind === "avoid") ac.extra.push(actor);
   return kind;
@@ -1778,8 +1787,9 @@ const mustClash = (D, work, c, from) => {  // 반드시 포함끼리 같은 배�
 // 바꿀 수 있는 것: soft(반드시 → 가능하면) · drop(보고 싶은 배우에서 빼기) · extra(이 작품에서 더 피하는 배우 풀기) · star(⭐ 꼭 볼 배우 풀기) · avoid(모든 작품에 적용 중인 피하고 싶은 배우 풀기, '내 취향'에서 바꾼다)
 // 날짜 먼저(inDates)는 고른 날짜 안에서 찾고, 날짜를 더하면 되는 경우(현재 조건 그대로)도 한 줄 알려 준다. 회차 수는 그 조건으로 볼 수 있는 회차(전체대관 제외) 합
 const recCount = recs => recs.reduce((n, r) => n + r.perfs.length, 0);
-const relaxChanges = (D, S, work) => {
-  const c = actorConds(D, S, work), star = S.proto?.pins?.[work]?.star || [], out = [];
+const relaxChanges = (D, S, work, mode = "actor") => {
+  const c = actorConds(D, S, work, mode), star = [], out = [];
+  if (mode === "date") { for (const a of c.avoid) out.push({k: "avoid", a}); return out; }  // 날짜 먼저는 배우 먼저 조건을 쓰지 않는다
   for (const x of c.pick) { if (x.must) out.push({k: "soft", a: x.a}); out.push({k: "drop", a: x.a}); }
   for (const a of c.extra) out.push({k: "extra", a});
   for (const a of star) out.push({k: "star", a});
@@ -1798,7 +1808,7 @@ const relaxFrag = ch => ch.k === "soft" ? `${ch.a} 배우를 반드시 → 가�
 // 반환: [{text, n, k: "actor"|"date"}] 최대 3개(배우 조건 바꾸기) + 날짜를 더하면 되는 경우 한 줄
 const noComboHints = (D, S, work, from, inDates = null) => {
   const base = JSON.stringify(S), total = list => { const S2 = JSON.parse(base); S2.proto ||= {}; for (const ch of list) applyRelax(D, S2, work, ch); return recCount(comboRecs(D, S2, work, from, inDates)); };
-  const chs = relaxChanges(D, S, work), ok = [];
+  const chs = relaxChanges(D, S, work, inDates ? "date" : "actor"), ok = [];
   for (const ch of chs) { const n = total([ch]); if (n > 0) ok.push({list: [ch], n}); }
   const softFor = new Set(ok.filter(x => x.list[0].k === "soft").map(x => x.list[0].a));
   let found = ok.filter(x => !(x.list[0].k === "drop" && softFor.has(x.list[0].a)));  // 같은 배우는 덜 센 방법만
@@ -1809,7 +1819,7 @@ const noComboHints = (D, S, work, from, inDates = null) => {
   found.sort((x, y) => x.list.length - y.list.length || Math.max(...x.list.map(c => RELAX_ORDER[c.k])) - Math.max(...y.list.map(c => RELAX_ORDER[c.k])) || y.n - x.n || x.list[0].a.localeCompare(y.list[0].a, "ko"));
   const out = found.slice(0, 3).map(x => ({k: "actor", n: x.n, text: `${x.list.map(relaxFrag).join("고 ")}면 ${x.n}회${x.list.some(c => c.k === "avoid") ? " ('내 취향'에서 바꿀 수 있어요)" : ""}`}));
   if (inDates && inDates.length) {  // 날짜를 더하면: 현재 조건 그대로 볼 수 있는 가장 가까운 날
-    const all = [...new Set(comboRecs(D, S, work, from, null).flatMap(r => r.dates))].filter(d => !inDates.includes(d)), lo = [...inDates].sort()[0], hi = [...inDates].sort().pop();
+    const allDays = [...new Set(D.perfs.filter(p => p.work === work && p.date >= from && !isPrivate(p)).map(p => p.date))], all = [...new Set(comboRecs(D, S, work, from, allDays).flatMap(r => r.dates))].filter(d => !inDates.includes(d)), lo = [...inDates].sort()[0], hi = [...inDates].sort().pop();
     const gap = d => d < lo ? (Date.parse(lo) - Date.parse(d)) : d > hi ? (Date.parse(d) - Date.parse(hi)) : 0, near = all.sort((a, b) => gap(a) - gap(b) || a.localeCompare(b))[0];
     if (near) { const n = recCount(comboRecs(D, S, work, from, [...inDates, near])); if (n > 0) out.push({k: "date", n, date: near, text: `날짜에 ${near.slice(5, 7).replace(/^0/, "")}/${near.slice(8).replace(/^0/, "")}(${["일", "월", "화", "수", "목", "금", "토"][new Date(near + "T00:00:00").getDay()]})도 더하면 ${n}회`}); }
   }
@@ -1837,9 +1847,9 @@ const likedActors = (S, work) => new Set(Object.values(satOf(S, work)).filter(e 
 const likeBonus = (S, work, names) => { const L = likedActors(S, work); return Math.min(LIKE_CAP, names.filter(a => L.has(a)).length * LIKE_BONUS); };  // 같은 배우는 여러 조합에서 받아도 한 번만 센다
 const satBlocked = (S, work, key, run) => { const e = satOf(S, work)[key]; return !!e && e.a === "dislike" && (!e.run || !run || e.run === run); };  // '별로예요' 조합은 그 작품의 이번 시즌 동안 다시 추천하지 않는다
 // 결과 카드: 처음 보여 준 추천 2개를 고정해 둔다(답해도 카드가 안 바뀐다). '다시 추천받기'는 한 번, 이미 보여 준 조합·별로예요 조합을 빼고 3번째 카드로 붙인다(결정 18·41)
-const recSig = (D, S, work) => { const c = actorConds(D, S, work); return JSON.stringify([workPrefs(S, work), c.pick, c.avoid, c.extra, pinsOf(S, work).star]); };  // 조건이 바뀌면 새로 고른다. 이 작품에 한해 뺀 배우(별로예요 → 추가)는 지금 카드를 그대로 둔다
+const recSig = (D, S, work, mode = "actor") => { const c = actorConds(D, S, work, mode), out = S.proto?.satOut?.[work] || []; return JSON.stringify([workPrefs(S, work), c.pick, c.avoid, c.extra.filter(a => !out.includes(a))]); };  // '별로예요 → 이 작품에서 빼기'로 뺀 배우(satOut)는 지금 카드를 그대로 둔다  // 조건이 바뀌면 새로 고른다. 이 작품에 한해 뺀 배우(별로예요 → 추가)는 지금 카드를 그대로 둔다
 const shownRecs = (D, S, work, from, inDates = null) => {  // 날짜 먼저 경로의 카드는 따로 둔다(고른 날짜가 바뀌면 새로 고른다)
-  const P = (S.proto ||= {}), k = inDates ? work + "#날짜" : work, cur = (P.shown ||= {})[k], sig = recSig(D, S, work) + (inDates ? JSON.stringify(inDates) : "");
+  const P = (S.proto ||= {}), k = inDates ? work + "#날짜" : work, cur = (P.shown ||= {})[k], sig = recSig(D, S, work, inDates ? "date" : "actor") + (inDates ? JSON.stringify(inDates) : "");
   if (cur && cur.sig === sig) return cur;
   return P.shown[k] = {sig, list: comboRecs(D, S, work, from, inDates).slice(0, 2).map(c => ({key: c.key, cast: c.cast})), again: false};
 };
@@ -2468,10 +2478,9 @@ const workState = (w, from) => {
 };
 const notInWork = (w, names) => names.filter(a => !(D.roles[w.name] || []).some(r => r.cast.includes(a)));
 // 날짜 먼저 경로의 배우 조건 줄(7절 A2): 조건이 없으면 숨긴다. [바꾸기]는 배우 먼저 화면으로
-const condLine = w => { const c = actorConds(D, S, w.name), n = c.avoid.length + c.extra.length;
-  if (!c.must.length && !n) return "";
-  const parts = [c.must.length ? `반드시 포함 ${c.must.map(esc).join("·")}` : "", n ? `피하는 배우 ${n}명` : ""].filter(Boolean);
-  return `<div class="card condline">${parts.length ? `<p class="small">${parts.join(" · ")} 적용 중 <a href="#find/${esc(w.name)}/actor">바꾸기</a></p>` : ""}</div>`; };
+const condLine = w => { const c = actorConds(D, S, w.name, "date"), n = c.avoid.length;  // 날짜 먼저는 취향 카드 기본값만(2026-11-04): 피하고 싶은 배우만 알리고 '내 취향'에서 바꾼다
+  if (!n) return "";
+  return `<div class="card condline"><p class="small">피하고 싶은 배우 ${n}명 적용 중 <a href="#me/1">내 취향에서 바꾸기</a></p></div>`; };
 const cardsOf = d => shownRecs(D, S, d.work, today(), d.dd ? S.cal[d.work]?.dates || [] : null);  // 버튼이 가리키는 카드 목록(날짜 먼저 카드는 data-dd)
 // 날짜 먼저(7절, 2026-10-29 사용자 요청으로 세 화면): ① #find/작품/date 회차 달력에서 날짜 고르기(기간이 먼저·기본, 기간을 여러 번 더할 수 있고, 하루씩으로 하루를 빼거나 더한다) → 다음 버튼
 // ② #find/작품/date/recs 고른 날짜의 추천 조합 → 이 조합 고르기 ③ #find/작품/date/cal 고른 조합의 캘린더만. 볼 수 없는 날(조건 때문)은 흐리게, 공개 안 된 기간은 안내
@@ -2501,13 +2510,13 @@ const mdDot = d => `${d.slice(5, 7)}.${d.slice(8, 10)}`;
 const mdDow = d => `${mdDot(d)}(${dowOf(d)})`;
 const runsText = runs => runs.map(([a, b]) => a === b ? mdDow(a) : `${mdDow(a)}~${mdDow(b)}`).join(", ");  // 구간이 몇 개든 날짜마다 요일(사용자 요청 2026-11-04): 11.24(화)~11.29(일), 11.30(월)
 const dateFirst = (w, step) => {
-  const work = w.name, W = esc(work), from = today(), st = (S.cal[work] ||= {actors: [], period: "all"}), c = actorConds(D, S, work), never = [...c.avoid, ...c.extra], byDate = {};
+  const work = w.name, W = esc(work), from = today(), st = (S.cal[work] ||= {actors: [], period: "all"}), c = actorConds(D, S, work, "date"), never = [...c.avoid], byDate = {};
   for (const p of D.perfs) if (p.work === work && p.date >= from && !isPrivate(p)) (byDate[p.date] ||= []).push(p);
   const all = Object.keys(byDate).sort(), dates = (st.dates || []).filter(d => byDate[d]), head = `<div><p class="eyebrow">${W} · 날짜 먼저</p><h1>언제 볼 수 있어요?</h1></div>${condLine(w)}`;
   if (step === "recs") return dateRecs(w, dates, byDate, all, c, never);
   if (step === "cal") return actorCal(w, showRef(D, work), `#find/${W}/date/recs`);
   if (!all.length) return `<div class="one">${head}<div class="card"><p class="small">아직 공개된 회차가 없어요.</p></div></div>`;
-  const ok = p => !Object.values(p.cast).some(a => never.includes(a)) && c.must.every(a => Object.values(p.cast).includes(a)), dim = d => !byDate[d].some(ok);
+  const recDays = new Set(comboRecs(D, S, work, from, all).flatMap(r => r.dates)), dim = d => !recDays.has(d);  // 추천과 같은 계산(기본값)으로 추천할 조합이 있는 날만 진하게(2026-11-04)
   const ms = monthRange(all), m = ms.includes(st.dm) ? st.dm : ms[0], mi = ms.indexOf(m), first = new Date(m + "-01T00:00:00"), pad = (first.getDay() + 6) % 7, nd = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
   let cells = ""; for (let k = 0; k < pad; k++) cells += `<div class="day empty"></div>`;
   for (let d = 1; d <= nd; d++) { const date = `${m}-${String(d).padStart(2, "0")}`, ps = byDate[date];
@@ -2532,7 +2541,7 @@ const dateRecs = (w, dates, byDate, all, c, never) => {
     const blocker = !noMust.length && never.find(a => ps.every(p => Object.values(p.cast).some(x => never.includes(x))) && ps.some(p => Object.values(p.cast).includes(a)));
     const hints = noComboHints(D, S, work, from, dates);
     return `<div class="one sv">${head}<div class="card nocombo"><p class="small ctr"><b>이 날짜엔 맞는 조합이 없어요.</b></p>${noMust.map(a => `<p class="small muted ctr">${esc(a)} 배우는 고른 날짜에 나오지 않아요.${nextOf(a) ? ` 다음 출연은 ${md(nextOf(a))}이에요` : ""}</p>`).join("")}${blocker ? `<p class="small muted ctr">고른 날짜의 회차에 모두 ${esc(blocker)} 배우가 나와요</p>` : ""}${noComboList(hints) || `<p class="small muted ctr">날짜를 더 고르거나 배우 조건을 바꿔 보세요.</p>`}
-      <div class="btnrow"><a class="btn ghost" href="#find/${W}/date">날짜 다시 고르기</a><a class="btn" href="#find/${W}/actor">배우 조건 바꾸기</a></div></div></div>`; }
+      <div class="btnrow"><a class="btn ghost" href="#find/${W}/date">날짜 다시 고르기</a><a class="btn" href="#me/1">배우 조건 바꾸기</a></div></div></div>`; }  // 날짜 먼저는 취향 카드 기본값만 쓰니 '내 취향'에서 바꾼다
   return `<div class="one sv">${head}<section id="cast" class="sec"><div class="combochips">${satCards(work, sel, dates, true)}</div></section></div>`;
 };
 // 배우 먼저(8절, 2026-10-29 사용자 요청으로 세 화면): ① #find/작품/actor 배역별 배우 칸(이름 + 대표 영상) — 한 번 ✓ 가능하면 포함, 두 번 ★ 반드시 포함, 세 번 취소 → 확인 버튼
@@ -2672,7 +2681,7 @@ const satCards = (work, sel, inDates = null, nav = false) => {  // nav: 배우 �
   const from = today(), sh = shownRecs(D, S, work, from, inDates), sat = satOf(S, work), W = esc(work), DD = inDates ? ` data-dd="1"` : "";  // 날짜 먼저 카드는 data-dd 로 구분
   if (sh.list.length && !S.proto?.recSeen) { (S.proto ||= {}).recSeen = today(); save(); }  // 추천 조합을 실제로 봤다(홈 베타 후기 팝업 조건, 결정 83)
   const recBy = new Map(comboRecs(D, S, work, from, inDates).map(r => [r.key, r]));
-  const kinds = wantKinds(D, S, work), pk = S.proto?.pick?.[work + (inDates ? "#날짜" : "")], recOf = sh.list.map(c => recBy.get(c.key) || null);  // kinds: 꼭 보고 싶은 배우(이름 상자 양쪽 커튼) · pk: 사용자가 [이 조합 고르기]를 눌러 고른 조합(흐름별 기억)
+  const kinds = wantKinds(D, S, work, inDates ? "date" : "actor"), pk = S.proto?.pick?.[work + (inDates ? "#날짜" : "")], recOf = sh.list.map(c => recBy.get(c.key) || null);  // kinds: 꼭 보고 싶은 배우(이름 상자 양쪽 커튼) · pk: 사용자가 [이 조합 고르기]를 눌러 고른 조합(흐름별 기억)
   const whyLines = c => { const r = recBy.get(c.key); if (!r) return "";  // 왜 맞는지 사용자 친화 문장(reasonLines): 본진·애정 배우 → 취향에 맞는 배우의 특징 → 조합 평가, 근거가 없으면 배우 조건 문장
     return `<ul class="why">${reasonLines(D, S, work, r).map(l => `<li class="small">${esc(l)}</li>`).join("")}</ul>`; };  // 정보가 적은 배우를 따로 적지 않는다(사용자 요청 2026-11-03 저녁)
   const perfsOfKey = key => D.perfs.filter(p => p.work === work && p.date >= from && !isPrivate(p) && (!inDates || inDates.includes(p.date)) && comboKey(D, work, p.cast) === key).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
@@ -2963,7 +2972,7 @@ document.addEventListener("click", e => {
     case "vopen": vopenTap(d); break;
     case "vreact": { if (!/^[\w-]{11}$/.test(d.vid || "")) break; const r = setVideoReaction(S, d.work, d.a, d.vid, d.r); if (r) { track("video_reaction", videoReactionRecord(d.work, d.role, d.a, d.vid, r)); save(); vAfter(`[data-act="vreact"][data-r="${r}"]`); } break; }  // 답을 바꿀 때마다 한 줄(같은 답을 또 눌러도 안 남긴다)
     case "vtrait": { if (!/^[\w-]{11}$/.test(d.vid || "")) break; const t = toggleVideoTrait(D, S, d.work, d.a, d.vid, d.t); if (t) { track("video_reaction", videoReactionRecord(d.work, d.role, d.a, d.vid, "like", t)); save(); vAfter(`[data-act="vtrait"][data-t="${d.t}"]`); } break; }  // 칩을 누를 때마다 한 줄(like + 지금 고른 특징 전체, 비면 []). 분석은 마지막 줄
-    case "pin": { const before = pinStateOf(S, d.work, d.a), after = togglePin(S, d.work, d.a, d.k); track("actor_pick", pickRecord(D, d.work, d.a, before, after)); save(); vAfter(`[data-act="pin"][data-k="${d.k}"]`); break; }
+    case "pin": { const before = pinStateOf(S, d.work, d.a), after = togglePin(D, S, d.work, d.a, d.k); track("actor_pick", pickRecord(D, d.work, d.a, before, after)); save(); vAfter(`[data-act="pin"][data-k="${d.k}"]`); break; }
     case "comboReset": { resetCombo(S, d.work); const P = S.proto; for (const k of Object.keys(P.sent || {})) if (k.startsWith(`combo|${d.work}|`)) { delete P.sent[k]; delete (P.msg || {})[k]; delete (P.dr || {})[k]; } delete P.flash; save(); route(); break; }
     case "rateScore": { const c = RATE_CTX[d.id]; if (c) setDr(c.key, draftScore(getDr(c.key), +d.n)); break; }
     case "rateChip": { const c = RATE_CTX[d.id]; if (c) setDr(c.key, draftChip(getDr(c.key), d.c, d.d)); break; }
@@ -3005,7 +3014,7 @@ document.addEventListener("click", e => {
       if (prev && prev === (d.who || d.k)) { delete e.why; delete e.actor; delete e.ask; } else { if (!setSatWhy(S, d.work, c.key, d.k || "", d.who || "")) return; delete e.ask; track("combo_fit", satRecord(D, S, d.work, c.key)); }
       save(); route(); break; }
     case "satAvoid": { const c = cardsOf(d).list[+d.i], e = c && satOf(S, d.work)[c.key]; if (!e?.actor) return; e.ask = d.y === "1" ? "yes" : "no";
-      if (e.ask === "yes" && pinStateOf(S, d.work, e.actor) !== "avoid") { const before = pinStateOf(S, d.work, e.actor); setPin(S, d.work, e.actor, "avoid"); track("actor_pick", pickRecord(D, d.work, e.actor, before, "avoid")); }  // 이 작품에 한해 뺀다(9.2절). 몰래 감점하지 않는다
+      if (e.ask === "yes" && pinStateOf(S, d.work, e.actor) !== "avoid") { const before = pinStateOf(S, d.work, e.actor); setPin(S, d.work, e.actor, "avoid"); (((S.proto ||= {}).satOut ||= {})[d.work] ||= []).push(e.actor); track("actor_pick", pickRecord(D, d.work, e.actor, before, "avoid")); }  // 이 작품에 한해 뺀다(9.2절). 몰래 감점하지 않는다
       save(); route(); break; }
     case "recAgain": { if (!recAgain(D, S, d.work, today(), d.dd ? S.cal[d.work]?.dates || [] : null)) { toast("이 조건에서 더 보여 드릴 조합이 없어요"); return; } save(); route(); break; }
     case "calDay": { ((S.proto ||= {}).cd ||= {})[d.work] = d.d; save(); route(); break; }
