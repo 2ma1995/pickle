@@ -283,10 +283,11 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
 .mesum{gap:12px}
 .mesent{margin:0;font-size:18px;font-weight:700;line-height:1.5;letter-spacing:-.02em;word-break:keep-all;color:var(--fg)}
 /* 찾는 방법 고르기(사용자 요청 2026-11-03): 배우 먼저가 위. 버튼 한 줄에 [조건 | 고르기], 가운데 정렬, 줄바꿈 없이 폭에 맞춰 글자 크기를 줄인다(넓으면 15px) */
-.howlist{container-type:inline-size}
-.howlist .btn.howbtn{display:flex;align-items:center;justify-content:center;gap:0;min-height:56px;padding:12px;white-space:nowrap;text-align:center;font-size:min(15px,calc((100cqw - 24px)/21))}
-.howbtn small{font-size:.86em;font-weight:500;opacity:.9;padding-right:.75em;margin-right:.75em;border-right:1px solid currentColor}
-.howbtn b{font-weight:800}
+/* 2026-11-04: 가운데 세로선을 없애고, 두 버튼이 안내 문구 칸 너비를 같이 쓴다(.howlist 4칸 격자 + 버튼은 subgrid). 그래서 '배우 먼저 고르기'와 '날짜 먼저 고르기' 글자가 같은 세로선에서 시작한다 */
+.howlist{container-type:inline-size;grid-template-columns:1fr auto auto 1fr;column-gap:0}
+.howlist .btn.howbtn{grid-column:1/-1;display:grid;grid-template-columns:subgrid;column-gap:.75em;align-items:center;justify-content:normal;min-height:56px;padding:12px;white-space:nowrap;font-size:min(15px,calc((100cqw - 24px)/21))}
+.howbtn small{grid-column:2;text-align:right;font-size:.86em;font-weight:500;opacity:.9}
+.howbtn b{grid-column:3;text-align:left;font-weight:800}
 /* 날짜 먼저 기간·하루씩 탭(사용자 요청 2026-11-03): 흰 바탕에 큰 글씨, 고른 탭은 짙은 바탕에 흰 글씨 */
 .seg.dfseg{background:var(--paper);padding:4px;gap:4px;border-radius:12px}
 .seg.dfseg button{min-height:46px;font-size:16px;font-weight:700;color:var(--on-paper);border-color:transparent}
@@ -466,6 +467,10 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
 .month .days .day.none{background:transparent}
 .month .days .day.has:not(.pin){background:var(--soft);border:1.5px solid var(--fg)}
 .month .days .day.has:not(.pin) .n{font-weight:800}
+/* 이 조합 고르기 → 캘린더(사용자 요청 2026-11-04): 고른 조합이 나오는 날은 붉은 굵은 테두리, 누른 날은 붉게 채운다. 붉은색은 추천 조합 이름 상자와 같은 --curtain. 공연 화면(#show) 캘린더는 그대로 */
+.pickcal .month .days .day.has:not(.pin){border:3px solid var(--curtain)}
+.pickcal .month .days .day.has.pin{background:var(--curtain);border:3px solid var(--curtain);color:#FFFFFF}
+.pickcal .month .days .day.has.pin .n,.pickcal .month .days .day.has.pin .star{color:#FFFFFF}
 /* 폰(600px 미만)은 원래대로 한 줄 3개(사용자 요청 2026-10-29: 한 줄 5개는 넓은 화면만) */
 @media (max-width:599px){.pgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 10px}.pgrid .pcard{gap:8px}.pgrid .pt{font-size:12.5px;line-height:1.35}.pgrid .pw{font-size:12px;line-height:1.45}.pgrid .prank{font-size:34px}}
 /* 동그란 배우 사진(위키미디어 공용, 없으면 이름 첫 글자) — 추천 조합 카드: 날짜·시간 밑에 사진 → 이름 → 배역 */
@@ -522,7 +527,7 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
   .tcfan img{position:absolute;left:calc(var(--pw) / -2);top:calc(var(--pw) * -.75);width:var(--pw);aspect-ratio:2/3;object-fit:cover;border-radius:12px;opacity:.8;backface-visibility:hidden;transform:translateZ(var(--d)) rotateY(var(--a)) translateZ(calc(var(--r) * -1))}
   .tcarena .tcwrap{position:relative;z-index:1}
   /* 포스터가 원을 따라 천천히 왼쪽으로 돈다(사용자 요청 2026-11-03). 오른쪽 끝(-L/2)에서 나와 왼쪽 끝(+L/2)으로 가면 화면 밖에서 다시 오른쪽 끝으로. 시작 위치는 포스터마다 음수 지연(--dl)으로 지금 자리 그대로 */
-  .tcfan img{animation:tcspin var(--T,80s) linear var(--dl,0s) infinite}
+  .tcfan img{animation:tcspin var(--T,50s) linear var(--dl,0s) infinite}
   @keyframes tcspin{
     0%{opacity:0;transform:translateZ(var(--d)) rotateY(calc(var(--L) / -2)) translateZ(calc(var(--r) * -1))}
     4%,96%{opacity:.8}
@@ -582,3 +587,10 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
 .pimg.pkcur::after{content:"";position:absolute;inset:0 -1px;z-index:2;pointer-events:none;background:var(--curtain-pair) no-repeat center/100% 100%}  /* 커튼은 포스터 가로 길이에 맞춘 한 장(양 끝 1px 더 덮어 끝에 포스터가 비치지 않게, 사용자 요청 2026-11-03 저녁). 둥근 모서리는 .pimg 가 잘라 준다 */  /* 예전 다각형 자르기가 뒤집힌 오른쪽 커튼의 바깥쪽을 파서 포스터와 커튼 사이가 비어 보였다(사용자 요청 2026-11-03: 빈 공간을 커튼으로 채움) */
 .pimg .pkc.r{transform:scaleX(-1)}
 .pimg.pkcur .prank{left:calc(12% + 4px)}
+/* 볼 수 있는 조합이 없을 때(2026-11-04): 안내 문구는 가운데, 제안은 그 아래 줄마다, 버튼 둘은 한 줄 */
+.nocombo .ctr{text-align:center;word-break:keep-all}
+.nocombo .rlx{margin:2px 0 6px;padding-left:20px;display:grid;gap:6px;line-height:1.5;word-break:keep-all}
+.nocombo .btnrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.nocombo .btnrow .btn{display:flex;align-items:center;justify-content:center;min-height:46px;padding:10px 8px;font-size:14.5px;text-align:center;white-space:nowrap}
+/* '이 조합 어때요?': 하나를 고르면 나머지 둘은 흐리게 꺼진다 */
+.chip.x.dim:disabled{opacity:.4;cursor:not-allowed}
