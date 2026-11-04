@@ -238,7 +238,7 @@ main[data-view=saved],main[data-view=tag]{max-width:640px}
 .card,.cand,.pa,.actor,.tile,.likebox,.lkrole,.tl{grid-template-columns:minmax(0,1fr)}
 .q,.why li,.tag,.tlab,.small,.tiny,.vrow{overflow-wrap:anywhere}
 /* QA(통합) CSS 보정 */
-/* 내 공연 카드: V.plans가 카드에 작품별 --accent(작품 색)를 인라인으로 박아 버튼이 보라색으로 나온다. 토큰 하나(와인)로 되돌림. 근본 해결은 V.plans의 style 속성 삭제 */
+/* 내 티켓 카드: V.plans가 카드에 작품별 --accent(작품 색)를 인라인으로 박아 버튼이 보라색으로 나온다. 토큰 하나(와인)로 되돌림. 근본 해결은 V.plans의 style 속성 삭제 */
 #view .cards2>.card{--accent:inherit!important}
 /* 날짜 화면의 본문 안 CTA는 웹(≥900)에서만. 마크업의 인라인 display:grid가 .inline-cta{display:none}을 이겨서 폰·태블릿에서 하단 고정 버튼과 두 개로 보인다 */
 .inline-cta{display:none!important}
@@ -523,7 +523,7 @@ a.wcard:hover{border-color:var(--hl)}
     <div class="brand"><a href="#home" style="text-decoration:none;color:inherit"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4z"/><path d="M13 5v2M13 11v2M13 17v2"/></svg>PICKLE</a><a class="xlink" href="https://x.com/pickle_musical" target="_blank" rel="noopener" aria-label="PICKLE X 계정 @pickle_musical (새 탭)"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>@pickle_musical</a></div>
     <nav class="topnav">
       <a href="#home" data-tab="home">홈</a>
-      <a href="#plans" data-tab="plans">내 공연</a>
+      <a href="#plans" data-tab="plans">내 티켓</a>
       <a href="#me" data-tab="me">내 취향</a>
     </nav>
     <span aria-hidden="true"></span>  <!-- 머리줄 오른쪽 빈칸(가운데 맞춤용). 명암 버튼은 판을 하나로 통일하며 뺐다(2026-10-29) -->
@@ -532,7 +532,7 @@ a.wcard:hover{border-color:var(--hl)}
   <div class="cta" id="cta" hidden></div>
   <nav class="tabs" id="tabs">
     <a href="#home" data-tab="home"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20h-5v-5.5H9V20H4z"/></svg>홈</a>
-    <a href="#plans" data-tab="plans"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>내 공연</a>
+    <a href="#plans" data-tab="plans"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>내 티켓</a>
     <a href="#me" data-tab="me"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7.5-4.4-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.6-7.5 10-7.5 10z"/></svg>내 취향</a>
   </nav>
   <div class="toast" id="toast"></div>
@@ -542,7 +542,7 @@ a.wcard:hover{border-color:var(--hl)}
 <div class="sheet-bg" id="sheetbg" data-noshot></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" data-noshot></div>
 
-<script src="data.js?v=202611041550"></script>
+<script src="data.js?v=202611041600"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -554,7 +554,9 @@ const ROLE_COLORS = ["var(--r1)", "var(--r2)", "var(--r3)", "var(--r4)", "var(--
 const KEY = "pickle_v2";
 let S = {prefs: null, query: null, cal: {}, plans: [], tags: [], votes: [], likes: [], reviews: []};  // reviews: 관람 후 리뷰(docs/261027_2 11절) / votes: 같은 배역 두 배우 비교 투표 / likes: 좋아하는 배우 설문 [{actor, why, tags, roles: [{work, role, why, tags}]}]
 try { S = Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+let SAVE_HOOK = null;  // 저장할 때마다 부르는 것(티켓 기록 보내기 예약). 기록 코드가 아래에서 채운다
+const saveRaw = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+const save = () => { saveRaw(); if (SAVE_HOOK) SAVE_HOOK(); };
 
 // 관람 후 리뷰의 좋았던 점을 추천 데이터에 합친다 (docs/261027_2 12절, 결정 49)
 // 같은 배우·태그를 서로 다른 사용자 2명 이상이 남겼을 때만(D.userReviews = 서버가 모아 준 다른 사용자 리뷰 행 + 이 기기 리뷰). 이 기기 혼자 남긴 태그는 기록만 하고 점수에 쓰지 않는다
@@ -1108,14 +1110,25 @@ V.saved = i => {
 };
 
 const likedCard = () => { const L = likedCombos(S); return L.length ? `<div class="card"><h3>좋아한 조합 <span class="small muted">${L.length}개</span></h3>${L.map(x => `<p class="small"><b>${esc(x.work)}</b> · ${Object.entries(x.cast).map(([r, a]) => `${esc(r)} ${esc(a)}`).join(" · ")} <a href="#find/${esc(x.work)}/actor">다시 찾기</a></p>`).join("")}</div>` : ""; };
-// 내 공연(#plans) = 서비스 안 캘린더. 날짜 칸은 그날 담은 공연의 포스터로 채우고(미정일정 흑백 · 관람예정 컬러), 날짜를 누르면 그날 공연 정보(#plans/YYYY-MM-DD)
+// 내 티켓(#plans) = 서비스 안 캘린더. 날짜 칸은 그날 담은 공연의 포스터로 채우고(미정일정 흑백 · 관람예정 컬러), 날짜를 누르면 그날 공연 정보(#plans/YYYY-MM-DD)
 // 관람 후 알림은 홈 배너만(사용자 결정 2026-10-28): 브라우저 푸시 권한을 묻지 않는다
 let PCAL_M = "";  // 보고 있는 달(저장 안 함. 처음엔 다가오는 일정이 있는 달)
 const DOWS = ["일", "월", "화", "수", "목", "금", "토"];
 const dowOf = d => DOWS[new Date(d + "T00:00:00").getDay()];
 const ymdDot = d => `${d.slice(0, 4)}.${d.slice(5, 7)}.${d.slice(8, 10)}`;
 const statusPill = x => `<span class="spill ${planStatus(x)}">${PLAN_STATUS[planStatus(x)]}</span>`;
-const planPoster = x => workOf(x.work)?.poster || kopisShow(x.kopis)?.poster || "";  // MVP 작품은 앱 포스터, 본 공연 기록하기로 남긴 KOPIS 공연은 KOPIS 포스터
+// 티켓 번호(tid): 기록·사용자 포스터를 잇는 이 기기 안의 무작위 번호(한 번 붙이면 그대로). 사람을 알아볼 수 있는 값이 아니다
+const planId = x => x.tid ||= (Date.now().toString(36) + Math.random().toString(36).slice(2, 8)).slice(-12);
+// 사용자가 앨범에서 고른 포스터(사용자 결정 2026-11-04: 이 기기에만). 줄인 JPEG 를 pickle_posters 에 티켓 번호별로. 서버로 보내지 않는다
+const POSTER_K = "pickle_posters";
+const userPosters = () => { try { const o = JSON.parse(localStorage.getItem(POSTER_K) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } };
+const setUserPoster = (tid, url) => { const o = userPosters(); if (url) o[tid] = url; else delete o[tid]; try { localStorage.setItem(POSTER_K, JSON.stringify(o)); return true; } catch (e) { return false; } };
+const userPoster = x => x.tid ? userPosters()[x.tid] || "" : "";
+const shrinkImage = (file, max = 480) => new Promise((ok, no) => { const url = URL.createObjectURL(file), img = new Image();
+  img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); ok(c.toDataURL("image/jpeg", 0.78)); };
+  img.onerror = () => { URL.revokeObjectURL(url); no(new Error("image")); }; img.src = url; });
+const planPoster = x => userPoster(x) || workOf(x.work)?.poster || kopisShow(x.kopis)?.poster || "";  // MVP 작품은 앱 포스터, 본 공연 기록하기로 남긴 KOPIS 공연은 KOPIS 포스터
 const planVenue = x => runOf(x.work, x.date)?.venue || kopisShow(x.kopis)?.venue || x.venue || "";
 const planCast = x => { const ls = leads(x.work, x.cast); return ls.length ? ls : Object.values(x.cast || {}).map(a => ["", a]); };  // 배역을 모르는 공연은 배우만
 const pcalCell = (d, from) => {
@@ -1136,45 +1149,59 @@ V.plans = day => {
   const ym = PCAL_M, inMonth = S.plans.map((x, i) => [x, i]).filter(([x]) => x.date.startsWith(ym)).sort(([a], [b]) => (a.date + a.time).localeCompare(b.date + b.time));
   const nB = inMonth.filter(([x]) => planStatus(x) === "booked").length;
   return `
-  <div class="pchead"><div><p class="eyebrow">내 공연</p><h1>관극 캘린더</h1></div>
+  <div class="pchead"><div><p class="eyebrow">내 티켓</p><h1>관극 캘린더</h1></div>
     <div class="pclegend"><span><i class="lg tentative"></i>보고싶어요</span><span><i class="lg booked"></i>예매했어요</span><span><i class="lg seen"></i>관람했어요</span></div></div>
-  <section class="pcal" aria-label="${+ym.slice(0, 4)}년 ${+ym.slice(5)}월 캘린더">
+  <div class="tkwrap"><section class="pcal" aria-label="${+ym.slice(0, 4)}년 ${+ym.slice(5)}월 캘린더">
     <div class="pcnav"><button type="button" data-act="pcalMove" data-n="-1" aria-label="이전 달">‹</button><b>${+ym.slice(0, 4)}. ${ym.slice(5)}</b><button type="button" data-act="pcalMove" data-n="1" aria-label="다음 달">›</button></div>
     <div class="pcgrid">${DOWS.map((d, k) => `<span class="pcdow${k === 0 || k === 6 ? " sun" : ""}">${d}</span>`).join("")}${pcalWeeks(ym).flat().map(d => pcalCell(d, from)).join("")}</div>
     ${ym !== from.slice(0, 7) ? `<button type="button" class="pctoday" data-act="pcalMove" data-n="0">오늘로</button>` : ""}
   </section>
-  ${S.plans.length ? `<section class="hsec"><h2>${+ym.slice(5)}월 일정 <span class="count">${Object.entries(PLAN_STATUS).map(([k, l]) => `${l} ${inMonth.filter(([x]) => planStatus(x) === k).length}`).join(" · ")}</span></h2>
+  <aside class="tkside" aria-label="이달 일정과 조합 기록">${S.plans.length ? `<section class="hsec"><h2>${+ym.slice(5)}월 일정 <span class="count">${Object.entries(PLAN_STATUS).map(([k, l]) => `${l} ${inMonth.filter(([x]) => planStatus(x) === k).length}`).join(" · ")}</span></h2>
     ${inMonth.length ? `<div class="agenda">${inMonth.map(agendaRow).join("")}</div>` : `<p class="small muted">이 달에는 담은 공연이 없어요.</p>`}</section>`
     : `<div class="card"><p><b>아직 담은 공연이 없어요</b></p><p class="small muted">추천받은 조합에서 회차를 담으면 캘린더에 보고싶어요(흑백 포스터)로 들어가요. 예매한 뒤 예매했어요로 바꾸면 포스터가 컬러로 바뀌어요.</p><a class="btn" href="#find">배우 조합 추천받기</a></div>`}
   ${likedCard()}${seenProgress()}
-  <a class="btn ghost" href="#log">본 공연 기록하기</a>`;
+  <a class="btn ghost" href="#ticket">티켓 등록하기</a></aside></div>`;
 };
 const seenProgress = () => {  // 본 조합 기록: 본 공연이 있는 작품마다 '본 조합 N개 / 전체'
-  const works = [...new Set(S.plans.filter(isSeen).map(x => x.work))].filter(w => workOf(w));  // 회차 데이터가 있는 작품만(KOPIS 공연은 조합을 못 센다) if (!works.length) return "";
+  const works = [...new Set(S.plans.filter(isSeen).map(x => x.work))].filter(w => workOf(w));  // 회차 데이터가 있는 작품만(KOPIS 공연은 조합을 못 센다)
+  if (!works.length) return "";
   return `<h2>본 조합 기록</h2><div class="cards2">${works.map(work => {
     const all = new Set(perfsOf(work).map(p => leadKey(work, p.cast))), seen = [...seenKeys(work)].filter(k => all.has(k)).length;
     return `<div class="card"><div class="between"><b>${esc(work)}</b><span class="small muted">본 조합 ${seen}개 / 전체 ${all.size}개</span></div>
       <div class="bar"><span style="width:${all.size ? Math.round(seen / all.size * 100) : 0}%"></span></div>
       ${seen < all.size ? `<a class="btn ghost" href="#find/${esc(work)}/actor">아직 안 본 조합 찾기 →</a>` : `<p class="small muted">이번 시즌 조합을 다 봤어요</p>`}</div>`; }).join("")}</div>`; };
+// 이날의 조합 리뷰(사용자 요청 2026-11-04): 추천 조합 카드의 '이 조합 어때요?'와 같은 질문을 티켓의 그날 출연진에. 답은 티켓(x.cr)에 남기고,
+// 회차 데이터가 있는 MVP 작품이면 추천 카드에서 답한 것처럼 그 작품 추천에도 반영한다(S.proto.sat, src: "ticket")
+let CR_OPEN = new Set();  // 펼친 티켓(작품|날짜|회차, 저장 안 함)
+const crPanel = (x, i) => { const e = x.cr || {}, names = planCast(x).map(([, a]) => a);
+  const why = e.a !== "dislike" ? "" : `<p class="tiny muted">누구 때문인가요? <span>(선택)</span></p><div class="chips">${names.map(a => `<button type="button" class="chip x ${e.actor === a ? "on" : ""}" data-act="crWhy" data-i="${i}" data-who="${esc(a)}" aria-pressed="${e.actor === a}">${esc(a)}</button>`).join("")}${SAT_WHY.map(([k, l]) => `<button type="button" class="chip x ${e.why === k ? "on" : ""}" data-act="crWhy" data-i="${i}" data-k="${k}" aria-pressed="${e.why === k}">${esc(l)}</button>`).join("")}</div>`;
+  return `<div class="crbox"><p class="tiny muted">이 조합 어때요?</p><div class="chips">${SAT.map(([k, l]) => `<button type="button" class="chip x ${e.a === k ? "on" : e.a ? "dim" : ""}" data-act="crSet" data-i="${i}" data-a="${k}" aria-pressed="${e.a === k}"${e.a && e.a !== k ? " disabled" : ""}>${esc(l)}</button>`).join("")}</div>${e.a === "like" ? `<p class="tiny muted">좋아한 조합으로 기억할게요.</p>` : ""}${why}</div>`; };
+const crMirror = x => { if (!workOf(x.work)) return; const key = comboKey(D, x.work, x.cast), o = ((S.proto ||= {}).sat ||= {})[x.work] ||= {};
+  if (x.cr?.a) o[key] = {a: x.cr.a, cast: Object.fromEntries(leadsOf(D, x.work, x.cast)), run: runLabelOf(D, x.work, x.date) || "", order: 0, src: "ticket", ...(x.cr.why ? {why: x.cr.why} : {}), ...(x.cr.actor ? {actor: x.cr.actor} : {})};
+  else if (o[key]?.src === "ticket") delete o[key]; };
 // 날짜를 누른 화면: 공연명·날짜·시간·출연배우·장소는 회차 정보에서 자동으로, 좌석·금액은 직접 적는다
 const planDay = d => { PCAL_M = d.slice(0, 7);  // 캘린더로 돌아가면 이 날짜의 달
   const ps = plansOn(S, d), from = today(), head = `<div><p class="eyebrow">${ymdDot(d)} (${dowOf(d)})</p><h1>${ps.length ? "이날의 공연" : "담은 공연이 없어요"}</h1></div>`;
   if (!ps.length) return `${head}<p class="small muted">추천받은 조합에서 회차를 담으면 이 날짜에 들어가요.</p><a class="btn" href="#find">배우 조합 추천받기</a><a class="btn ghost" href="#plans">캘린더로</a>`;
-  const item = ([x, i]) => { const pp = planPoster(x), run = runOf(x.work, x.date) || {}, st = planStatus(x), rv = reviewOf(S, x.work, x.date, x.time);
+  const item = ([x, i]) => { const pp = planPoster(x), up = userPoster(x), run = runOf(x.work, x.date) || {}, st = planStatus(x), rv = reviewOf(S, x.work, x.date, x.time);
     const cast = planCast(x).map(([r, a]) => `<span class="pcast">${r ? `<span class="tiny muted">${esc(r)}</span> ` : ""}${esc(a)}</span>`).join("");
+    const pick = `<label class="chip pdpick">${up ? "포스터 바꾸기" : "포스터 사진 등록"}<input type="file" accept="image/*" data-poster="${i}" hidden></label>${up ? `<button type="button" class="chip x" data-act="posterDel" data-i="${i}">사진 지우기</button>` : ""}`;
     return `<article class="pday ${st}">
-      <div class="pdtop">${pp ? `<img class="pdposter" src="${esc(pp)}" referrerpolicy="no-referrer" alt="${esc(x.work)} 포스터">` : ""}
+      <div class="pdtop">${pp ? `<img class="pdposter" src="${esc(pp)}" referrerpolicy="no-referrer" alt="${esc(x.work)} 포스터">` : `<span class="pdposter pdnone" aria-hidden="true"></span>`}
         <div class="pdst"><div class="pseg" role="group" aria-label="일정 상태">${Object.entries(PLAN_STATUS).map(([k, l]) => `<button type="button" class="${k === st ? "on" : ""}" data-act="planStatus" data-i="${i}" data-s="${k}" aria-pressed="${k === st}">${l}</button>`).join("")}</div>
           <p class="tiny muted">${st === "seen" ? "본 공연이에요." : st === "booked" ? "예매한 공연이에요." : "예매하고 나면 예매했어요로 바꿔 주세요."}</p>
-          ${run.ticket && st === "tentative" && x.date >= from ? `<a class="btn" data-act="ticketSaved" data-i="${i}" href="${esc(run.ticket)}" target="_blank" rel="noopener">예매처로 이동 ↗</a>` : ""}</div></div>
+          ${run.ticket && st === "tentative" && x.date >= from ? `<a class="btn" data-act="ticketSaved" data-i="${i}" href="${esc(run.ticket)}" target="_blank" rel="noopener">예매처로 이동 ↗</a>` : ""}
+          ${!pp || up ? `<div class="chips">${pick}</div>` : ""}</div></div>
       <dl class="pinfo">
         <div><dt>공연명</dt><dd><b>${esc(x.work)}</b></dd></div>
-        <div><dt>날짜</dt><dd>${ymdDot(x.date)} (${esc(x.dow || dowOf(x.date))})</dd></div>
-        <div><dt>시간</dt><dd>${esc(x.time || "-")}</dd></div>
-        <div><dt>출연배우</dt><dd class="pcasts">${cast || "-"}</dd></div>
+        <div><dt>일시</dt><dd>${ymdDot(x.date)} (${esc(x.dow || dowOf(x.date))})${x.time ? ` ${esc(x.time)}` : ""}</dd></div>
+        <div class="pcastrow"><dt>출연배우</dt><dd><span class="pcasts">${cast || "-"}</span>${cast ? `<button type="button" class="btn crbtn${CR_OPEN.has(rvKey(x)) || x.cr?.a ? " on" : ""}" data-act="crOpen" data-i="${i}" aria-expanded="${CR_OPEN.has(rvKey(x))}">이날의 조합 리뷰</button>` : ""}</dd></div>
+        ${CR_OPEN.has(rvKey(x)) ? `<div class="crrow"><dt class="sr-only">이날의 조합 리뷰</dt><dd>${crPanel(x, i)}</dd></div>` : ""}
         <div><dt>장소</dt><dd>${esc(planVenue(x) || "-")}</dd></div>
         <div><dt><label for="pf-seat-${i}">좌석</label></dt><dd><input id="pf-seat-${i}" data-pf="seat" data-i="${i}" value="${esc(x.seat || "")}" placeholder="예: 1층 B열 12번" maxlength="40" autocomplete="off"></dd></div>
         <div><dt><label for="pf-price-${i}">금액</label></dt><dd class="pfwon"><input id="pf-price-${i}" data-pf="price" data-i="${i}" value="${x.price ? x.price.toLocaleString("ko-KR") : ""}" placeholder="예: 150,000" inputmode="numeric" autocomplete="off"><span>원</span></dd></div>
+        <div><dt><label for="pf-buyer-${i}">구매처</label></dt><dd><input id="pf-buyer-${i}" data-pf="buyer" data-i="${i}" value="${esc(x.buyer || "")}" placeholder="예: 인터파크" maxlength="40" autocomplete="off"></dd></div>
+        <div class="pmemo"><dt><label for="pf-memo-${i}">리뷰/메모</label></dt><dd><textarea id="pf-memo-${i}" data-pf="memo" data-i="${i}" rows="3" maxlength="2000" placeholder="그날의 감상이나 메모">${esc(x.memo || "")}</textarea>${trackUi() ? `<p class="tiny muted">리뷰/메모도 기록으로 남아요. 연락처 같은 개인정보는 적지 마세요.</p>` : ""}</dd></div>
       </dl>
       <div class="pdact">${x.date < from ? (x.tagged ? `<span class="small" style="color:var(--ok)">기록 남김 ✓ ${rv ? `<a href="#tag/${i}">고치기</a>` : ""}</span>` : `<a class="btn ghost" href="#tag/${i}">관람 기록 남기기</a>`) : `<a class="chip" href="#detail/${esc(x.work)}/${x.date}/${x.time}">회차 상세</a>`}
         <button type="button" class="chip x" data-act="unplan" data-i="${i}">일정 삭제</button></div>
@@ -1201,7 +1228,7 @@ V.review = (work, date, time, entry = "log") => {
   if (dr.done) { const sug = reviewSuggest(S, rv);  // 7단계: 저장 뒤 배우 조건 제안(체크한 것만, 기본은 선택 안 됨)
     return `<div class="one">${head}<div class="card"><h3>저장했어요</h3><p class="small muted">남긴 기록은 배우 정보로 쓰이고, 취향 카드는 바뀌지 않아요.</p></div>
       ${sug.length ? `<div class="card"><h3>배우 조건에 넣을까요? <span class="small muted">고른 것만</span></h3><div class="chips">${sug.map(s => { const on = dr.picks.some(x => x.actor === s.actor); return `<button type="button" class="chip x ${on ? "on" : ""}" data-act="rvPick" data-a="${esc(s.actor)}" data-k="${s.kind}" aria-pressed="${on}">${esc(s.actor)} 배우를 ${s.kind === "fav" ? "애정 배우" : "피하고 싶은 배우"}에 넣기</button>`; }).join("")}</div>
-        <div class="nbgrid"><button class="nb" data-act="rvSug" data-y="1" ${dr.picks.length ? "" : "disabled"}>넣기</button><button class="nb" data-act="rvSug" data-y="0">괜찮아요</button></div></div>` : `<button class="btn" data-act="rvSug" data-y="0">내 공연으로</button>`}</div>`; }
+        <div class="nbgrid"><button class="nb" data-act="rvSug" data-y="1" ${dr.picks.length ? "" : "disabled"}>넣기</button><button class="nb" data-act="rvSug" data-y="0">괜찮아요</button></div></div>` : `<button class="btn" data-act="rvSug" data-y="0">내 티켓으로</button>`}</div>`; }
   const roles = Object.keys(rv.cast);
   const row = role => { const a = rv.cast[role], r = rv.rows[role], R = esc(role), grp = rvGroups(D, RV_BASE_GROUPS), base = grp.length ? grp : [["", reviewChips(D, S, work, role, a).tags]], add = rvGroups(D, RV_MORE_GROUPS),  // 태그 사전 분류가 없으면 예전 순서(결정 43)
       more = RV_MORE[role] || add.some(([, ts]) => ts.some(t => r?.tags.includes(t)));  // 추가 태그를 골라 둔 배역은 펼친 채로
@@ -1234,6 +1261,64 @@ const lkFill = lc => {  // 고른 날짜(·시각)의 회차표 출연진으로 
   const day = lc.perfs.filter(([d]) => d === LK.date), p = day.length === 1 ? day[0] : day.find(([, t]) => t === LK.time);
   if (day.length === 1) LK.time = day[0][1];
   if (p) { LK.rc = Object.fromEntries(lc.roles.map(([r], i) => [r, p[2][i]]).filter(([, a]) => a)); LK.auto = true; } };
+// 티켓 등록하기(사용자 요청 2026-11-04): 캘린더에서 입력하기(본 공연 기록하기 흐름 #log) · CSV 파일로 등록하기(#ticket/csv)
+V.ticket = how => how === "csv" ? ticketCsv() : `<div class="one"><div><p class="eyebrow">내 티켓</p><h1>티켓 등록하기</h1></div>
+  <a class="card tkopt" href="#log"><b>캘린더에서 입력하기</b><span class="small muted">공연을 찾거나 직접 적고, 본 날짜를 골라 한 장씩 등록해요</span></a>
+  <a class="card tkopt" href="#ticket/csv"><b>CSV 파일로 등록하기</b><span class="small muted">다른 앱이나 엑셀에 모아 둔 관람 기록을 한 번에 가져와요</span></a>
+  <a class="btn ghost" href="#plans">캘린더로</a></div>`;
+// CSV 칸 이름 → 티켓 칸. 사용자 요청 칸(제목 일시 캘린더 출연 장소 좌석 금액 구매처 리뷰/메모)에 앱 칸 이름도 받는다. 캘린더 칸은 쓰지 않는다
+const CSV_COLS = {title: ["제목", "공연명", "작품", "작품명", "공연"], when: ["일시", "날짜", "관람일", "관람일시", "일자"], time: ["시간", "시각"], cast: ["출연", "출연배우", "배우", "캐스트", "캐스팅"],
+  venue: ["장소", "공연장"], seat: ["좌석"], price: ["금액", "가격", "티켓가격"], buyer: ["구매처", "예매처"], memo: ["리뷰/메모", "리뷰", "메모", "후기"]};
+const csvSplit = (text, sep) => { const rows = [[]]; let f = "", q = false;  // 따옴표 안의 구분자·줄바꿈은 글자로
+  for (let i = 0; i < text.length; i++) { const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; continue; }
+    if (c === '"' && !f) q = true; else if (c === sep) { rows[rows.length - 1].push(f); f = ""; } else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; rows[rows.length - 1].push(f); f = ""; rows.push([]); } else f += c; }
+  rows[rows.length - 1].push(f); return rows.filter(r => r.some(x => x.trim())); };
+// 일시: 2024.05.05 14:00 · 2024-05-05(일) 오후 2:00 · 2024년 5월 5일 오후 2시 · 24.05.05 등. 날짜를 못 읽으면 null
+const csvWhen = s => { const v = String(s || "").trim(), m = v.match(/(\d{4}|\d{2})\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})/); if (!m) return null;
+  const y = m[1].length === 2 ? 2000 + +m[1] : +m[1], date = `${y}-${String(m[2]).padStart(2, "0")}-${String(m[3]).padStart(2, "0")}`, dt = new Date(date + "T00:00:00");
+  if (isNaN(dt) || dt.getMonth() + 1 !== +m[2] || y < 1950 || y > 2100) return null;
+  const rest = v.slice(m.index + m[0].length), tm = rest.match(/(오전|오후|AM|PM|am|pm)?\s*(\d{1,2})\s*(?::|시)\s*(\d{2})?/);
+  let time = ""; if (tm) { let h = +tm[2]; if (/오후|pm/i.test(tm[1] || "") && h < 12) h += 12; if (/오전|am/i.test(tm[1] || "") && h === 12) h = 0; if (h < 24) time = `${String(h).padStart(2, "0")}:${tm[3] || "00"}`; }
+  return {date, time}; };
+const normTitle = s => String(s || "").replace(/\[[^\]]*\]|\([^)]*\)|\s|뮤지컬|〈|〉|<|>/g, "").toLowerCase();
+const parseCsvTickets = (text, name = "") => {
+  const head = text.split(/\r?\n/, 1)[0] || "", sep = head.includes("\t") ? "\t" : (head.split(";").length > head.split(",").length ? ";" : ","), rows = csvSplit(text, sep);
+  if (!rows.length) return {name, rows: [], bad: [], error: "파일이 비어 있어요"};
+  const hdr = rows[0].map(h => h.replace(/^﻿/, "").replace(/\s/g, "")), col = {};
+  for (const [k, names] of Object.entries(CSV_COLS)) { const j = hdr.findIndex(h => names.includes(h)); if (j >= 0) col[k] = j; }
+  if (col.title === undefined || col.when === undefined) return {name, rows: [], bad: [], error: "첫 줄에 '제목'과 '일시' 칸이 있어야 해요"};
+  const get = (r, k) => col[k] === undefined ? "" : String(r[col[k]] ?? "").trim(), out = [], bad = [], seen = new Set();
+  rows.slice(1).forEach((r, n) => { const title = get(r, "title").slice(0, 60), w = csvWhen(get(r, "when"));
+    if (!title || !w) { bad.push({line: n + 2, title, when: get(r, "when")}); return; }
+    const time = w.time || csvWhen("2000.01.01 " + get(r, "time"))?.time || "", k = [title, w.date, time].join("|"); if (seen.has(k)) return; seen.add(k);
+    const price = parseInt(get(r, "price").replace(/\D/g, ""), 10);
+    out.push({title, date: w.date, time, cast: splitNames(get(r, "cast")).slice(0, 30), venue: get(r, "venue").slice(0, 60), seat: get(r, "seat").slice(0, 40),
+      ...(price > 0 ? {price: Math.min(price, 9999999)} : {}), buyer: get(r, "buyer").slice(0, 40), memo: get(r, "memo").slice(0, 2000)}); });
+  return {name, rows: out, bad}; };
+// CSV 한 줄 → 티켓. MVP 작품(같은 이름)이면 그 회차 출연진, KOPIS 공연(제목이 같고 기간 안)이면 공연 번호로 포스터·장소를 잇는다
+const csvPlan = (r, from) => { const w = workOf(r.title), perf = w && D.perfs.find(q => q.work === w.name && q.date === r.date && (!r.time || q.time === r.time));
+  const ks = !w && [...(D.currentShows || []), ...(D.pastShows || [])].find(s => normTitle(s.title) === normTitle(r.title) && (!s.start || r.date >= s.start) && (!s.end || r.date <= s.end));
+  return {work: w ? w.name : r.title, date: r.date, dow: dowOf(r.date), time: perf?.time || r.time, cast: perf ? {...perf.cast} : Object.fromEntries(r.cast.map(a => [a, a])),
+    status: r.date <= from ? "seen" : "booked", src: "csv", ...(ks ? {kopis: ks.id} : {}), ...(r.venue ? {venue: r.venue} : {}), ...(r.seat ? {seat: r.seat} : {}),
+    ...(r.price ? {price: r.price} : {}), ...(r.buyer ? {buyer: r.buyer} : {}), ...(r.memo ? {memo: r.memo} : {})}; };
+let CSV = null;  // 읽은 CSV(저장 안 함)
+const csvDup = r => S.plans.some(x => (x.work === r.title || x.work === workOf(r.title)?.name) && x.date === r.date && (x.time || "") === (r.time || ""));
+const ticketCsv = () => { const head = `<div><p class="eyebrow">티켓 등록하기</p><h1>CSV 파일로 등록하기</h1></div>`;
+  if (!CSV) return `<div class="one">${head}<p class="small muted">첫 줄에 칸 이름이 있는 CSV 파일을 골라 주세요. 쉼표나 탭으로 나뉜 파일 모두 돼요.</p>
+    <div class="card"><h3>읽는 칸</h3><p class="small">제목 · 일시 · 출연 · 장소 · 좌석 · 금액 · 구매처 · 리뷰/메모 <span class="muted">(캘린더 칸은 쓰지 않아요)</span></p>
+      <p class="tiny muted">제목과 일시는 꼭 있어야 해요. 일시는 2024.05.05 14:00처럼 날짜와 시간을 함께 적어요. 출연은 배우 이름을 띄어 쓰거나 쉼표로 나눠요.</p></div>
+    <label class="btn">CSV 파일 고르기<input type="file" id="csvfile" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values" hidden></label>
+    <a class="btn ghost" href="#ticket">뒤로</a></div>`;
+  if (CSV.error) return `<div class="one">${head}<div class="card"><p class="small"><b>${esc(CSV.error)}</b></p><p class="tiny muted">${esc(CSV.name)}</p></div><button class="btn" data-act="csvReset">다른 파일 고르기</button></div>`;
+  const fresh = CSV.rows.filter(r => !csvDup(r)), dup = CSV.rows.length - fresh.length;
+  return `<div class="one">${head}<div class="card"><p><b>${fresh.length}개를 등록할 수 있어요</b></p><p class="tiny muted">${esc(CSV.name)}${dup ? ` · 이미 있는 ${dup}개는 건너뛰어요` : ""}${CSV.bad.length ? ` · 제목이나 일시를 못 읽은 ${CSV.bad.length}줄은 빼요` : ""}</p>
+    <div class="agenda">${fresh.slice(0, 30).map(r => `<div class="agrow seen"><span class="agph"></span><span class="agd"><b>${+r.date.slice(8)}</b><span>${dowOf(r.date)}</span></span><span class="agi"><b>${esc(r.title)}</b><span class="tiny muted">${[r.date.slice(0, 7).replace("-", "."), r.time, r.venue, r.cast.join(" ")].filter(Boolean).map(esc).join(" · ")}</span></span></div>`).join("")}</div>
+    ${fresh.length > 30 ? `<p class="tiny muted">외 ${fresh.length - 30}개</p>` : ""}
+    ${CSV.bad.length ? `<p class="tiny muted">못 읽은 줄: ${CSV.bad.slice(0, 5).map(b => `${b.line}번째 줄${b.title ? `(${esc(b.title)})` : ""}`).join(", ")}${CSV.bad.length > 5 ? " 외" : ""}</p>` : ""}</div>
+    <button class="btn" data-act="csvGo" ${fresh.length ? "" : "disabled"}>${fresh.length ? `${fresh.length}개 등록하기` : "새로 등록할 티켓이 없어요"}</button><button class="btn ghost" data-act="csvReset">다른 파일 고르기</button></div>`; };
+const readCsvFile = f => f.arrayBuffer().then(buf => { let text; try { text = new TextDecoder("utf-8", {fatal: true}).decode(buf); } catch (e) { text = new TextDecoder("euc-kr").decode(buf); }  // 엑셀 한글 CSV(CP949)
+  return text.replace(/^﻿/, ""); });
 V.log = (work, id) => {
   const from = today(), w = work && workOf(work);
   if (work === "k") return logKopis(id);
@@ -1262,15 +1347,17 @@ const hourLabel = h => { const n = +h; return `${n < 12 ? "오전" : "오후"} $
 const timePick = (cur, sel) => { const [h, m] = (cur || "19:00").split(":");
   return `<div class="lkt"><span class="tiny muted">시각</span><div class="tpick"><select id="${sel}h" aria-label="시">${HOURS.map(x => `<option value="${x}"${x === h ? " selected" : ""}>${hourLabel(x)}</option>`).join("")}</select>
     <select id="${sel}m" aria-label="분">${["00", "30"].map(x => `<option value="${x}"${x === m ? " selected" : ""}>${x}분</option>`).join("")}</select></div></div>`; };
+// 배우 이름 칸(사용자 요청 2026-11-04): 띄어쓰기·쉼표·가운뎃점·빗금으로 나눠 여러 명을 한 번에. 한 명당 20자까지
+const splitNames = s => [...new Set(String(s || "").split(/[\s,，、·/;|]+/).map(a => a.trim().slice(0, 20)).filter(Boolean))];
 let LOG_DATE = "";  // 캘린더 날짜에서 들어온 본 공연 기록하기의 날짜(저장 안 함)
 let LM = {title: "", venue: "", date: "", time: "19:00", cast: []};  // 직접 기록 초안(저장 안 함). 시각 기본 오후 7:00
 const logManual = () => { const from = today(), n = LM.cast.length; if (!LM.date && LOG_DATE) LM.date = LOG_DATE;
-  return `<div class="one"><div><p class="eyebrow">본 공연 기록하기</p><h1>공연 정보를 적어 주세요</h1></div><p class="small muted">목록에 없는 공연도 기록할 수 있어요. 공연 이름·공연장과 후기 글은 이 기기에만 남아요.</p>
+  return `<div class="one"><div><p class="eyebrow">본 공연 기록하기</p><h1>공연 정보를 적어 주세요</h1></div><p class="small muted">목록에 없는 공연도 기록할 수 있어요. 관람 리뷰의 후기 글은 이 기기에만 남아요.</p>
     <div class="card lmform"><label>공연 이름<input id="lmTitle" value="${esc(LM.title)}" placeholder="예: 레베카" maxlength="60" autocomplete="off"></label>
       <label><span>공연장 <span class="muted">(선택)</span></span><input id="lmVenue" value="${esc(LM.venue)}" placeholder="예: 충무아트센터 대극장" maxlength="60" autocomplete="off"></label>
       <label>본 날짜<input type="date" id="lmDate" max="${from}" value="${esc(LM.date)}"></label>${timePick(LM.time, "lmt")}</div>
     <div class="card"><h3>누가 나왔어요?</h3><div class="chips">${LM.cast.map(a => `<button type="button" class="chip x on" data-act="lmDel" data-a="${esc(a)}" aria-label="${esc(a)} 빼기">${esc(a)} ×</button>`).join("")}</div>
-      <div class="lkadd"><input id="lmadd" list="lmactors" placeholder="배우 이름" autocomplete="off" maxlength="20" aria-label="본 배우 이름"><button type="button" class="chip" data-act="lmAdd">추가</button></div>
+      <div class="lkadd"><input id="lmadd" list="lmactors" placeholder="배우 이름 (여러 명은 띄어 써서)" autocomplete="off" maxlength="200" aria-label="본 배우 이름"><button type="button" class="chip" data-act="lmAdd">추가</button></div>
       <datalist id="lmactors">${allActors().map(a => `<option value="${esc(a)}">`).join("")}</datalist></div>
     <button class="btn" data-act="lmGo" ${n ? "" : "disabled"}>${n ? `배우 ${n}명 평가하기` : "본 배우를 추가해 주세요"}</button></div>`; };
 const logKopis = id => {
@@ -1285,7 +1372,7 @@ const logKopis = id => {
     ? `${lc.roles.map(([r, as]) => `<div class="lkrole"><b>${esc(r)}</b><div class="chips">${as.map(a => chip(LK.rc[r] === a, `data-act="lkRole" data-r="${esc(r)}" data-a="${esc(a)}"`, a)).join("")}</div></div>`).join("")}
       <p class="tiny muted">${LK.auto ? "그날 회차표대로 채웠어요. 다르면 바꿔 주세요." : "날짜와 시각을 고르면 그 회차 출연진으로 채워져요. 배역마다 한 명을 골라 주세요."}</p>`
     : `<div class="chips">${[...new Set([...(s.cast || []), ...LK.cast])].map(a => chip(LK.cast.includes(a), `data-act="lkCast" data-a="${esc(a)}"`, a)).join("")}</div>
-      <div class="lkadd"><input id="lkadd" placeholder="목록에 없는 배우 이름" autocomplete="off" maxlength="20" aria-label="목록에 없는 배우 이름"><button type="button" class="chip" data-act="lkAdd">추가</button></div>
+      <div class="lkadd"><input id="lkadd" placeholder="목록에 없는 배우 이름 (여러 명은 띄어 써서)" autocomplete="off" maxlength="200" aria-label="목록에 없는 배우 이름"><button type="button" class="chip" data-act="lkAdd">추가</button></div>
       <p class="tiny muted">KOPIS에는 주요 출연진만 올라와요. 없는 배우는 이름을 적어 추가해 주세요.</p>`;
   return `<div class="one"><div class="lkhead">${curPoster(s, "lkposter")}<div><p class="eyebrow">본 공연 기록하기</p><h1>${esc(s.title)}</h1><p class="small muted">${esc(s.venue)} · ${md(s.start)} ~ ${s.end.slice(0, 4) !== s.start.slice(0, 4) ? s.end.slice(0, 4) + " " : ""}${md(s.end)}</p></div></div>
     <div class="card"><h3>언제 봤어요?</h3>
@@ -1858,7 +1945,7 @@ const recAgain = (D, S, work, from, inDates = null) => {
   const have = new Set(sh.list.map(x => x.key)), next = comboRecs(D, S, work, from, inDates).find(c => !have.has(c.key)); if (!next) return null;
   sh.list.push({key: next.key, cast: next.cast}); sh.again = true; return next;
 };
-const likedCombos = S => Object.entries(S.proto?.sat || {}).flatMap(([work, o]) => Object.values(o).filter(e => e.a === "like").map(e => ({work, cast: e.cast})));  // '좋아한 조합'(내 공연·내 취향에서 본다)
+const likedCombos = S => Object.entries(S.proto?.sat || {}).flatMap(([work, o]) => Object.values(o).filter(e => e.a === "like").map(e => ({work, cast: e.cast})));  // '좋아한 조합'(내 티켓·내 취향에서 본다)
 const satRecord = (D, S, work, key) => { const e = satOf(S, work)[key]; if (!e) return null;
   return {work, run: e.run || undefined, cast: e.cast, answer: e.a, ...(e.order ? {order: e.order} : {}), ...(e.why ? {why: e.why} : {}), ...(e.actor ? {actor: e.actor} : {})}; };
 
@@ -1905,7 +1992,7 @@ const swapRvActor = (D, rv, role, actor) => {  // 다른 배우였어요(결정 
   if (!(role in rv.cast) || !cands.includes(actor)) return false;
   rv.cast[role] = actor; return true;
 };
-const saveReview = (D, S, rv, entry = "plan", at = "") => {  // 한 회차에 리뷰 1개(같은 회차를 다시 저장하면 고친다). 저장하면 그 회차가 내 공연 '본 공연'에 들어간다
+const saveReview = (D, S, rv, entry = "plan", at = "") => {  // 한 회차에 리뷰 1개(같은 회차를 다시 저장하면 고친다). 저장하면 그 회차가 내 티켓 '본 공연'에 들어간다
   const out = {...JSON.parse(JSON.stringify(rv)), entry, at};
   S.reviews = (S.reviews || []).filter(r => !(r.work === rv.work && r.date === rv.date && r.time === rv.time)); S.reviews.push(out);
   const plans = (S.plans ||= []), x = plans.find(y => y.work === rv.work && y.date === rv.date && y.time === rv.time);
@@ -1953,13 +2040,15 @@ const fitPairs = (D, S) => (S.reviews || []).flatMap(rv => {
   const p = (D.perfs || []).find(q => q.work === rv.work && q.date === rv.date && q.time === rv.time), e = p && satOf(S, rv.work)[comboKey(D, rv.work, p.cast)];
   return e ? [{work: rv.work, date: rv.date, time: rv.time, sat: e.a, rates: Object.values(rv.rows || {}).map(r => r.rate)}] : []; });
 const logPerfs = (D, work, from) => (D.perfs || []).filter(p => p.work === work && p.date < from && !isPrivate(p)).sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));  // 본 공연 기록하기: 지난 회차만(최근 순)
-// 내 공연 캘린더(사용자 요청 2026-10-28): 담은 회차는 '미정일정'(흑백 포스터)으로 들어가고, 예매한 뒤 '관람예정'으로 바꾸면 컬러 포스터. 좌석·금액은 사용자가 적는다
+// 내 티켓 캘린더(사용자 요청 2026-10-28): 담은 회차는 '미정일정'(흑백 포스터)으로 들어가고, 예매한 뒤 '관람예정'으로 바꾸면 컬러 포스터. 좌석·금액은 사용자가 적는다
 const PLAN_STATUS = {tentative: "보고싶어요", booked: "예매했어요", seen: "관람했어요"};  // 화면 이름만 바꿨다(2026-11-03, 예전 미정일정·관람예정). 저장 값은 그대로
 const planStatus = x => x?.status === "booked" || x?.status === "seen" ? x.status : "tentative";  // 상태가 없는 예전 기록은 보고싶어요
 const setPlanStatus = (S, i, st) => { const x = S.plans[i]; if (!x || !PLAN_STATUS[st]) return false; x.status = st; return true; };
 const setPlanField = (S, i, k, v) => { const x = S.plans[i]; if (!x) return false;
   if (k === "price") { const n = parseInt(String(v ?? "").replace(/\D/g, ""), 10); if (n > 0) x.price = Math.min(n, 9999999); else delete x.price; return true; }  // 숫자만 남긴다(쉼표·'원' 허용)
   if (k === "seat") { const s = String(v ?? "").trim().slice(0, 40); if (s) x.seat = s; else delete x.seat; return true; }
+  if (k === "buyer") { const s = String(v ?? "").trim().slice(0, 40); if (s) x.buyer = s; else delete x.buyer; return true; }  // 구매처(예매처 이름)
+  if (k === "memo") { const s = String(v ?? "").slice(0, 2000); if (s.trim()) x.memo = s; else delete x.memo; return true; }  // 리뷰/메모(티켓 칸. 관람 리뷰의 후기 글과는 따로)
   return false; };
 const plansOn = (S, date) => (S.plans || []).map((x, i) => [x, i]).filter(([x]) => x.date === date)
   .sort(([a], [b]) => (planStatus(a) === "tentative" ? 1 : 0) - (planStatus(b) === "tentative" ? 1 : 0) || a.time.localeCompare(b.time));  // 관람예정이 앞(칸 포스터는 첫째 것)
@@ -1978,19 +2067,20 @@ mergeMyTags();
 // 목적: 추천한 조합이 그 사람 취향에 맞았는지 배우는 데이터. 사용 지표(앱 열기 등)는 만들지 않는다. 가입 없이 무작위 익명 ID 로만.
 // 지금은 연습 모드라 서버로 안 보내고 콘솔과 화면 구석 목록에만 보인다. 켜는 법: 내보내기(recommend.py --export)가 .env 의 SUPABASE_URL·SUPABASE_ANON_KEY(공개 키만)를 data.js 의 window.PICKLE_TRACK 으로 넣는다. 키는 이 파일에 적지 않는다
 // <track>
-const TRACK_CFG = {mode: "practice", url: "", key: "", table: "events", batch: 20, cap: 200, maxBytes: 4096, keepaliveBytes: 56000};  // keepalive 요청 본문은 64KB 까지라 한 번에 56KB 넘게 묶지 않는다
+const TRACK_CFG = {mode: "practice", url: "", key: "", table: "events", batch: 20, cap: 600, maxBytes: 4096, keepaliveBytes: 56000};  // keepalive 요청 본문은 64KB 까지라 한 번에 56KB 넘게 묶지 않는다
 const ALGO_VER = "rule-v1";  // 추천 방식 버전: 추천 규칙이 바뀌면 올린다(어느 방식이 낸 추천을 평가한 건지 구분)
-const APP_VER = "proto-0.5";  // 서버 표 제약: 20자 이하
+const APP_VER = "proto-0.6";  // 서버 표 제약: 20자 이하
 // 이유 칩 7개(정의서). 코드 ↔ 화면 글자. 글자가 바뀌어도 기록 값(코드)은 그대로다
 const CHIPS = [["voice", "목소리"], ["vocal", "성량·가창"], ["acting", "연기·해석"], ["chemistry", "두 배우 호흡"], ["actor", "특정 배우"], ["wrong", "설명이 틀렸어요"], ["etc", "날짜·가격·이미 봄"]];
 const CHIP_CODES = CHIPS.map(c => c[0]);
 // 화면 이름(방문·화면 진입 기록). 주소(#…)를 이 목록으로 바꿔 보낸다 — 주소 안 작품 제목·날짜 같은 글자는 보내지 않는다
 const SCREENS = ["home", "taste", "find", "find_taste", "find_how", "find_actor", "find_actor_recs", "find_actor_cal", "find_date", "find_date_recs", "find_date_cal",
-  "show", "detail", "saved", "plans", "plans_day", "review", "log", "log_work", "log_kopis", "log_manual", "me", "privacy", "photos", "browse", "other"];
+  "show", "detail", "saved", "plans", "plans_day", "review", "log", "log_work", "log_kopis", "log_manual", "ticket", "ticket_csv", "me", "privacy", "photos", "browse", "other"];
 const screenOf = (name, args = []) => {
   if (name === "find") { const [w, how, step] = args; if (!w) return "find"; if (!how) return "find_taste"; if (how === "actor" || how === "date") return `find_${how}${step === "recs" || step === "cal" ? "_" + step : ""}`; return "find_how"; }
   if (name === "plans") return args[0] ? "plans_day" : "plans";
   if (name === "log") return args[0] === "k" ? "log_kopis" : args[0] === "m" ? "log_manual" : args[0] ? "log_work" : "log";
+  if (name === "ticket") return args[0] === "csv" ? "ticket_csv" : "ticket";
   if (name === "tag" || name === "review") return "review";
   if (name === "onboard") return "taste";
   return SCREENS.includes(name) ? name : "other"; };
@@ -2004,6 +2094,7 @@ const R = {
   code: (v, V, bad) => typeof v === "string" && /^[a-z0-9_.-]{1,20}$/.test(v) ? v : bad(),
   ytid: (v, V, bad) => typeof v === "string" && /^[A-Za-z0-9_-]{11}$/.test(v) ? v : bad(),  // 유튜브 영상 ID(11자). 주소나 제목이 아니라 ID 만
   date: (v, V, bad) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : bad(),  // 공연 날짜(기록한 날이 아니다)
+  text: max => (v, V, bad) => typeof v === "string" && v.length <= max ? v : bad(),  // 사용자가 적은 글(티켓 칸만, 사용자 결정 2026-11-04). 길이만 본다
   time: (v, V, bad) => typeof v === "string" && /^\d{2}:\d{2}$/.test(v) ? v : bad(),  // 공연 시작 시각
   inSet: key => (v, V, bad) => typeof v === "string" && v.length <= 40 && !!V && !!V[key] && V[key].has(v) ? v : bad(),
   arr: (max, item) => (v, V, bad) => { if (!Array.isArray(v) || v.length > max) return bad(); const out = []; for (const x of v) { const y = item(x, V, bad); if (y !== undefined) out.push(y); } return out; },
@@ -2045,7 +2136,7 @@ const EVENTS = {
   after_review: {req: ["work", "date", "time", "actors"], shape: {work: R_WORK, run: R_RUN, date: R.date, time: R.time, entry: R.oneOf(["plan", "log"]),
     actors: R.arr(8, R.obj({role: R.inSet("roles"), actor: R.inSet("actors"), rate: R.oneOf(["good", "meh", "bad"]), tags: R.arr(3, R.inSet("actorTags"))}, ["role", "actor", "rate"])),
     combo: R.arr(3, R.inSet("comboTags"))}},  // 관람 후 리뷰(11.1절)를 저장할 때. 주관식 원문은 보내지 않는다
-  plan_status: {req: ["work", "date", "time", "status"], shape: {work: R_WORK, run: R_RUN, date: R.date, time: R.time, cast: R_CAST, status: R.oneOf(["tentative", "booked", "seen"])}},  // 내 공연 캘린더에서 미정일정 ↔ 관람예정을 바꿀 때(예매 전환). 좌석·금액은 보내지 않는다
+  plan_status: {req: ["work", "date", "time", "status"], shape: {work: R_WORK, run: R_RUN, date: R.date, time: R.time, cast: R_CAST, status: R.oneOf(["tentative", "booked", "seen"])}},  // 내 티켓 캘린더에서 미정일정 ↔ 관람예정을 바꿀 때(예매 전환). 좌석·금액은 보내지 않는다
   visit: {req: ["entry"], shape: {entry: R.oneOf(SCREENS), returning: R.bool}},  // 앱을 열 때 한 번: 들어온 화면, 전에 이 기기에서 온 적이 있는지(기기 번호가 이미 있었는지)
   screen_view: {req: ["screen"], shape: {screen: R.oneOf(SCREENS), work: R_WORK}},  // 화면을 옮길 때마다 한 줄: 화면 이름(정해 둔 목록), MVP 작품 화면이면 작품
   // 2026-11-04 analytics: screen-stage and explicit interaction records; no raw text, IP, or timestamps.
@@ -2060,6 +2151,11 @@ const EVENTS = {
   show_review: {req: ["source", "date", "actors"], shape: {source: R.oneOf(["kopis", "manual"]), show: R.inSet("shows"), date: R.date, time: R.time, entry: R.oneOf(["plan", "log"]),
     actors: R.arr(12, R.obj({actor: R.inSet("actors"), role: R.inSet("logRoles"), rate: R.oneOf(["good", "meh", "bad"]), tags: R.arr(3, R.inSet("actorTags"))}, ["actor", "rate"])),
     combo: R.arr(3, R.inSet("comboTags")), backfill: R.bool}},
+  // 2026-11-04: 내 티켓(사용자 결정: 리뷰/메모까지 전부). 티켓이 바뀌면 그 티켓 전체를 한 줄(tid 로 묶어 마지막 줄이 이긴다), 지우면 deleted.
+  // 사용자 포스터 사진은 보내지 않는다(있는지만 own_poster). 리뷰/메모가 길어 4KB 를 넘으면 뒤를 잘라 memo_cut
+  ticket: {req: ["tid"], shape: {tid: R.code, title: R.text(60), date: R.date, time: R.time, status: R.oneOf(["tentative", "booked", "seen"]), src: R.oneOf(["mvp", "kopis", "manual", "csv"]),
+    kopis: R.inSet("shows"), cast: R.arr(30, R.text(20)), venue: R.text(60), seat: R.text(40), price: R.int(1, 9999999), buyer: R.text(40), memo: R.text(2000), memo_cut: R.bool,
+    cr: R.obj({a: R.oneOf(["like", "dislike", "unsure"]), why: R.oneOf(["actor", "combo", "reason", "skip"]), actor: R.text(20)}, ["a"]), own_poster: R.bool, deleted: R.bool}},
 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const isJwt = k => /^eyJ[\w-]+\.[\w-]+\.[\w-]+$/.test(k);
@@ -2170,7 +2266,7 @@ const loadVotes = async () => {
 };
 const votesP = loadVotes();
 const track = (event, props) => { const ok = TRK.track(event, props); if (ok) scheduleFlush(); if (typeof renderDebug === "function") renderDebug(); return ok; };
-let flushT; const scheduleFlush = () => { if (!TRK.live()) return; clearTimeout(flushT); flushT = setTimeout(() => TRK.flush(), 3000); };
+let flushT; const scheduleFlush = () => { if (!TRK.live()) return; clearTimeout(flushT); flushT = setTimeout(() => TRK.flush().then(r => { if (r?.sent && TRK.queue().length) scheduleFlush(); }), 3000); };  // 남은 묶음이 있으면 이어서(티켓 CSV 처럼 한 번에 많을 때)
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && TRK.live()) TRK.flush(); });
 
 // ---------- proto: 기록 안내 배너 · 설정 · 안내 화면 · 디버그 목록 ----------
@@ -2196,13 +2292,13 @@ const trackSettings = () => { const off = TRK.isOff();
     <div class="nbgrid"><button class="nb" data-act="trackToggle">${off ? "기록 켜기" : "기록 끄기"}</button><button class="nb" data-act="trackClear">이 기기 기록 지우기</button></div>
     <p class="tiny muted"><b>기록 끄기</b> 지금부터 보내지 않고 이 기기의 번호를 지워요. 이미 보낸 기록은 6개월 뒤 지워져요.</p>
     <p class="tiny muted"><b>이 기기 기록 지우기</b> 이 기기의 번호만 지워요. 켜 둔 상태면 다음 기록부터 새 번호예요.</p>
-    ${CLR_ASK ? `<div class="ask"><p class="small"><b>기록을 지웠어요.</b> 이 기기에 저장된 취향·내 공연 일정도 지울까요?</p><div class="nbgrid"><button class="nb" data-act="clearAppData">취향·볼 예정도 지우기</button><button class="nb" data-act="clearAppKeep">그대로 두기</button></div></div>` : ""}</div>`; };
+    ${CLR_ASK ? `<div class="ask"><p class="small"><b>기록을 지웠어요.</b> 이 기기에 저장된 취향·내 티켓 일정도 지울까요?</p><div class="nbgrid"><button class="nb" data-act="clearAppData">취향·볼 예정도 지우기</button><button class="nb" data-act="clearAppKeep">그대로 두기</button></div></div>` : ""}</div>`; };
 // 기록·개인정보 안내(사용자 요청 2026-11-03: 꼭 필요한 것만). 홈 맨 아래 링크로만 들어온다. 문장은 기록기 코드와 맞춰 둔다:
 // 이벤트 표(EVENTS)에 이름·연락처·IP·시각 칸이 없고(서버 한 줄 = 무작위 번호·버전·이벤트·payload, 시각은 순서 seq 로 대신), 관람 후 리뷰(after_review)에 주관식이 없고, 광고·분석 스크립트를 싣지 않는다
 V.privacy = () => !trackUi() ? `<div class="one"><div class="card"><p class="small">이 앱은 지금 아무 기록도 서버로 보내지 않아요.</p><a class="btn ghost" href="#home">홈으로</a></div></div>` : `<div class="one prv">
   <div><h1>기록·개인정보 안내</h1></div>
-  <div class="card prvno"><h3>남기지 않는 것</h3><ul class="small"><li>이름, 연락처, 아이디, 가입 정보가 없어요.</li><li>IP를 따로 저장하지 않아요.</li><li>기록한 시각은 남기지 않고 날짜만 남겨요.</li><li>후기에 쓴 글(주관식)은 보내지 않아요.</li><li>광고나 외부 분석 도구가 없어요.</li></ul></div>
-  <div class="card"><h3>남기는 것</h3><p class="small">이 기기의 무작위 익명 번호와 함께, 고른 취향·추천에 대한 반응·화면 이동·본 공연 기록을 남겨요.</p><p class="small">본 공연 기록은 공연, 본 날짜, 배우별 평가와 고른 태그만 남겨요. 직접 적은 공연 이름·공연장과 후기 글은 이 기기에만 있어요. 전에 이 기기에 저장해 둔 본 공연 기록도 같은 방식으로 한 번 보내요.</p>
+  <div class="card prvno"><h3>남기지 않는 것</h3><ul class="small"><li>이름, 연락처, 아이디, 가입 정보가 없어요.</li><li>IP를 따로 저장하지 않아요.</li><li>기록한 시각은 남기지 않고 날짜만 남겨요.</li><li>관람 리뷰에 쓴 후기 글은 보내지 않아요.</li><li>앨범에서 고른 포스터 사진은 보내지 않아요.</li><li>광고나 외부 분석 도구가 없어요.</li></ul></div>
+  <div class="card"><h3>남기는 것</h3><p class="small">이 기기의 무작위 익명 번호와 함께, 고른 취향·추천에 대한 반응·화면 이동·본 공연 기록을 남겨요.</p><p class="small">내 티켓에 등록한 티켓은 공연명, 일시, 출연, 장소, 좌석, 금액, 구매처, 리뷰/메모를 남겨요. 리뷰/메모에는 연락처 같은 개인정보를 적지 마세요. 본 공연 기록은 공연, 본 날짜, 배우별 평가와 고른 태그를 남겨요. 전에 이 기기에 저장해 둔 티켓과 기록도 같은 방식으로 한 번 보내요.</p>
     <h3>목적과 보관 기간</h3><p class="small">추천을 고치는 데만 쓰고, 6개월이 지나면 지워요.</p></div>
   <div class="card"><h3>국외 이전</h3><p class="small">기록은 Supabase Pte. Ltd.(싱가포르)에 맡겨 저장해요. 저장 위치는 서울 리전이지만, Supabase와 협력 업체가 있는 나라에서 처리될 수 있어요.</p>
     <table class="prt"><tr><td>이전 항목</td><td>위 '남기는 것'(이름·연락처 없음)</td></tr><tr><td>국가</td><td>싱가포르 등 Supabase가 처리하는 나라</td></tr><tr><td>시기·방법</td><td>기록할 때마다 인터넷으로 전송</td></tr><tr><td>받는 자</td><td>Supabase Pte. Ltd.</td></tr><tr><td>목적·기간</td><td>추천 개선, 6개월</td></tr><tr><td>거부 방법</td><td>아래 [기록 끄기]. 꺼도 추천은 그대로 쓸 수 있어요</td></tr></table></div>
@@ -2839,9 +2935,9 @@ const snapTaste = () => {
   (S.proto ||= {}).snap = {id: TRK.peekAnon(), sig}; save(); return true;
 };
 // 기록 안내가 바뀌면(안내문 9항) 전에 쓰던 기기에 홈 맨 위로 한 번 알린다. 처음 온 기기는 지금 안내를 처음부터 보니 알리지 않는다
-const NOTICE_VER = "2026-11-04";
+const NOTICE_VER = "2026-11-04b";  // b: 내 티켓 기록 추가(같은 날 두 번째 변경)
 const noticeCard = () => trackUi() && !TRK.isOff() && S.proto?.notice !== NOTICE_VER ? `<div class="card accent notice" role="status"><p class="small"><b>기록 안내가 바뀌었어요 (11월 4일)</b></p>
-  <p class="small">이제 본 공연 기록(공연, 본 날짜, 배우별 평가와 태그)도 남겨요. 직접 적은 공연 이름·공연장과 후기 글은 보내지 않아요. 전에 이 기기에 저장해 둔 본 공연 기록도 같은 방식으로 한 번 보내요.</p>
+  <p class="small">이제 내 티켓에 등록한 티켓(공연명·일시·출연·장소·좌석·금액·구매처·리뷰/메모)과 본 공연 기록(배우별 평가와 태그)도 남겨요. 앨범에서 고른 포스터 사진은 보내지 않아요. 전에 이 기기에 저장해 둔 티켓과 기록도 한 번 보내요.</p>
   <div class="chips"><button class="btn" data-act="noticeOk">확인</button><a class="btn ghost" href="#privacy">자세히 보기·기록 끄기</a></div></div>` : "";
 // MVP 밖 본 공연 기록 보내기. 보냈거나 보낼 게 없는 기록은 S.proto.rvSent(작품|날짜|회차)에 표시한다. 기록을 끈 동안은 표시하지 않는다(다시 켜면 다음 방문에 보낸다)
 const rvKey = rv => [rv.work, rv.date, rv.time].join("|");
@@ -2852,6 +2948,26 @@ const sendShowReview = (rv, backfill = false) => {
   const sent = ((S.proto ||= {}).rvSent ||= []); if (!sent.includes(rvKey(rv))) sent.push(rvKey(rv));
   return !!rec;
 };
+// 내 티켓 기록: 저장할 때마다(1.5초 모아) 바뀐 티켓만 ticket 한 줄. 무엇을 보냈는지는 티켓 번호별 짧은 지문(S.proto.tkSig). 지운 티켓은 deleted
+const tkHash = s => { let h = 5381; for (let i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) >>> 0; return h.toString(36); };
+const ticketRecord = x => { const venue = planVenue(x), w = workOf(x.work);
+  const rec = {tid: planId(x), title: String(x.work || "").slice(0, 60), date: x.date, ...(x.time ? {time: x.time} : {}), status: planStatus(x),
+    src: x.src === "csv" ? "csv" : w ? "mvp" : x.kopis ? "kopis" : "manual", ...(x.kopis && VOCAB.shows.has(x.kopis) ? {kopis: x.kopis} : {}),
+    cast: planCast(x).map(([, a]) => String(a).slice(0, 20)).slice(0, 30), ...(venue ? {venue: String(venue).slice(0, 60)} : {}), ...(x.seat ? {seat: x.seat} : {}),
+    ...(x.price ? {price: x.price} : {}), ...(x.buyer ? {buyer: x.buyer} : {}), ...(x.memo ? {memo: x.memo} : {}),
+    ...(x.cr?.a ? {cr: {a: x.cr.a, ...(x.cr.why ? {why: x.cr.why} : {}), ...(x.cr.actor ? {actor: String(x.cr.actor).slice(0, 20)} : {})}} : {}), ...(userPoster(x) ? {own_poster: true} : {})};
+  while (rec.memo && new TextEncoder().encode(JSON.stringify(rec)).length > 3800) { rec.memo = rec.memo.slice(0, Math.floor(rec.memo.length * 0.85)); rec.memo_cut = true; }  // 서버 표 한 줄 4KB
+  return rec; };
+let tkT;
+const syncTickets = () => {
+  if (!trackUi() || TRK.isOff() || S.proto?.notice !== NOTICE_VER) return 0;
+  const sig = ((S.proto ||= {}).tkSig ||= {}), alive = new Set(); let n = 0;
+  for (const x of S.plans || []) { const id = planId(x); alive.add(id); if (n >= 150) continue;  // 한 번에 150장까지, 나머지는 다음 저장 때
+    const h = tkHash(JSON.stringify(ticketRecord(x))); if (sig[id] === h) continue; if (track("ticket", ticketRecord(x))) { sig[id] = h; n++; } }
+  for (const id of Object.keys(sig)) if (!alive.has(id) && track("ticket", {tid: id, deleted: true})) { delete sig[id]; n++; }
+  if (n) saveRaw(); if (n >= 150) { clearTimeout(tkT); tkT = setTimeout(syncTickets, 4000); }
+  return n; };
+SAVE_HOOK = () => { clearTimeout(tkT); tkT = setTimeout(syncTickets, 1500); };
 // 앱을 열 때 한 번: 2026-11-04 전에 이 기기에만 저장된 MVP 밖 관람 기록을 보낸다(한 번에 30개까지, 나머지는 다음 방문)
 const backfillReviews = () => {
   if (TRK.isOff() || S.proto?.notice !== NOTICE_VER) return 0;  // 바뀐 기록 안내를 본 뒤에만(홈 안내의 확인 버튼·안내 화면)
@@ -2883,7 +2999,7 @@ function route() {
   CTA = null; const view = $("#view"); view.innerHTML = (V[name] || V.home)(...args); view.dataset.view = V[name] ? name : "home";
   const cta = $("#cta"); if (CTA) { cta.hidden = false; cta.innerHTML = `<button class="btn" data-act="${CTA.act}">${esc(CTA.text)}</button>`; } else cta.hidden = true;  // 폰에서는 화면 아래 고정 버튼(넓은 화면은 덩어리 안 버튼)
   $("#back").hidden = ["home", "works", "taste", "onboard", "me"].includes(name) || (name === "plans" && !args.length);  // 캘린더 날짜 화면(#plans/날짜)에는 뒤로
-  const tab = {plans: "plans", tag: "plans", review: "plans", log: "plans", me: "me", privacy: "me"}[name] || "home";
+  const tab = {plans: "plans", tag: "plans", review: "plans", log: "plans", ticket: "plans", me: "me", privacy: "me"}[name] || "home";
   document.querySelectorAll("[data-tab]").forEach(a => a.classList.toggle("on", a.dataset.tab === tab));
   if (location.hash !== lastHash) window.scrollTo(0, 0);  // 화면이 바뀔 때만 맨 위로. 카드·칩을 눌러 다시 그릴 땐 스크롤을 유지한다
   if (location.hash !== lastHash && !window.PICKLE_NO_SCREEN) { const sc = screenOf(name, args), w = ["find", "show", "detail", "review", "log"].includes(name) && workOf(args[0]) ? args[0] : undefined;
@@ -3064,6 +3180,17 @@ document.addEventListener("click", e => {
     case "runQuery": { const st = S.cal[d.work]; if (!st?.count) { toast("조건에 맞는 회차가 없어요"); return; } S.query = {work: d.work, lo: st.lo, hi: st.hi, actors: st.actors, dates: st.dates || []}; save(); location.hash = "#result"; break; }
     case "plan": { const p = D.perfs.find(x => x.work === d.work && x.date === d.date && x.time === d.time); if (!p) return; if (isPrivate(p)) { toast("단체 대관 공연이라 일반 예매가 안 돼요"); return; } finishPending("plan", p); break; }  // 바로 담는다(별점 시트 없음)
     case "unplan": S.plans.splice(+d.i, 1); save(); route(); break;
+    case "csvReset": CSV = null; route(); break;
+    case "csvGo": { if (!CSV?.rows) return; const from = today(), add = CSV.rows.filter(r => !csvDup(r)).map(r => csvPlan(r, from)); if (!add.length) return;
+      S.plans.push(...add); add.forEach(planId); CSV = null; PCAL_M = add.map(x => x.date).sort().pop().slice(0, 7); save(); toast(`티켓 ${add.length}개를 등록했어요`); location.hash = "#plans"; break; }
+    case "crOpen": { const x = S.plans[+d.i]; if (!x) return; const id = rvKey(x); CR_OPEN.has(id) ? CR_OPEN.delete(id) : CR_OPEN.add(id); route(); break; }
+    case "crSet": { const x = S.plans[+d.i]; if (!x || !SAT.some(([k]) => k === d.a)) return; if (x.cr?.a === d.a) delete x.cr; else if (!x.cr?.a) x.cr = {a: d.a}; else return;  // 하나를 고르면 나머지는 꺼진다(같은 걸 다시 눌러 풀어야 바꾼다)
+      crMirror(x); save(); route(); break; }
+    case "crWhy": { const x = S.plans[+d.i], e = x?.cr; if (!e || e.a !== "dislike") return;
+      if (d.who) { if (!planCast(x).some(([, a]) => a === d.who)) return; if (e.actor === d.who) { delete e.actor; delete e.why; } else { e.actor = d.who; e.why = "actor"; } }
+      else if (SAT_WHY.some(([k]) => k === d.k)) { if (e.why === d.k) delete e.why; else { e.why = d.k; delete e.actor; } } else return;
+      crMirror(x); save(); route(); break; }
+    case "posterDel": { const x = S.plans[+d.i]; if (!x) return; setUserPoster(planId(x), ""); route(); break; }
     case "plansTab": S.plansTab = d.t; save(); route(); break;
     case "pcalMove": PCAL_M = +d.n ? pcalShift(PCAL_M || today().slice(0, 7), +d.n) : today().slice(0, 7); route(); break;
     case "planStatus": { const x = S.plans[+d.i]; if (!x || planStatus(x) === d.s || !setPlanStatus(S, +d.i, d.s)) break; save(); track("plan_status", planStatusRecord(D, x)); toast(d.s === "booked" ? "관람예정으로 바꿨어요" : "미정일정으로 바꿨어요"); route(); break; }
@@ -3082,8 +3209,8 @@ document.addEventListener("click", e => {
     case "lkCast": LK.cast = LK.cast.includes(d.a) ? LK.cast.filter(a => a !== d.a) : [...LK.cast, d.a]; route(); break;
     case "lkRole": { if (LK.rc[d.r] === d.a) delete LK.rc[d.r]; else LK.rc[d.r] = d.a; LK.auto = false; route(); break; }  // 배역마다 한 명(다시 누르면 뺀다)
     case "lkTime": { const lc = logCastOf(LK.id); LK.time = d.t; if (lc) lkFill(lc); route(); break; }  // 회차표의 그날 회차 시각 칩
-    case "lkAdd": { const el = $("#lkadd"), a = (el?.value || "").trim().slice(0, 20); if (!a) { el?.focus(); return; } if (!LK.cast.includes(a)) LK.cast = [...LK.cast, a]; route(); $("#lkadd")?.focus(); break; }
-    case "lmAdd": { const el = $("#lmadd"), a = (el?.value || "").trim().slice(0, 20); if (!a) { el?.focus(); return; } if (!LM.cast.includes(a)) LM.cast = [...LM.cast, a]; route(); $("#lmadd")?.focus(); break; }
+    case "lkAdd": { const el = $("#lkadd"), as = splitNames(el?.value); if (!as.length) { el?.focus(); return; } LK.cast = [...new Set([...LK.cast, ...as])]; route(); $("#lkadd")?.focus(); break; }
+    case "lmAdd": { const el = $("#lmadd"), as = splitNames(el?.value); if (!as.length) { el?.focus(); return; } LM.cast = [...new Set([...LM.cast, ...as])]; route(); $("#lmadd")?.focus(); break; }
     case "lmDel": LM.cast = LM.cast.filter(a => a !== d.a); route(); break;
     case "lmGo": { const title = LM.title.trim(), from = today(); if (!LM.cast.length) return;
       if (!title) { toast("공연 이름을 적어 주세요"); $("#lmTitle")?.focus(); return; }
@@ -3102,7 +3229,7 @@ document.addEventListener("click", e => {
         entry: dr.entry === "log" ? "log" : "plan", rated_actors: Math.min(20, Object.keys(out.rows || {}).length)});
       if (!workOf(out.work)) sendShowReview(out);  // KOPIS·직접 입력 공연은 show_review(제목·공연장·후기 글 없이)
       dr.done = true; save(); route(); break; }  // 저장 뒤 같은 화면에서 배우 조건 제안(결정 51)
-    case "noticeOk": { (S.proto ||= {}).notice = NOTICE_VER; save(); backfillReviews(); route(); break; }  // 바뀐 기록 안내의 확인 버튼 → 전에 저장한 본 공연 기록을 보낸다
+    case "noticeOk": { (S.proto ||= {}).notice = NOTICE_VER; save(); backfillReviews(); syncTickets(); route(); break; }  // 바뀐 기록 안내의 확인 버튼 → 전에 저장한 본 공연 기록을 보낸다
     case "rvSkip": { const dr = S.proto?.rdraft; if (!dr) return; const [w, dt, tm] = dr.k.split("|"), x = S.plans.find(y => y.work === w && y.date === dt && y.time === tm); if (x) x.asked = true; S.proto.rdraft = null; save(); location.hash = "#plans"; break; }  // 건너뛰면 관람 이력만 남고 다시 묻지 않는다
     case "rvPick": { const dr = S.proto?.rdraft; if (!dr?.done) return; dr.picks = dr.picks.some(x => x.actor === d.a) ? dr.picks.filter(x => x.actor !== d.a) : [...dr.picks, {actor: d.a, kind: d.k}]; save(); route(); break; }
     case "rvSug": { const dr = S.proto?.rdraft; if (!dr) return; if (d.y === "1" && dr.picks.length) applySuggest(S, dr.picks); const n = d.y === "1" ? dr.picks.length : 0; S.proto.rdraft = null; save(); location.hash = "#plans"; if (n) toast("배우 조건에 넣었어요"); break; }
@@ -3118,6 +3245,10 @@ document.addEventListener("input", e => {
   if (e.target.id === "logq") { const q = e.target.value.trim().toLowerCase().replace(/\s+/g, ""); let n = 0;  // 다시 그리지 않고 카드만 숨긴다(입력 중 커서 유지)
     document.querySelectorAll("#loglist [data-t]").forEach(c => { const on = !q || c.dataset.t.replace(/\s+/g, "").includes(q); c.hidden = !on; n += on; }); const none = $("#lognone"); if (none) none.hidden = n > 0; } });
 document.addEventListener("input", e => { const el = e.target.closest?.("[data-pf]"); if (el && setPlanField(S, +el.dataset.i, el.dataset.pf, el.value)) save(); });
+document.addEventListener("change", e => { const f = e.target.id === "csvfile" && e.target.files?.[0]; if (!f) return;  // 티켓 CSV
+  readCsvFile(f).then(text => { CSV = parseCsvTickets(text, f.name); route(); }).catch(() => { CSV = {name: f.name, rows: [], bad: [], error: "파일을 읽지 못했어요"}; route(); }); });
+document.addEventListener("change", e => { const el = e.target.closest?.("input[data-poster]"), x = el && S.plans[+el.dataset.poster], f = el?.files?.[0]; if (!x || !f) return;  // 앨범에서 고른 포스터: 줄여서 이 기기에만
+  shrinkImage(f).then(url => { if (!setUserPoster(planId(x), url)) toast("기기 저장 공간이 부족해 사진을 넣지 못했어요"); save(); route(); }).catch(() => toast("사진을 읽지 못했어요")); });
 document.addEventListener("change", e => { const el = e.target.closest?.("[data-pf=price]"), x = el && S.plans[+el.dataset.i]; if (x) el.value = x.price ? x.price.toLocaleString("ko-KR") : ""; });
 document.addEventListener("input", e => {  // 홈 공연 제목 검색: 목록만 다시 그린다(입력 중 커서 유지)
   if (e.target.id !== "homeq") return; HOME_Q = e.target.value; HOME_ROWS = 5; const g = $("#homegrid"); if (g) g.innerHTML = homeGrid(today());
@@ -3151,7 +3282,7 @@ if (!location.hash) history.replaceState(null, "", entryRoute(S.prefs, S));  // 
 if (!TRK.peekAnon()) (S.proto ||= {}).notice = NOTICE_VER;  // 이 기기에서 처음 기록하는 사람은 지금 안내가 처음이라 알림 없음
 const NOTICE_SEEN = S.proto?.notice === NOTICE_VER;  // 이번에 안내 화면으로 바로 들어온 사람은 끌 기회를 준 뒤(다음 방문·확인 버튼) 보낸다
 route();
-if (NOTICE_SEEN) backfillReviews();
+if (NOTICE_SEEN) { backfillReviews(); syncTickets(); }
 renderDebug();
 </script>
 </body>
