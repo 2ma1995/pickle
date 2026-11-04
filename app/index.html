@@ -542,7 +542,7 @@ a.wcard:hover{border-color:var(--hl)}
 <div class="sheet-bg" id="sheetbg" data-noshot></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" data-noshot></div>
 
-<script src="data.js?v=202611041406"></script>
+<script src="data.js?v=202611041520"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -1265,7 +1265,7 @@ const timePick = (cur, sel) => { const [h, m] = (cur || "19:00").split(":");
 let LOG_DATE = "";  // 캘린더 날짜에서 들어온 본 공연 기록하기의 날짜(저장 안 함)
 let LM = {title: "", venue: "", date: "", time: "19:00", cast: []};  // 직접 기록 초안(저장 안 함). 시각 기본 오후 7:00
 const logManual = () => { const from = today(), n = LM.cast.length; if (!LM.date && LOG_DATE) LM.date = LOG_DATE;
-  return `<div class="one"><div><p class="eyebrow">본 공연 기록하기</p><h1>공연 정보를 적어 주세요</h1></div><p class="small muted">목록에 없는 공연도 기록할 수 있어요. 기록은 이 기기에만 남아요.</p>
+  return `<div class="one"><div><p class="eyebrow">본 공연 기록하기</p><h1>공연 정보를 적어 주세요</h1></div><p class="small muted">목록에 없는 공연도 기록할 수 있어요. 공연 이름·공연장과 후기 글은 이 기기에만 남아요.</p>
     <div class="card lmform"><label>공연 이름<input id="lmTitle" value="${esc(LM.title)}" placeholder="예: 레베카" maxlength="60" autocomplete="off"></label>
       <label><span>공연장 <span class="muted">(선택)</span></span><input id="lmVenue" value="${esc(LM.venue)}" placeholder="예: 충무아트센터 대극장" maxlength="60" autocomplete="off"></label>
       <label>본 날짜<input type="date" id="lmDate" max="${from}" value="${esc(LM.date)}"></label>${timePick(LM.time, "lmt")}</div>
@@ -1928,6 +1928,16 @@ const applySuggest = (S, picks) => {  // 체크한 것만. 넣으면 전 작품 
 const reviewRecord = (D, rv) => ({work: rv.work, run: runLabelOf(D, rv.work, rv.date), date: rv.date, time: rv.time, entry: rv.entry || "plan",
   actors: Object.entries(rv.rows || {}).filter(([role]) => rv.cast[role]).map(([role, r]) => ({role, actor: rv.cast[role], rate: r.rate, tags: r.tags})),
   combo: (rv.combo || []).filter(t => t !== "?")});  // 주관식 원문은 보내지 않는다
+// MVP 밖 본 공연 기록 → show_review. 배우는 앱 데이터에 있는 이름(V.actors)만 미리 고른다(직접 입력한 이름은 버린다). 보낼 게 없으면 null:
+// 직접 입력은 아는 배우의 평가가 하나도 없을 때, KOPIS 는 공연 ID 가 없을 때
+const showReviewRecord = (V, rv, backfill = false) => {
+  const kopis = !rv.manual && rv.kopis && V.shows.has(rv.kopis) ? rv.kopis : "";
+  const actors = Object.entries(rv.rows || {}).filter(([k, r]) => r?.rate && V.actors.has(rv.cast?.[k])).slice(0, 12)
+    .map(([k, r]) => ({actor: rv.cast[k], ...(k !== rv.cast[k] && V.logRoles.has(k) ? {role: k} : {}), rate: r.rate, tags: (r.tags || []).slice(0, 3)}));
+  if (rv.manual ? !actors.length : !kopis) return null;
+  return {source: rv.manual ? "manual" : "kopis", ...(kopis ? {show: kopis} : {}), date: rv.date, ...(rv.time ? {time: rv.time} : {}), entry: rv.entry === "plan" ? "plan" : "log",
+    actors, combo: (rv.combo || []).filter(t => t !== "?").slice(0, 3), ...(backfill ? {backfill: true} : {})};
+};
 // 결정 53: 중간 만족도(추천 직후)와 관람 후 배우별 평가를 같은 회차 조합(주연 기준 조합 열쇠)으로 묶는다
 const fitPairs = (D, S) => (S.reviews || []).flatMap(rv => {
   const p = (D.perfs || []).find(q => q.work === rv.work && q.date === rv.date && q.time === rv.time), e = p && satOf(S, rv.work)[comboKey(D, rv.work, p.cast)];
@@ -1960,7 +1970,7 @@ mergeMyTags();
 // <track>
 const TRACK_CFG = {mode: "practice", url: "", key: "", table: "events", batch: 20, cap: 200, maxBytes: 4096, keepaliveBytes: 56000};  // keepalive 요청 본문은 64KB 까지라 한 번에 56KB 넘게 묶지 않는다
 const ALGO_VER = "rule-v1";  // 추천 방식 버전: 추천 규칙이 바뀌면 올린다(어느 방식이 낸 추천을 평가한 건지 구분)
-const APP_VER = "proto-0.4";  // 서버 표 제약: 20자 이하
+const APP_VER = "proto-0.5";  // 서버 표 제약: 20자 이하
 // 이유 칩 7개(정의서). 코드 ↔ 화면 글자. 글자가 바뀌어도 기록 값(코드)은 그대로다
 const CHIPS = [["voice", "목소리"], ["vocal", "성량·가창"], ["acting", "연기·해석"], ["chemistry", "두 배우 호흡"], ["actor", "특정 배우"], ["wrong", "설명이 틀렸어요"], ["etc", "날짜·가격·이미 봄"]];
 const CHIP_CODES = CHIPS.map(c => c[0]);
@@ -2036,6 +2046,10 @@ const EVENTS = {
   taste_step_submit: {req: ["step", "action"], shape: {step: R.int(1, 2), action: R.oneOf(["next", "skip"])}},
   beta_feedback_open: {req: ["source"], shape: {source: R.oneOf(["popup", "button"])}},
   review_complete: {req: ["source", "entry", "rated_actors"], shape: {source: R.oneOf(["mvp", "kopis", "manual"]), entry: R.oneOf(["plan", "log"]), rated_actors: R.int(0, 20)}},
+  // 2026-11-04: MVP 밖 본 공연 기록(KOPIS·직접 입력). 공연 ID(KOPIS)·날짜·회차·앱 데이터에 있는 배우의 평가·태그만. 제목·공연장·후기 글은 보내지 않는다. backfill = 전에 이 기기에만 저장했던 기록을 나중에 보냄
+  show_review: {req: ["source", "date", "actors"], shape: {source: R.oneOf(["kopis", "manual"]), show: R.inSet("shows"), date: R.date, time: R.time, entry: R.oneOf(["plan", "log"]),
+    actors: R.arr(12, R.obj({actor: R.inSet("actors"), role: R.inSet("logRoles"), rate: R.oneOf(["good", "meh", "bad"]), tags: R.arr(3, R.inSet("actorTags"))}, ["actor", "rate"])),
+    combo: R.arr(3, R.inSet("comboTags")), backfill: R.bool}},
 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const isJwt = k => /^eyJ[\w-]+\.[\w-]+\.[\w-]+$/.test(k);
@@ -2100,11 +2114,13 @@ function buildVocab(D) {
   for (const rows of Object.values(D.workTags || {})) for (const r of rows) tags.add(r.tag);
   for (const p of Object.values(D.actorProfiles || {})) for (const r of [...(p.voice || []), ...(p.role || [])]) tags.add(r.tag);
   return {
-    actors: new Set([...Object.values(D.roles).flatMap(rs => rs.flatMap(r => r.cast)), ...Object.keys(D.actorProfiles || {}), ...(D.currentShows || []).flatMap(s => s.cast || [])]),
+    actors: new Set([...Object.values(D.roles).flatMap(rs => rs.flatMap(r => r.cast)), ...Object.keys(D.actorProfiles || {}), ...(D.currentShows || []).flatMap(s => s.cast || []),
+      ...(D.pastShows || []).flatMap(s => s.cast || []), ...Object.values(D.logCasts || {}).flatMap(c => c.roles.flatMap(([, as]) => as))]),  // 끝난 공연·회차 캐스팅 배우도(본 공연 기록 show_review)
     tags, comboTags: new Set([...Object.keys(D.comboTagLabels || {}), ...Object.values(D.comboTags || {}).flatMap(rs => rs.map(r => r.tag))]),
     roles: new Set(Object.values(D.roles).flatMap(rs => rs.map(r => r.role))), axisKeys: new Set(D.axes.map(a => a.left)),
     actorTags: new Set([...Object.keys(D.actorTagLabels || {}), ...(D.voiceTags || [])]),  // 사전 확정 배우 태그(taste_snapshot 의 likeTags 값 검사용)
-    works: new Set(D.works.map(w => w.name)), runs: new Set(D.works.flatMap(w => w.runs.map(r => r.label))), shows: new Set([...D.works.map(w => w.name), ...(D.currentShows || []).map(s => s.id)]),
+    works: new Set(D.works.map(w => w.name)), runs: new Set(D.works.flatMap(w => w.runs.map(r => r.label))), shows: new Set([...D.works.map(w => w.name), ...(D.currentShows || []).map(s => s.id), ...(D.pastShows || []).map(s => s.id)]),
+    logRoles: new Set(Object.values(D.logCasts || {}).flatMap(c => c.roles.map(([r]) => r))),  // KOPIS 회차 캐스팅의 배역(show_review)
   };
 }
 // 다른 사람들이 고른 배우 특징 합계(서버 공개 표 actor_trait_votes 한 줄 = 배우·태그·고른 사람 수): [{actor, tag, n}] → {배우: {태그: 사람 수}}.
@@ -2176,12 +2192,12 @@ const trackSettings = () => { const off = TRK.isOff();
 V.privacy = () => !trackUi() ? `<div class="one"><div class="card"><p class="small">이 앱은 지금 아무 기록도 서버로 보내지 않아요.</p><a class="btn ghost" href="#home">홈으로</a></div></div>` : `<div class="one prv">
   <div><h1>기록·개인정보 안내</h1></div>
   <div class="card prvno"><h3>남기지 않는 것</h3><ul class="small"><li>이름, 연락처, 아이디, 가입 정보가 없어요.</li><li>IP를 따로 저장하지 않아요.</li><li>기록한 시각은 남기지 않고 날짜만 남겨요.</li><li>후기에 쓴 글(주관식)은 보내지 않아요.</li><li>광고나 외부 분석 도구가 없어요.</li></ul></div>
-  <div class="card"><h3>남기는 것</h3><p class="small">이 기기의 무작위 익명 번호와 함께, 고른 취향·추천에 대한 반응·화면 이동을 남겨요.</p>
+  <div class="card"><h3>남기는 것</h3><p class="small">이 기기의 무작위 익명 번호와 함께, 고른 취향·추천에 대한 반응·화면 이동·본 공연 기록을 남겨요.</p><p class="small">본 공연 기록은 공연, 본 날짜, 배우별 평가와 고른 태그만 남겨요. 직접 적은 공연 이름·공연장과 후기 글은 이 기기에만 있어요. 전에 이 기기에 저장해 둔 본 공연 기록도 같은 방식으로 한 번 보내요.</p>
     <h3>목적과 보관 기간</h3><p class="small">추천을 고치는 데만 쓰고, 6개월이 지나면 지워요.</p></div>
   <div class="card"><h3>국외 이전</h3><p class="small">기록은 Supabase Pte. Ltd.(싱가포르)에 맡겨 저장해요. 저장 위치는 서울 리전이지만, Supabase와 협력 업체가 있는 나라에서 처리될 수 있어요.</p>
     <table class="prt"><tr><td>이전 항목</td><td>위 '남기는 것'(이름·연락처 없음)</td></tr><tr><td>국가</td><td>싱가포르 등 Supabase가 처리하는 나라</td></tr><tr><td>시기·방법</td><td>기록할 때마다 인터넷으로 전송</td></tr><tr><td>받는 자</td><td>Supabase Pte. Ltd.</td></tr><tr><td>목적·기간</td><td>추천 개선, 6개월</td></tr><tr><td>거부 방법</td><td>아래 [기록 끄기]. 꺼도 추천은 그대로 쓸 수 있어요</td></tr></table></div>
   ${trackSettings()}
-  <p class="tiny muted">시행일 2026년 11월 3일</p></div>`;
+  <p class="tiny muted">시행일 2026년 11월 4일</p></div>`;
 
 // ---------- proto: 취향폼(1·2·3 + 건너뛰기) ----------
 V.taste = (step = "1") => `<div class="one">${SURVEY_BANNER}${onboardBody(step)}</div>`;  // '취향 없이 지금 하는 공연 전체 보기'는 MVP에서 뺐다(작품 추천 목록)
@@ -2392,7 +2408,7 @@ V.home = () => {
   Object.keys(RATE_CTX).forEach(k => delete RATE_CTX[k]);
   const visit = due >= 0 && S.plans[due] ? visitCard(due) : "";  // 관람 후 배너(결정 46 사용자 결정: 푸시 대신 홈 배너). 카드보다 위
   // 홈 맨 위의 기록 안내 줄은 뺐다(사용자 요청 2026-10-29). 기록·개인정보 안내는 홈 맨 아래 링크
-  if (!p) return `${visit}${tkFan(from)}<div class="tcwrap">
+  if (!p) return `${noticeCard()}${visit}${tkFan(from)}<div class="tcwrap">
     <section class="tk empty" aria-label="아직 비어 있는 내 취향 카드">${TK_CURTAIN}
       <div class="tkveilbg" aria-hidden="true">${TK_HEAD}<div class="tkcell tkbig">나의 뮤지컬 관극 취향</div>
         <div class="tkgrid"><span class="tkcell"><span class="tkk">목소리</span><span class="tcskel w60"></span></span><span class="tkcell"><span class="tkk">노래</span><span class="tcskel w40"></span></span><span class="tkcell"><span class="tkk">본진 배우</span><span class="tcskel w60"></span></span><span class="tkcell"><span class="tkk">애정 배우</span><span class="tcskel w60"></span></span></div></div>
@@ -2414,7 +2430,7 @@ V.home = () => {
         <div class="tkperf" aria-hidden="true"></div>
         <div class="tkbtns" data-noshot><button type="button" class="tkedit" data-go="#taste/1">수정하기</button><button type="button" class="tkedit" data-act="tkShare">공유하기</button><button type="button" class="tkedit" data-act="tkSave">저장하기</button></div>${foot}</div>`;
   if (!CARD_BACK) prepCardImg();
-  return `${visit}${tkFan(from)}<div class="tcwrap">${card}</div></div></div>${homeWorks(from)}
+  return `${noticeCard()}${visit}${tkFan(from)}<div class="tcwrap">${card}</div></div></div>${homeWorks(from)}
     ${privacyLink() ? `<p class="tiny muted">${privacyLink().replace(/^\s*·\s*/, "")}</p>` : ""}`;  // 기록·개인정보 안내 링크는 홈 맨 아래에만(사용자 요청 2026-11-03)
 };
 // 홈 아래 작품 목록(사용자 요청 2026-10-28: 홈이 비어 보이지 않게). ① 배우 조합을 추천받을 수 있는 작품(#find/작품) ② 지금 하는 공연 전체(KOPIS, 인기순·지역 칩, #show/…)
@@ -2813,6 +2829,28 @@ const snapTaste = () => {
   if (!track("taste_snapshot", rec)) return false;
   (S.proto ||= {}).snap = {id: TRK.peekAnon(), sig}; save(); return true;
 };
+// 기록 안내가 바뀌면(안내문 9항) 전에 쓰던 기기에 홈 맨 위로 한 번 알린다. 처음 온 기기는 지금 안내를 처음부터 보니 알리지 않는다
+const NOTICE_VER = "2026-11-04";
+const noticeCard = () => trackUi() && !TRK.isOff() && S.proto?.notice !== NOTICE_VER ? `<div class="card accent notice" role="status"><p class="small"><b>기록 안내가 바뀌었어요 (11월 4일)</b></p>
+  <p class="small">이제 본 공연 기록(공연, 본 날짜, 배우별 평가와 태그)도 남겨요. 직접 적은 공연 이름·공연장과 후기 글은 보내지 않아요. 전에 이 기기에 저장해 둔 본 공연 기록도 같은 방식으로 한 번 보내요.</p>
+  <div class="chips"><button class="btn" data-act="noticeOk">확인</button><a class="btn ghost" href="#privacy">자세히 보기·기록 끄기</a></div></div>` : "";
+// MVP 밖 본 공연 기록 보내기. 보냈거나 보낼 게 없는 기록은 S.proto.rvSent(작품|날짜|회차)에 표시한다. 기록을 끈 동안은 표시하지 않는다(다시 켜면 다음 방문에 보낸다)
+const rvKey = rv => [rv.work, rv.date, rv.time].join("|");
+const sendShowReview = (rv, backfill = false) => {
+  if (TRK.isOff()) return false;
+  const rec = showReviewRecord(VOCAB, rv, backfill);
+  if (rec && !track("show_review", rec)) return false;
+  const sent = ((S.proto ||= {}).rvSent ||= []); if (!sent.includes(rvKey(rv))) sent.push(rvKey(rv));
+  return !!rec;
+};
+// 앱을 열 때 한 번: 2026-11-04 전에 이 기기에만 저장된 MVP 밖 관람 기록을 보낸다(한 번에 30개까지, 나머지는 다음 방문)
+const backfillReviews = () => {
+  if (TRK.isOff() || S.proto?.notice !== NOTICE_VER) return 0;  // 바뀐 기록 안내를 본 뒤에만(홈 안내의 확인 버튼·안내 화면)
+  const sent = new Set(S.proto?.rvSent || []), todo = (S.reviews || []).filter(rv => !workOf(rv.work) && !sent.has(rvKey(rv))).slice(0, 30);
+  const n = todo.filter(rv => sendShowReview(rv, true)).length;
+  if (todo.length) save();
+  return n;
+};
 // 숨긴 뒤 잠깐 뜨는 '되돌리기'(6초). 다시 보고 싶으면 추천 줄 아래 '숨긴 공연 N개 · 되돌리기'
 let undoT; const showUndo = (key, action) => { const u = $("#undo"), ref = showRef(D, key); u.innerHTML = `<span>${esc(ref?.title || "공연")} 숨겼어요</span><button type="button" data-act="recUndo" data-key="${esc(key)}">되돌리기</button>`; u.hidden = false; clearTimeout(undoT); undoT = setTimeout(() => { u.hidden = true; }, 6000); };
 const ticketSavedTap = d => { const x = S.plans[+d.i], p = x && D.perfs.find(q => q.work === x.work && q.date === x.date && q.time === x.time); if (p) track("combo_choice", comboChoiceRecord(D, S, "ticket", p, today())); };
@@ -2829,6 +2867,7 @@ function route() {
   const [name, ...args] = h.split("/");
   if (name !== "home") CARD_BACK = false;  // 다른 화면에 다녀오면 카드는 앞면
   CUR = {name, args};
+  if (name === "privacy" && S.proto?.notice !== NOTICE_VER) { (S.proto ||= {}).notice = NOTICE_VER; save(); }  // 안내 화면을 열어 봤으면 알림은 끝(끄기는 그 화면에서)
   closeSheet(true);
   if (location.hash !== lastHash && S.proto?.flash) delete S.proto.flash;  // 평가 안내는 그 화면에서만
   const keepBar = document.querySelector(".afilter")?.scrollLeft || 0, keepRows = [...document.querySelectorAll(".prow")].map(x => x.scrollLeft);  // 지역 칩 줄·추천 줄의 가로 스크롤 위치(다시 그려도 그 자리 유지)  // 지역 칩 줄의 가로 스크롤 위치(다시 그려도 그 자리 유지)
@@ -3052,7 +3091,9 @@ document.addEventListener("click", e => {
       // Existing detailed after_review only permits known MVP works. Aggregate completion covers KOPIS/manual too.
       track("review_complete", {source: workOf(out.work) ? "mvp" : (out.manual ? "manual" : "kopis"),
         entry: dr.entry === "log" ? "log" : "plan", rated_actors: Math.min(20, Object.keys(out.rows || {}).length)});
-      dr.done = true; save(); route(); break; }  // 저장 뒤 같은 화면에서 배우 조건 제안(결정 51). KOPIS 공연 리뷰는 기록 표의 작품 목록 밖이라 이 기기에만 남는다
+      if (!workOf(out.work)) sendShowReview(out);  // KOPIS·직접 입력 공연은 show_review(제목·공연장·후기 글 없이)
+      dr.done = true; save(); route(); break; }  // 저장 뒤 같은 화면에서 배우 조건 제안(결정 51)
+    case "noticeOk": { (S.proto ||= {}).notice = NOTICE_VER; save(); backfillReviews(); route(); break; }  // 바뀐 기록 안내의 확인 버튼 → 전에 저장한 본 공연 기록을 보낸다
     case "rvSkip": { const dr = S.proto?.rdraft; if (!dr) return; const [w, dt, tm] = dr.k.split("|"), x = S.plans.find(y => y.work === w && y.date === dt && y.time === tm); if (x) x.asked = true; S.proto.rdraft = null; save(); location.hash = "#plans"; break; }  // 건너뛰면 관람 이력만 남고 다시 묻지 않는다
     case "rvPick": { const dr = S.proto?.rdraft; if (!dr?.done) return; dr.picks = dr.picks.some(x => x.actor === d.a) ? dr.picks.filter(x => x.actor !== d.a) : [...dr.picks, {actor: d.a, kind: d.k}]; save(); route(); break; }
     case "rvSug": { const dr = S.proto?.rdraft; if (!dr) return; if (d.y === "1" && dr.picks.length) applySuggest(S, dr.picks); const n = d.y === "1" ? dr.picks.length : 0; S.proto.rdraft = null; save(); location.hash = "#plans"; if (n) toast("배우 조건에 넣었어요"); break; }
@@ -3098,7 +3139,10 @@ document.addEventListener("keydown", e => {  // 시트(모달)가 열려 있을 
 const ENTER_ADD = {favB: '[data-act="addFav"][data-k="b"]', fav: '[data-act="addFav"]:not([data-k])', avoidIn: '[data-act="addAvoid"]', lkadd: '[data-act="lkAdd"]', lmadd: '[data-act="lmAdd"]', acAvoid: '[data-act="acAvoidAdd"]'};  // 배우 검색 칸에서 엔터 = 그 칸의 [추가]
 document.addEventListener("keydown", e => { const sel = e.key === "Enter" && !e.isComposing && ENTER_ADD[e.target.id]; if (sel) { e.preventDefault(); $(sel)?.click(); } });
 if (!location.hash) history.replaceState(null, "", entryRoute(S.prefs, S));  // 처음 온 사람(취향 없음)의 첫 화면은 3단계 취향. #pick/… 같은 주소로 바로 들어온 사람은 그대로 둔다
+if (!TRK.peekAnon()) (S.proto ||= {}).notice = NOTICE_VER;  // 이 기기에서 처음 기록하는 사람은 지금 안내가 처음이라 알림 없음
+const NOTICE_SEEN = S.proto?.notice === NOTICE_VER;  // 이번에 안내 화면으로 바로 들어온 사람은 끌 기회를 준 뒤(다음 방문·확인 버튼) 보낸다
 route();
+if (NOTICE_SEEN) backfillReviews();
 renderDebug();
 </script>
 </body>
