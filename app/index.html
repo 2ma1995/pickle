@@ -539,7 +539,7 @@ a.wcard:hover{border-color:var(--hl)}
 <div class="sheet-bg" id="sheetbg" data-noshot></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" data-noshot></div>
 
-<script src="data.js?v=202611041331"></script>
+<script src="data.js?v=202611041341"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -676,7 +676,7 @@ const allActors = () => ACTORS ||= [...new Set([...Object.values(D.roles).flat()
 let OB_MORE = false;  // 3/3 '조금 더 골라 보기'를 펼쳤는지(화면을 다시 그려도 펼친 채로 둔다. 저장은 안 한다)
 const onboardBody = (step, embed = false, w = "", base = "#taste") => {  // base: 단계 주소(#taste 또는 내 취향 탭의 #me)  // embed: '내 취향' 화면 안에서 바로 편집(결정 39) — 단계 머리·다음 버튼 없이. w: 작품 취향 확인(6.3절) — 그 작품의 값을 고친다
   const n = step === "2" ? 2 : 1, p = w ? workPrefs(S, w) : S.prefs || {}, axes = p.axes || [], favs = p.favs || [], avoid = p.avoid || [];
-  const nav = embed ? "" : `<div class="obg">${[favs.length + avoid.length, axes.length + (p.prio ? 1 : 0) + (p.any || []).length][n - 1] ? `<button class="btn" data-act="obGo" data-to="${n + 1}"${base !== "#taste" ? ` data-base="${base}"` : ""}>${n < 2 ? "다음" : "내 취향 카드 완성하기"}</button>` : ""}<button class="btn ghost" data-act="obGo" data-to="${n + 1}"${base !== "#taste" ? ` data-base="${base}"` : ""}>건너뛰기</button></div>`;
+  const nav = embed ? "" : `<div class="obg">${[favs.length + avoid.length, axes.length + (p.prio ? 1 : 0) + (p.any || []).length][n - 1] ? `<button class="btn" data-result="next" data-act="obGo" data-to="${n + 1}"${base !== "#taste" ? ` data-base="${base}"` : ""}>${n < 2 ? "다음" : "내 취향 카드 완성하기"}</button>` : ""}<button class="btn ghost" data-result="skip" data-act="obGo" data-to="${n + 1}"${base !== "#taste" ? ` data-base="${base}"` : ""}>건너뛰기</button></div>`;
   const head = embed ? `<h2>${["좋아하는 배우 · 피하고 싶은 배우", "공연을 볼 때 기대하는 것"][n - 1]}</h2>` : `<div class="onboard-head"><p class="eyebrow">취향 고르기 ${n}/2${n > 1 ? ` · <a href="${base}/${n - 1}">이전</a>` : ""}</p><h1>${["좋아하는 배우가 있나요?", "공연을 볼 때 무엇을 기대하나요?"][n - 1]}</h1></div>`;
   if (n === 2) {
     const cnt = tagCounts(D), on = t => axes.includes(tagKey(t)), anyOn = q => (p.any || []).includes(q.id) && !q.opts.some(o => on(o[1]));
@@ -1957,7 +1957,7 @@ mergeMyTags();
 // <track>
 const TRACK_CFG = {mode: "practice", url: "", key: "", table: "events", batch: 20, cap: 200, maxBytes: 4096, keepaliveBytes: 56000};  // keepalive 요청 본문은 64KB 까지라 한 번에 56KB 넘게 묶지 않는다
 const ALGO_VER = "rule-v1";  // 추천 방식 버전: 추천 규칙이 바뀌면 올린다(어느 방식이 낸 추천을 평가한 건지 구분)
-const APP_VER = "proto-0.3";  // 서버 표 제약: 20자 이하
+const APP_VER = "proto-0.4";  // 서버 표 제약: 20자 이하
 // 이유 칩 7개(정의서). 코드 ↔ 화면 글자. 글자가 바뀌어도 기록 값(코드)은 그대로다
 const CHIPS = [["voice", "목소리"], ["vocal", "성량·가창"], ["acting", "연기·해석"], ["chemistry", "두 배우 호흡"], ["actor", "특정 배우"], ["wrong", "설명이 틀렸어요"], ["etc", "날짜·가격·이미 봄"]];
 const CHIP_CODES = CHIPS.map(c => c[0]);
@@ -2014,7 +2014,6 @@ const EVENTS = {
     shown: R.arr(3, R.obj({cast: R_CAST, pick: R.bool}, ["cast", "pick"])),  // 그때 보여 준 추천 조합 위 3개(첫째가 PICK)
     filters: R.obj({period: R.oneOf(PERIOD_CODES), star: R.arr(4, R.inSet("actors")), avoid: R.arr(4, R.inSet("actors"))})}},
   actor_pick: {req: ["work", "role", "actor", "action"], shape: {work: R_WORK, role: R.inSet("roles"), actor: R.inSet("actors"), action: R.oneOf(["pin", "unpin", "avoid", "unavoid"])}},
-  role_duel: {req: ["work", "role", "left", "right", "result"], shape: {work: R_WORK, role: R.inSet("roles"), left: R_SIDE, right: R_SIDE, result: R.oneOf(["left", "right", "tie"])}},  // 좌우 위치는 무작위, 그때 놓인 대로 남긴다
   actor_rating: {req: ["show_id", "actor", "score"], shape: {show_id: R.inSet("shows"), actor: R.inSet("actors"), score: R.int(1, 5), chips: R_CHIPS}},
   video_reaction: {req: ["work", "role", "actor", "video", "reaction"], shape: {work: R_WORK, role: R.inSet("roles"), actor: R.inSet("actors"), video: R.ytid, reaction: R.oneOf(["like", "unsure", "dislike"]), traits: R.arr(6, R.inSet("actorTags"))}},  // 배우 영상 썸네일을 누른 뒤 '이 영상 어땠어요?'에 답할 때(답을 바꿀 때마다 한 줄). traits: '마음에 들어요'(like)일 때 '어떤 점이 좋았어요?'에서 고른 특징 태그(사전 확정 태그만, 최대 6, 칩을 바꿀 때마다 한 줄·비면 [])
   taste_snapshot: {req: ["likes", "axes", "tags"], shape: {likes: R.arr(10, R.inSet("actors")), axes: R.dict(R.inSet("axisKeys"), R.int(-2, 2), 5), tags: R.arr(12, R.inSet("tags")), likeTags: R.dict(R.inSet("actors"), R.arr(8, R.inSet("actorTags")), 10), prio: R.oneOf(["노래", "연기", "몸", "고루"]), must: R.arr(10, R.inSet("actors")), avoid: R.arr(10, R.inSet("actors"))}},  // 취향폼을 저장하거나 고칠 때·홈에서 좋아하는 배우의 특징을 골라 [찾기]를 누를 때: 좋아하는 배우(앱 데이터에 있는 이름만), 취향 5축 값, 고른 태그, 좋아하는 배우별로 고른 특징 태그(사전 확정 태그만). '왜 좋아요' 글은 안 보낸다
@@ -2026,6 +2025,14 @@ const EVENTS = {
   plan_status: {req: ["work", "date", "time", "status"], shape: {work: R_WORK, run: R_RUN, date: R.date, time: R.time, cast: R_CAST, status: R.oneOf(["tentative", "booked", "seen"])}},  // 내 공연 캘린더에서 미정일정 ↔ 관람예정을 바꿀 때(예매 전환). 좌석·금액은 보내지 않는다
   visit: {req: ["entry"], shape: {entry: R.oneOf(SCREENS), returning: R.bool}},  // 앱을 열 때 한 번: 들어온 화면, 전에 이 기기에서 온 적이 있는지(기기 번호가 이미 있었는지)
   screen_view: {req: ["screen"], shape: {screen: R.oneOf(SCREENS), work: R_WORK}},  // 화면을 옮길 때마다 한 줄: 화면 이름(정해 둔 목록), MVP 작품 화면이면 작품
+  // 2026-11-04 analytics: screen-stage and explicit interaction records; no raw text, IP, or timestamps.
+  video_open: {req: ["work", "actor", "video"], shape: {work: R_WORK, actor: R.inSet("actors"), video: R.ytid, role: R.inSet("roles")}},
+  find_path_view: {req: ["work", "path"], shape: {work: R_WORK, path: R.oneOf(["actor", "date"])}},
+  rec_results_view: {req: ["work", "path"], shape: {work: R_WORK, path: R.oneOf(["actor", "date"])}},
+  cast_select: {req: ["work", "path", "rank", "to_calendar"], shape: {work: R_WORK, path: R.oneOf(["actor", "date", "show"]), rank: R.int(1, 20), to_calendar: R.bool}},  // path show = 공연 화면(#show)의 추천 조합
+  taste_step_submit: {req: ["step", "action"], shape: {step: R.int(1, 2), action: R.oneOf(["next", "skip"])}},
+  beta_feedback_open: {req: ["source"], shape: {source: R.oneOf(["popup", "button"])}},
+  review_complete: {req: ["source", "entry", "rated_actors"], shape: {source: R.oneOf(["mvp", "kopis", "manual"]), entry: R.oneOf(["plan", "log"]), rated_actors: R.int(0, 20)}},
 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const isJwt = k => /^eyJ[\w-]+\.[\w-]+\.[\w-]+$/.test(k);
@@ -2671,12 +2678,11 @@ const satCards = (work, sel, inDates = null, nav = false) => {  // nav: 배우 �
   return `${sh.list.map(card).join("")}${more}`;
 };
 const castSection = (ref, taste, want) => {
-  const work = ref.key, from = today(), sel = curSel(D, S, work, from), recs = taste ? comboRecs(D, S, work, from) : [], {star, avoid} = pinsOf(S, work), cmp = S.proto?.cmp?.[work];
+  const work = ref.key, from = today(), sel = curSel(D, S, work, from), recs = taste ? comboRecs(D, S, work, from) : [], {star, avoid} = pinsOf(S, work);
   const rows = leadRolesOf(D, work).map(r => { const cands = duelCands(D, work, r.role, from); if (!cands.length) return "";
     const a0 = sel[r.role];
     return `<div class="rolebox"><div class="rolehead"><b>${esc(r.role)}</b></div>
       <div class="chips">${cands.map(a => `<button class="chip pickc ${a === a0 ? "on" : ""}" data-act="selActor" data-work="${esc(work)}" data-role="${esc(r.role)}" data-a="${esc(a)}" aria-pressed="${a === a0}">${esc(a)}${star.includes(a) ? " ⭐" : avoid.includes(a) ? " · 빼기" : ""}</button>`).join("")}</div>
-      ${cmp && cmp.role === r.role && cmp.b === a0 ? `<button class="chip x" data-act="cmpOpen" data-work="${esc(work)}">${esc(cmp.a)} · ${esc(cmp.b)} 둘 비교해 보기</button>` : ""}
       ${a0 ? actorDetail(work, r.role, a0, want) : ""}</div>`; }).join("");
   const combos = taste && recs.length ? satCards(work, sel) : "";  // '추천 조합'은 배우 칩이 아니라 조합 카드 칸에 한 번만
   const supp = (D.roles[work] || []).filter(r => !isUnit(D, work, r.role) && r.cast.length);  // 추천 단위 밖 배역(결정 28)
@@ -2809,6 +2815,7 @@ let undoT; const showUndo = (key, action) => { const u = $("#undo"), ref = showR
 const ticketSavedTap = d => { const x = S.plans[+d.i], p = x && D.perfs.find(q => q.work === x.work && q.date === x.date && q.time === x.time); if (p) track("combo_choice", comboChoiceRecord(D, S, "ticket", p, today())); };
 const vopenTap = d => {  // 영상 ID 가 있는 썸네일을 눌렀을 때: 유튜브는 새 탭으로 열리고(링크를 막지 않는다) 앱에는 모달이 떠 있어 돌아오면 바로 보인다. 답 없이 닫으면 다음에 또 뜬다(답한 영상은 고른 답·칩이 눌린 채로)
   if (!/^[\w-]{11}$/.test(d.vid || "") || !d.work || !d.a) return;
+  track("video_open", {work: d.work, actor: d.a, video: d.vid, ...(d.role ? {role: d.role} : {})});
   SHEET = {kind: "video", work: d.work, role: d.role || "", a: d.a, vid: d.vid}; renderSheet();
 };
 const vAfter = sel => { if (SHEET?.kind === "video") { SHEET.dirty = true; SHEET.focus = sel; renderSheet(); } else route(); };  // 모달 안에서 답·칩·담기를 누르면 모달만 다시 그린다(닫을 때 뒤 화면을 새로 그린다)
@@ -2830,7 +2837,13 @@ function route() {
   if (location.hash !== lastHash) window.scrollTo(0, 0);  // 화면이 바뀔 때만 맨 위로. 카드·칩을 눌러 다시 그릴 땐 스크롤을 유지한다
   if (location.hash !== lastHash && !window.PICKLE_NO_SCREEN) { const sc = screenOf(name, args), w = ["find", "show", "detail", "review", "log"].includes(name) && workOf(args[0]) ? args[0] : undefined;
     if (lastHash === undefined) track("visit", {entry: sc, returning: !!TRK.peekAnon()});
-    track("screen_view", w ? {screen: sc, work: w} : {screen: sc}); }
+    track("screen_view", w ? {screen: sc, work: w} : {screen: sc});
+    // A result-screen entry is NOT proof that the recommendation cards were read.
+    if (name === "find" && workOf(args[0]) && ["actor", "date"].includes(args[1])) {
+      if (!args[2]) track("find_path_view", {work: args[0], path: args[1]});
+      if (args[2] === "recs") track("rec_results_view", {work: args[0], path: args[1]});
+    }
+  }
   lastHash = location.hash;
   document.querySelectorAll(".prow").forEach((x, i) => { if (keepRows[i]) x.scrollLeft = keepRows[i]; });
   const bar = document.querySelector(".afilter");  // 눌린 지역 칩이 가로 스크롤 밖이면 보이는 곳까지 밀어 준다
@@ -2849,7 +2862,7 @@ document.addEventListener("click", e => {
   if (go) {
     if (go.dataset.entry) { const en = ((S.stats ||= {}).entry ||= {rec: 0, browse: 0}); en[go.dataset.entry] = (en[go.dataset.entry] || 0) + 1; save(); }  // 홈에서 어느 입구(추천 칸/모든 작품)로 들어왔는지. 나중에 보려고 세기만 하고 화면엔 안 보인다
     location.hash = go.dataset.go; return; }
-  if (e.target.closest("a[data-beta]")) { betaDone(); if (SHEET?.kind === "beta") closeSheet(true); return; }  // 베타 후기 설문: 링크는 그대로 새 탭으로 열리고(막지 않는다) 팝업은 다시 안 뜬다
+  if (e.target.closest("a[data-beta]")) { track("beta_feedback_open", {source: SHEET?.kind === "beta" ? "popup" : "button"}); betaDone(); if (SHEET?.kind === "beta") closeSheet(true); return; }  // 베타 후기 설문: 링크는 그대로 새 탭으로 열리고(막지 않는다) 팝업은 다시 안 뜬다
   const ts = e.target.closest('a[data-act="ticketSaved"]'); if (ts) { ticketSavedTap(ts.dataset); return; }  // 담은 뒤 화면의 [예매처로 이동]: 링크는 그대로 열리고(막지 않는다) combo_choice(ticket) 를 남긴다
   if (!e.target.closest('[data-act="recMenu"],[data-act="recFb"]')) document.querySelectorAll(".pmenu").forEach(m => m.remove());  // 열린 ⋯ 메뉴는 바깥을 누르면 닫힌다
   const vo = e.target.closest('a[data-act="vopen"]'); if (vo) { vopenTap(vo.dataset); return; }  // 영상 썸네일: 링크는 그대로 새 탭으로 열리고(막지 않는다) 그 자리에 '이 영상 어땠어요?'가 나온다
@@ -2894,7 +2907,9 @@ document.addEventListener("click", e => {
     case "tkShare": shareCard(); break;  // 홈 취향 카드 공유하기: 휴대폰은 공유창(SNS 앱), 못 쓰면 문구·링크 복사
     case "tkSave": saveCardImg(); break;  // 홈 취향 카드 저장하기: 카드 한 장을 PNG 로
     case "cardFlip": flipCard(); break;  // 홈 취향 카드 뒤집기(포커스는 뒤집힌 면의 첫 버튼으로)
-    case "obGo": { delete prefsOf().must; save(); snapTaste(); const nx = tasteNext(+d.to - 1); location.hash = d.base && nx !== "#home" ? nx.replace("#taste", d.base) : nx; break; }  // 내 취향 탭(#me)에서 시작했으면 #me/2  // 건너뛰어도 S.prefs 는 만들어 둔다(다음부터는 곧바로 홈). 카드 완성하기는 알림을 띄우지 않는다(사용자 요청 2026-10-29)
+    case "obGo": { delete prefsOf().must; save(); snapTaste();
+      track("taste_step_submit", {step: +d.to - 1, action: d.result === "next" ? "next" : "skip"});
+      const nx = tasteNext(+d.to - 1); location.hash = d.base && nx !== "#home" ? nx.replace("#taste", d.base) : nx; break; }  // 내 취향 탭(#me)에서 시작했으면 #me/2  // 건너뛰어도 S.prefs 는 만들어 둔다(다음부터는 곧바로 홈). 카드 완성하기는 알림을 띄우지 않는다(사용자 요청 2026-10-29)
     case "askTag": { if (!askTagList(D).includes(d.t) || !(S.prefs?.favs || []).includes(d.a)) break; if (ASK.a !== d.a) { ASK.a = d.a; ASK.sel = new Set(); } ASK.sel.has(d.t) ? ASK.sel.delete(d.t) : ASK.sel.add(d.t); route(); break; }
     case "askSkip": { if (!(S.prefs?.favs || []).includes(d.a)) break; likeGet(d.a).asked = "skip"; if (ASK.a === d.a) ASK.sel = new Set(); save(); route(); break; }
     case "askFind": { const tags = ASK.a === d.a ? [...ASK.sel].filter(t => askTagList(D).includes(t)) : []; if (!tags.length || !(S.prefs?.favs || []).includes(d.a)) break;
@@ -2931,14 +2946,15 @@ document.addEventListener("click", e => {
       save(); route(); break; }
     case "actorSel": { const A = ((S.proto ||= {}).asel ||= {}); A[d.show] = A[d.show] === d.a ? "" : d.a; save(); route(); break; }
     case "duel": { const dwork = d.work || work, cur = duelNext(D, S, dwork, today()); if (!cur) return;
-      track("role_duel", duelRecord(D, dwork, cur, d.r));
       const r = applyDuel(S, dwork, cur, d.r);
       S.proto.duelMsg = {work: dwork, text: r.win ? `${r.win} 쪽을 골랐어요. 위 추천 조합에 반영했어요.` : "비슷하다고 기록했어요."};
       save(); route(); break; }
     case "pinAnswer": { const before = pinStateOf(S, d.work, d.a), after = answerPinAsk(S, d.work, d.a, d.y === "1"); if (after) track("actor_pick", pickRecord(D, d.work, d.a, before, after)); save(); refresh(); break; }  // '제외할까요?'·'꼭 볼 배우로 할까요?' 에 답했을 때만 🚫/⭐
     case "duelMore": duelMore(S, d.work || work); save(); route(); break;  // 월드컵 다음 라운드
     case "selActor": { const before = setSel(D, S, d.work, d.role, d.a, today()); save(); route(); break; }  // 그 배역의 배우를 바꾼다: 아래 날짜가 다시 계산된다
-    case "selCombo": { const c = cardsOf(d).list[+d.i]; if (!c) return; setSelCast(S, d.work, c.cast); if (d.nav) ((S.proto ||= {}).pick ||= {})[d.work + (d.dd ? "#날짜" : "")] = c.key; save(); if (d.nav) location.hash = `#find/${d.work}/${d.dd ? "date" : "actor"}/cal`; else route(); break; }  // 배우 먼저: 고른 조합의 캘린더 화면으로
+    case "selCombo": { const c = cardsOf(d).list[+d.i]; if (!c) return; setSelCast(S, d.work, c.cast);
+      track("cast_select", {work: d.work, path: d.dd ? "date" : CUR.name === "find" ? "actor" : "show", rank: +d.i + 1, to_calendar: !!d.nav});
+      if (d.nav) ((S.proto ||= {}).pick ||= {})[d.work + (d.dd ? "#날짜" : "")] = c.key; save(); if (d.nav) location.hash = `#find/${d.work}/${d.dd ? "date" : "actor"}/cal`; else route(); break; }  // 배우 먼저: 고른 조합의 캘린더 화면으로
     case "sat": { const c = cardsOf(d).list[+d.i]; if (!c) return; const cur = satOf(S, d.work)[c.key]; if (cur && cur.a !== d.a) return;  // 하나를 고르면 나머지 둘은 꺼진다(고른 걸 다시 눌러 풀어야 바꿀 수 있다)
       const run = runLabelOf(D, d.work, (D.perfs.find(p => p.work === d.work && comboKey(D, d.work, p.cast) === c.key) || {}).date || today());
       const r = setSat(S, d.work, c.key, c.cast, d.a, run, +d.i + 1); if (r === null) return;
@@ -2954,7 +2970,7 @@ document.addEventListener("click", e => {
     case "calMove": { calMove(S, d.work, selDates(D, d.work, curSel(D, S, d.work, today()), today()), +d.d); save(); route(); break; }
     case "toDates": { const t = document.querySelector("#dates"); if (t) t.scrollIntoView({behavior: "smooth"}); break; }
     case "cmpOpen": { const c = S.proto?.cmp?.[d.work]; if (!c) return; const flip = Math.random() < 0.5; SHEET = {kind: "duel", work: d.work, cur: {role: c.role, left: flip ? c.b : c.a, right: flip ? c.a : c.b}}; renderSheet(); break; }  // 좌우는 무작위
-    case "sheetDuel": { if (SHEET?.kind !== "duel") return; const {work: w, cur} = SHEET; track("role_duel", duelRecord(D, w, cur, d.r)); const r = applyDuel(S, w, cur, d.r); delete (S.proto.cmp || {})[w]; save(); closeSheet(); route(); toast(r.win ? `${r.win} 쪽을 골랐어요. 추천 조합에 반영했어요` : "비슷하다고 기록했어요"); break; }
+    case "sheetDuel": { if (SHEET?.kind !== "duel") return; const {work: w, cur} = SHEET; const r = applyDuel(S, w, cur, d.r); delete (S.proto.cmp || {})[w]; save(); closeSheet(); route(); toast(r.win ? `${r.win} 쪽을 골랐어요. 추천 조합에 반영했어요` : "비슷하다고 기록했어요"); break; }
     case "visitSkip": skipVisit(S, +d.i); save(); route(); break;
     case "visitAgain": { const vd = S.proto?.vd; if (!vd) return; vd.again = vd.again.includes(d.a) ? vd.again.filter(a => a !== d.a) : [...vd.again, d.a].slice(0, 3); save(); route(); break; }
     case "visitDone": { const vd = S.proto?.vd; if (!vd) return; addAgain(S, vd.i, vd.again); delete S.proto.vd; save(); route(); toast(vd.again.length ? "좋아하는 배우에 더했어요" : "저장했어요"); break; }
@@ -3029,7 +3045,11 @@ document.addEventListener("click", e => {
       const rv = reviewOf(S, s.title, LK.date, LK.time) || newKopisReview(s, LK.date, LK.time, picked); RV_MORE = {};
       S.proto.rdraft = {k: [s.title, LK.date, LK.time].join("|"), entry: "log", rv: JSON.parse(JSON.stringify(rv)), swap: "", done: false, picks: []}; save(); location.hash = "#review"; break; }
     case "rvSave": { const dr = S.proto?.rdraft; if (!dr) return; dr.rv.note = ($("#rvnote")?.value || "").trim(); const out = saveReview(D, S, dr.rv, dr.entry, today());
-      if (Object.keys(out.rows).length && workOf(out.work)) track("after_review", reviewRecord(D, out)); dr.done = true; save(); route(); break; }  // 저장 뒤 같은 화면에서 배우 조건 제안(결정 51). KOPIS 공연 리뷰는 기록 표의 작품 목록 밖이라 이 기기에만 남는다
+      if (Object.keys(out.rows).length && workOf(out.work)) track("after_review", reviewRecord(D, out));
+      // Existing detailed after_review only permits known MVP works. Aggregate completion covers KOPIS/manual too.
+      track("review_complete", {source: workOf(out.work) ? "mvp" : (out.manual ? "manual" : "kopis"),
+        entry: dr.entry === "log" ? "log" : "plan", rated_actors: Math.min(20, Object.keys(out.rows || {}).length)});
+      dr.done = true; save(); route(); break; }  // 저장 뒤 같은 화면에서 배우 조건 제안(결정 51). KOPIS 공연 리뷰는 기록 표의 작품 목록 밖이라 이 기기에만 남는다
     case "rvSkip": { const dr = S.proto?.rdraft; if (!dr) return; const [w, dt, tm] = dr.k.split("|"), x = S.plans.find(y => y.work === w && y.date === dt && y.time === tm); if (x) x.asked = true; S.proto.rdraft = null; save(); location.hash = "#plans"; break; }  // 건너뛰면 관람 이력만 남고 다시 묻지 않는다
     case "rvPick": { const dr = S.proto?.rdraft; if (!dr?.done) return; dr.picks = dr.picks.some(x => x.actor === d.a) ? dr.picks.filter(x => x.actor !== d.a) : [...dr.picks, {actor: d.a, kind: d.k}]; save(); route(); break; }
     case "rvSug": { const dr = S.proto?.rdraft; if (!dr) return; if (d.y === "1" && dr.picks.length) applySuggest(S, dr.picks); const n = d.y === "1" ? dr.picks.length : 0; S.proto.rdraft = null; save(); location.hash = "#plans"; if (n) toast("배우 조건에 넣었어요"); break; }
