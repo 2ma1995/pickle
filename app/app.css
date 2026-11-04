@@ -520,7 +520,7 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
 .tchero,.tcfan{display:none}
 @media (min-width:900px){
   .tcstage{width:100vw;margin-inline:calc(50% - 50vw);padding:20px 0 28px;overflow-x:clip}  /* 무대는 화면 끝까지, 끝 밖으로 나간 포스터는 잘라서 가로 스크롤이 안 생긴다 */
-  .tchero{display:block;margin:12px 0 40px;font-family:"Pretendard",-apple-system,BlinkMacSystemFont,sans-serif;font-size:clamp(44px,4.4vw,68px);font-weight:800;line-height:1.2;letter-spacing:-.045em;text-align:center;color:var(--fg)}
+  .tchero{display:block;margin:12px 0 40px;font-family:var(--display);font-size:clamp(44px,4.4vw,68px);font-weight:800;line-height:1.2;letter-spacing:.01em;text-align:center;color:var(--fg)}
   .tcarena{position:relative}
   /* 원기둥 벽: 각 포스터를 무대 가운데에서 --a 만큼 돌린 뒤 반지름만큼 뒤로 민다. 보는 사람 쪽으로 당긴 만큼(--d) 양쪽 포스터가 가까워져 커 보인다 */
   .tcfan{--r:1000px;--d:900px;--pw:180px;display:block;position:absolute;left:50%;top:42%;width:0;height:0;perspective:1000px;pointer-events:none}
