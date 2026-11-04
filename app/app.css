@@ -522,7 +522,7 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
   .tcfan img{position:absolute;left:calc(var(--pw) / -2);top:calc(var(--pw) * -.75);width:var(--pw);aspect-ratio:2/3;object-fit:cover;border-radius:12px;opacity:.8;backface-visibility:hidden;transform:translateZ(var(--d)) rotateY(var(--a)) translateZ(calc(var(--r) * -1))}
   .tcarena .tcwrap{position:relative;z-index:1}
   /* 포스터가 원을 따라 천천히 왼쪽으로 돈다(사용자 요청 2026-11-03). 오른쪽 끝(-L/2)에서 나와 왼쪽 끝(+L/2)으로 가면 화면 밖에서 다시 오른쪽 끝으로. 시작 위치는 포스터마다 음수 지연(--dl)으로 지금 자리 그대로 */
-  .tcfan img{animation:tcspin var(--T,120s) linear var(--dl,0s) infinite}
+  .tcfan img{animation:tcspin var(--T,80s) linear var(--dl,0s) infinite}
   @keyframes tcspin{
     0%{opacity:0;transform:translateZ(var(--d)) rotateY(calc(var(--L) / -2)) translateZ(calc(var(--r) * -1))}
     4%,96%{opacity:.8}

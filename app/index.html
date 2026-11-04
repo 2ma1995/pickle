@@ -510,8 +510,8 @@ a.wcard:hover{border-color:var(--hl)}
 .favrow .tiny{font-size:11px;word-break:keep-all}
 @media (min-width:600px){.favrow{gap:12px}.favrow>.card{padding:18px 16px}}
 </style>
-<link rel="stylesheet" href="theme.css?v=20261103s">
-<link rel="stylesheet" href="app.css?v=20261103s">  <!-- 스타일을 고칠 때마다 theme.css·app.css 의 ?v= 숫자를 같이 올린다(브라우저가 옛 스타일을 기억하지 않게) -->
+<link rel="stylesheet" href="theme.css?v=20261104a">
+<link rel="stylesheet" href="app.css?v=20261104a">  <!-- 스타일을 고칠 때마다 theme.css·app.css 의 ?v= 숫자를 같이 올린다(브라우저가 옛 스타일을 기억하지 않게) -->
 </head>
 <body>
 <div class="shell">
@@ -539,7 +539,7 @@ a.wcard:hover{border-color:var(--hl)}
 <div class="sheet-bg" id="sheetbg" data-noshot></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" data-noshot></div>
 
-<script src="data.js?v=202611032150"></script>
+<script src="data.js?v=202611041235"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -2326,7 +2326,7 @@ const PREF_ACTS = new Set(["obPick", "obPrio", "addFav", "rmFav", "addAvoid", "r
 // 포스터는 장식이라 읽기 도구엔 숨긴다. 폰에선 문구·포스터 모두 숨긴다(CSS)
 const FAN_STEP = 10.5;  // 포스터 사이 각도(도). rotateY 는 양수가 왼쪽이라 1위가 왼쪽 끝에 오도록 (가운데 - i)를 곱한다. 원기둥 반지름 1000px 에서 포스터 너비 180px + 틈 약 4px
 const fanPosters = from => byPopularity(allShows(D, from), from).map(x => showRef(D, x.key)).filter(Boolean).map(r => r.kind === "seed" ? r.w.poster : r.s.poster).filter(Boolean).slice(0, 10);
-const FAN_SPIN = 120;  // 포스터가 원을 한 바퀴(포스터 수 × FAN_STEP) 도는 시간(초). 천천히 왼쪽으로(사용자 요청 2026-11-03)
+const FAN_SPIN = 80;  // 포스터가 원을 한 바퀴(포스터 수 × FAN_STEP) 도는 시간(초). 120초에서 1.5배 빠르게(사용자 요청 2026-11-04). 천천히 왼쪽으로(사용자 요청 2026-11-03)
 const tkFan = from => { const ps = fanPosters(from), mid = (ps.length - 1) / 2, L = ps.length * FAN_STEP;
   const dl = i => (-(((mid - i) * FAN_STEP + L / 2) / L) * FAN_SPIN).toFixed(2);  // 음수 지연: 처음 화면에선 1위가 왼쪽 끝인 지금 자리에서 시작
   return `<div class="tcstage"><h1 class="tchero">내 취향을 입력하고<br>배우 조합을 추천받아요</h1><div class="tcarena"><div class="tcfan" aria-hidden="true" style="--L:${L.toFixed(1)}deg;--T:${FAN_SPIN}s">${ps.map((u, i) => `<img src="${esc(u)}" alt="" referrerpolicy="no-referrer" style="--a:${((mid - i) * FAN_STEP).toFixed(1)}deg;--dl:${dl(i)}s">`).join("")}</div>`; };
