@@ -623,3 +623,9 @@ html.lock,html.lock body{overflow:hidden}  /* 시트가 열려 있는 동안 뒤
 /* 취향 카드 머리줄(PICKLE · MY PICKLE TASTE) 오른쪽 끝 실링왁스(사용자 요청 2026-11-04) */
 .tkhead{position:relative}
 .tkseal{position:absolute;right:10px;top:50%;width:34px;height:34px;transform:translateY(-50%);background:var(--seal) no-repeat center/contain;pointer-events:none}
+
+/* 내 티켓 오른쪽(2026-11-04 저녁): 이달 일정 5개 + 더 보기, 좋아한 조합의 다시 찾기는 줄 오른쪽 끝 */
+.agmore{justify-self:start;margin-top:4px}
+.lkrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.lkrow>span{min-width:0}
+.lkrow>a{flex:none;white-space:nowrap}
