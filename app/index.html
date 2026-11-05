@@ -542,7 +542,7 @@ a.wcard:hover{border-color:var(--hl)}
 <div class="sheet-bg" id="sheetbg" data-noshot></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" data-noshot></div>
 
-<script src="data.js?v=202611041655"></script>
+<script src="data.js?v=202611051231"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -3031,6 +3031,8 @@ $("#sheetbg").addEventListener("click", closeSheet);
 
 // ---------- 동작 ----------
 document.addEventListener("click", e => {
+  // 내 티켓 탭을 누르면 관극 캘린더는 늘 이번 달(사용자 요청 2026-11-05). 이미 캘린더면 주소가 안 바뀌니 직접 다시 그린다
+  if (e.target.closest?.('a[data-tab="plans"]')) { PCAL_M = today().slice(0, 7); AG_OPEN = false; if (location.hash === "#plans") { route(); window.scrollTo(0, 0); } }
   const go = e.target.closest("[data-go]");
   if (go) {
     if (go.dataset.entry) { const en = ((S.stats ||= {}).entry ||= {rec: 0, browse: 0}); en[go.dataset.entry] = (en[go.dataset.entry] || 0) + 1; save(); }  // 홈에서 어느 입구(추천 칸/모든 작품)로 들어왔는지. 나중에 보려고 세기만 하고 화면엔 안 보인다
