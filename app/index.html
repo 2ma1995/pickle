@@ -542,7 +542,7 @@ a.wcard:hover{border-color:var(--hl)}
 <div class="sheet-bg" id="sheetbg" data-noshot></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" data-noshot></div>
 
-<script src="data.js?v=202611051231"></script>
+<script src="data.js?v=202611051335"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -2295,7 +2295,7 @@ const trackSettings = () => { const off = TRK.isOff();
   return `<div class="card"><h3>끄기와 지우기</h3>
     <p class="small">기록 보내기 <b>${off ? "꺼짐" : "켜짐"}</b> · 꺼도 추천은 그대로 쓸 수 있어요.</p>
     <div class="nbgrid"><button class="nb" data-act="trackToggle">${off ? "기록 켜기" : "기록 끄기"}</button><button class="nb" data-act="trackClear">이 기기 기록 지우기</button></div>
-    <p class="tiny muted"><b>기록 끄기</b> 지금부터 보내지 않고 이 기기의 번호를 지워요. 이미 보낸 기록은 6개월 뒤 지워져요.</p>
+    <p class="tiny muted"><b>기록 끄기</b> 지금부터 보내지 않고 이 기기의 번호를 지워요. 이미 보낸 기록은 누구 것인지 알 수 없는 채로 남아요.</p>
     <p class="tiny muted"><b>이 기기 기록 지우기</b> 이 기기의 번호만 지워요. 켜 둔 상태면 다음 기록부터 새 번호예요.</p>
     ${CLR_ASK ? `<div class="ask"><p class="small"><b>기록을 지웠어요.</b> 이 기기에 저장된 취향·내 티켓 일정도 지울까요?</p><div class="nbgrid"><button class="nb" data-act="clearAppData">취향·볼 예정도 지우기</button><button class="nb" data-act="clearAppKeep">그대로 두기</button></div></div>` : ""}</div>`; };
 // 기록·개인정보 안내(사용자 요청 2026-11-03: 꼭 필요한 것만). 홈 맨 아래 링크로만 들어온다. 문장은 기록기 코드와 맞춰 둔다:
@@ -2304,11 +2304,11 @@ V.privacy = () => !trackUi() ? `<div class="one"><div class="card"><p class="sma
   <div><h1>기록·개인정보 안내</h1></div>
   <div class="card prvno"><h3>남기지 않는 것</h3><ul class="small"><li>이름, 연락처, 아이디, 가입 정보가 없어요.</li><li>IP를 따로 저장하지 않아요.</li><li>기록한 시각은 남기지 않고 날짜만 남겨요.</li><li>관람 리뷰에 쓴 후기 글은 보내지 않아요.</li><li>앨범에서 고른 포스터 사진은 보내지 않아요.</li><li>광고나 외부 분석 도구가 없어요.</li></ul></div>
   <div class="card"><h3>남기는 것</h3><p class="small">이 기기의 무작위 익명 번호와 함께, 고른 취향·추천에 대한 반응·화면 이동·본 공연 기록을 남겨요.</p><p class="small">내 티켓에 등록한 티켓은 공연명, 일시, 출연, 장소, 좌석, 금액, 구매처, 리뷰/메모를 남겨요. 리뷰/메모에는 연락처 같은 개인정보를 적지 마세요. 본 공연 기록은 공연, 본 날짜, 배우별 평가와 고른 태그를 남겨요. 전에 이 기기에 저장해 둔 티켓과 기록도 같은 방식으로 한 번 보내요.</p>
-    <h3>목적과 보관 기간</h3><p class="small">추천을 고치는 데만 쓰고, 6개월이 지나면 지워요.</p></div>
+    <h3>목적과 보관 기간</h3><p class="small">추천을 고치는 데만 쓰고, 서비스를 운영하는 동안 보관해요. 서비스를 마치면 지워요.</p></div>
   <div class="card"><h3>국외 이전</h3><p class="small">기록은 Supabase Pte. Ltd.(싱가포르)에 맡겨 저장해요. 저장 위치는 서울 리전이지만, Supabase와 협력 업체가 있는 나라에서 처리될 수 있어요.</p>
-    <table class="prt"><tr><td>이전 항목</td><td>위 '남기는 것'(이름·연락처 없음)</td></tr><tr><td>국가</td><td>싱가포르 등 Supabase가 처리하는 나라</td></tr><tr><td>시기·방법</td><td>기록할 때마다 인터넷으로 전송</td></tr><tr><td>받는 자</td><td>Supabase Pte. Ltd.</td></tr><tr><td>목적·기간</td><td>추천 개선, 6개월</td></tr><tr><td>거부 방법</td><td>아래 [기록 끄기]. 꺼도 추천은 그대로 쓸 수 있어요</td></tr></table></div>
+    <table class="prt"><tr><td>이전 항목</td><td>위 '남기는 것'(이름·연락처 없음)</td></tr><tr><td>국가</td><td>싱가포르 등 Supabase가 처리하는 나라</td></tr><tr><td>시기·방법</td><td>기록할 때마다 인터넷으로 전송</td></tr><tr><td>받는 자</td><td>Supabase Pte. Ltd.</td></tr><tr><td>목적·기간</td><td>추천 개선, 서비스를 운영하는 동안</td></tr><tr><td>거부 방법</td><td>아래 [기록 끄기]. 꺼도 추천은 그대로 쓸 수 있어요</td></tr></table></div>
   ${trackSettings()}
-  <p class="tiny muted">시행일 2026년 11월 4일</p></div>`;
+  <p class="tiny muted">시행일 2026년 11월 5일</p></div>`;
 
 // ---------- proto: 취향폼(1·2·3 + 건너뛰기) ----------
 V.taste = (step = "1") => `<div class="one">${SURVEY_BANNER}${onboardBody(step)}</div>`;  // '취향 없이 지금 하는 공연 전체 보기'는 MVP에서 뺐다(작품 추천 목록)
@@ -2940,9 +2940,12 @@ const snapTaste = () => {
   (S.proto ||= {}).snap = {id: TRK.peekAnon(), sig}; save(); return true;
 };
 // 기록 안내가 바뀌면(안내문 9항) 전에 쓰던 기기에 홈 맨 위로 한 번 알린다. 처음 온 기기는 지금 안내를 처음부터 보니 알리지 않는다
-const NOTICE_VER = "2026-11-04b";  // b: 내 티켓 기록 추가(같은 날 두 번째 변경)
-const noticeCard = () => trackUi() && !TRK.isOff() && S.proto?.notice !== NOTICE_VER ? `<div class="card accent notice" role="status"><p class="small"><b>기록 안내가 바뀌었어요 (11월 4일)</b></p>
-  <p class="small">이제 내 티켓에 등록한 티켓(공연명·일시·출연·장소·좌석·금액·구매처·리뷰/메모)과 본 공연 기록(배우별 평가와 태그)도 남겨요. 앨범에서 고른 포스터 사진은 보내지 않아요. 전에 이 기기에 저장해 둔 티켓과 기록도 한 번 보내요.</p>
+const NOTICE_VER = "2026-11-05";  // 홈 알림 버전. 11-05: 6개월 자동 삭제 폐기(사용자 결정), 서비스를 운영하는 동안 보관
+const NOTICE_SEND = "2026-11-04b";  // 보내기 시작에 필요한 안내(내 티켓·본 공연 기록 추가). 이걸 본 기기는 보관 기간 알림을 보기 전에도 계속 보낸다
+const noticeSendOk = () => (S.proto?.notice || "") >= NOTICE_SEND;  // 날짜 문자열 비교: 2026-11-05 > 2026-11-04b
+const noticeCard = () => trackUi() && !TRK.isOff() && S.proto?.notice !== NOTICE_VER ? `<div class="card accent notice" role="status"><p class="small"><b>기록 안내가 바뀌었어요 (11월 5일)</b></p>
+  ${noticeSendOk() ? "" : `<p class="small">이제 내 티켓에 등록한 티켓(공연명·일시·출연·장소·좌석·금액·구매처·리뷰/메모)과 본 공연 기록(배우별 평가와 태그)도 남겨요. 앨범에서 고른 포스터 사진은 보내지 않아요. 전에 이 기기에 저장해 둔 티켓과 기록도 한 번 보내요.</p>`}
+  <p class="small">보관 기간이 바뀌었어요. 6개월이 지나면 지우던 기록을 이제 서비스를 운영하는 동안 보관하고, 서비스를 마치면 지워요. 쓰임은 그대로 추천을 고치는 데만이에요.</p>
   <div class="chips"><button class="btn" data-act="noticeOk">확인</button><a class="btn ghost" href="#privacy">자세히 보기·기록 끄기</a></div></div>` : "";
 // MVP 밖 본 공연 기록 보내기. 보냈거나 보낼 게 없는 기록은 S.proto.rvSent(작품|날짜|회차)에 표시한다. 기록을 끈 동안은 표시하지 않는다(다시 켜면 다음 방문에 보낸다)
 const rvKey = rv => [rv.work, rv.date, rv.time].join("|");
@@ -2965,7 +2968,7 @@ const ticketRecord = x => { const venue = planVenue(x), w = workOf(x.work);
   return rec; };
 let tkT;
 const syncTickets = () => {
-  if (!trackUi() || TRK.isOff() || S.proto?.notice !== NOTICE_VER) return 0;
+  if (!trackUi() || TRK.isOff() || !noticeSendOk()) return 0;
   const sig = ((S.proto ||= {}).tkSig ||= {}), alive = new Set(); let n = 0;
   for (const x of S.plans || []) { const id = planId(x); alive.add(id); if (n >= 150) continue;  // 한 번에 150장까지, 나머지는 다음 저장 때
     const h = tkHash(JSON.stringify(ticketRecord(x))); if (sig[id] === h) continue; if (track("ticket", ticketRecord(x))) { sig[id] = h; n++; } }
@@ -2975,7 +2978,7 @@ const syncTickets = () => {
 SAVE_HOOK = () => { clearTimeout(tkT); tkT = setTimeout(syncTickets, 1500); };
 // 앱을 열 때 한 번: 2026-11-04 전에 이 기기에만 저장된 MVP 밖 관람 기록을 보낸다(한 번에 30개까지, 나머지는 다음 방문)
 const backfillReviews = () => {
-  if (TRK.isOff() || S.proto?.notice !== NOTICE_VER) return 0;  // 바뀐 기록 안내를 본 뒤에만(홈 안내의 확인 버튼·안내 화면)
+  if (TRK.isOff() || !noticeSendOk()) return 0;  // 바뀐 기록 안내를 본 뒤에만(홈 안내의 확인 버튼·안내 화면)
   const sent = new Set(S.proto?.rvSent || []), todo = (S.reviews || []).filter(rv => !workOf(rv.work) && !sent.has(rvKey(rv))).slice(0, 30);
   const n = todo.filter(rv => sendShowReview(rv, true)).length;
   if (todo.length) save();
@@ -3291,7 +3294,7 @@ const ENTER_ADD = {favB: '[data-act="addFav"][data-k="b"]', fav: '[data-act="add
 document.addEventListener("keydown", e => { const sel = e.key === "Enter" && !e.isComposing && ENTER_ADD[e.target.id]; if (sel) { e.preventDefault(); $(sel)?.click(); } });
 if (!location.hash) history.replaceState(null, "", entryRoute(S.prefs, S));  // 처음 온 사람(취향 없음)의 첫 화면은 3단계 취향. #pick/… 같은 주소로 바로 들어온 사람은 그대로 둔다
 if (!TRK.peekAnon()) (S.proto ||= {}).notice = NOTICE_VER;  // 이 기기에서 처음 기록하는 사람은 지금 안내가 처음이라 알림 없음
-const NOTICE_SEEN = S.proto?.notice === NOTICE_VER;  // 이번에 안내 화면으로 바로 들어온 사람은 끌 기회를 준 뒤(다음 방문·확인 버튼) 보낸다
+const NOTICE_SEEN = noticeSendOk();  // 이번에 안내 화면으로 바로 들어온 사람은 끌 기회를 준 뒤(다음 방문·확인 버튼) 보낸다
 route();
 if (NOTICE_SEEN) { backfillReviews(); syncTickets(); }
 renderDebug();
