@@ -542,7 +542,7 @@ a.wcard:hover{border-color:var(--hl)}
 <div class="sheet-bg" id="sheetbg" data-noshot></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" data-noshot></div>
 
-<script src="data.js?v=202611061737"></script>
+<script src="data.js?v=202611061804"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -564,6 +564,55 @@ renameTags(S);
 let SAVE_HOOK = null, SYNC_HOOK = null;  // 저장할 때마다 부르는 것. SAVE_HOOK: 티켓 기록 보내기 예약(기록 코드가 채움) · SYNC_HOOK: 내 데이터 서버 저장 예약(동기화 코드가 채움, 꺼져 있으면 null)
 const saveRaw = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
 const save = () => { saveRaw(); if (SAVE_HOOK) SAVE_HOOK(); if (SYNC_HOOK) SYNC_HOOK(); };
+// <move>
+// 주소 이사(docs/backend_plan_2026-11-06.md 7절). 브라우저 저장소(localStorage)는 주소(도메인)마다 따로라서, 주소가 바뀌면 예전 주소에 저장한 취향·티켓·리뷰가 새 주소에서 안 보인다.
+// 예전 주소에서 열리면 이 브라우저의 PICKLE 데이터를 주소 #조각(서버로 안 가는 부분)에 담아 새 주소로 넘기고, 새 주소의 앱이 받아서 저장한다(동기화가 켜져 있으면 서버에도 올라간다).
+// 켜는 법: Actions 변수 PICKLE_HOME_URL=https://pickle-musical.com → data.js 의 window.PICKLE_HOME. 비어 있으면 넘기지 않는다(새 주소가 열리기 전에 사용자를 보내지 않게)
+// <move-core> (tools/move_page/index.html 에 글자 그대로 같은 사본이 있다. 고치면 둘 다 — tests/move_check.js 가 확인)
+const MOVE_FROM = ["2ma1995.github.io", "soobworks.github.io"];  // 예전 주소들. 2ma1995 는 팀원 저장소의 이사 페이지(tools/move_page)가, soobworks 는 이 앱이 넘긴다
+const MOVE_KEYS = ["pickle_v2", "pickle_anon", "pickle_track_off", "pickle_q", "pickle_posters"];  // 넘기는 것: 앱 데이터·익명 번호·기록 끄기 표시·안 보낸 기록·앨범 포스터. 로그인 정보(pickle_auth)는 주소마다 새로 만든다
+const MOVE_MAX = 600000, MOVE_POSTER_MAX = 300000;  // 주소 길이 상한(글자). 포스터 사진이 크면 사진만 빼고 넘긴다
+const b64u = s => { const b = new TextEncoder().encode(s); let bin = ""; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));  // 나눠서 바꾼다(큰 데이터에서 호출 스택이 넘치지 않게)
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+const unb64u = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0)));
+// 이 브라우저의 PICKLE 데이터를 묶는다(없으면 null)
+const packMove = get => { const out = {};
+  for (const k of MOVE_KEYS) { const v = get(k); if (v !== null && v !== undefined && v !== "") out[k] = String(v); }
+  if ((out.pickle_posters || "").length > MOVE_POSTER_MAX) delete out.pickle_posters;
+  return out.pickle_v2 || out.pickle_anon || out.pickle_track_off ? out : null; };
+// 새 주소: https://새주소/app/#move=<묶음>&to=<원래 화면 주소>. 묶음이 너무 길면 포스터, 안 보낸 기록 순으로 뺀다
+const moveUrl = (home, pack, hash) => {
+  const to = hash && hash !== "#" ? "&to=" + encodeURIComponent(hash) : "";
+  if (!pack) return home.replace(/\/+$/, "") + "/app/" + (hash || "");
+  let p = {...pack}, enc = b64u(JSON.stringify(p));
+  for (const k of ["pickle_posters", "pickle_q"]) if (enc.length > MOVE_MAX && p[k]) { delete p[k]; enc = b64u(JSON.stringify(p)); }
+  return home.replace(/\/+$/, "") + "/app/#move=" + enc + to; };
+// </move-core>
+// 받은 묶음 풀기. 모양이 틀리면 null(아무것도 안 바꾼다)
+const readMove = hash => {
+  const m = /^#move=([A-Za-z0-9_-]+)(?:&to=([^&]*))?$/.exec(hash || ""); if (!m || m[1].length > MOVE_MAX * 1.1) return null;
+  try { const p = JSON.parse(unb64u(m[1])); if (!isObjM(p) || !Object.keys(p).every(k => MOVE_KEYS.includes(k) && typeof p[k] === "string")) return null;
+    if (p.pickle_v2 && !isObjM(JSON.parse(p.pickle_v2))) return null;
+    return {pack: p, to: m[2] ? decodeURIComponent(m[2]) : ""}; } catch (e) { return null; } };
+const isObjM = v => !!v && typeof v === "object" && !Array.isArray(v);
+// 새 주소에서 받은 것을 이 브라우저에 넣는다. 앱 데이터는 이 브라우저 것과 합치고(merge: 지우지 않는다), 익명 번호·안 보낸 기록·포스터는 이 브라우저에 없을 때만, 기록 끄기는 예전 주소에서 껐으면 여기서도 끈다
+const applyMove = (pack, S, store, merge) => {
+  let next = S;
+  if (pack.pickle_v2) { const old = JSON.parse(pack.pickle_v2); next = merge(old, S); }
+  if (pack.pickle_anon && !store.get("pickle_anon") && pack.pickle_track_off !== "1") store.set("pickle_anon", pack.pickle_anon);
+  if (pack.pickle_track_off === "1") { store.set("pickle_track_off", "1"); store.del("pickle_anon"); store.del("pickle_q"); }
+  else if (pack.pickle_q && !store.get("pickle_q")) store.set("pickle_q", pack.pickle_q);
+  if (pack.pickle_posters) { let mine = {}; try { mine = JSON.parse(store.get("pickle_posters") || "{}") || {}; } catch (e) {}
+    try { store.set("pickle_posters", JSON.stringify({...JSON.parse(pack.pickle_posters), ...mine})); } catch (e) {} }
+  return next; };
+// 지금 예전 주소에서 열렸고 새 주소가 정해져 있으면 넘긴다(앱을 그리기 전에). 넘기는 중이면 MOVING = true 로 나머지 시작 동작을 건너뛴다
+const MOVE_HOME = (() => { const h = window.PICKLE_HOME; return typeof h === "string" && /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}$/.test(h) ? h : ""; })();
+let MOVING = false;
+if (MOVE_HOME && MOVE_FROM.includes(location.hostname)) {
+  let pack = null; try { pack = packMove(k => localStorage.getItem(k)); } catch (e) {}
+  MOVING = true; location.replace(moveUrl(MOVE_HOME, pack, location.hash));
+}
+// </move>
 
 // 관람 후 리뷰의 좋았던 점을 추천 데이터에 합친다 (docs/261027_2 12절, 결정 49)
 // 같은 배우·태그를 서로 다른 사용자 2명 이상이 남겼을 때만(D.userReviews = 서버가 모아 준 다른 사용자 리뷰 행 + 이 기기 리뷰). 이 기기 혼자 남긴 태그는 기록만 하고 점수에 쓰지 않는다
@@ -3244,6 +3293,7 @@ const vopenTap = d => {  // 영상 ID 가 있는 썸네일을 눌렀을 때: 유
 const vAfter = sel => { if (SHEET?.kind === "video") { SHEET.dirty = true; SHEET.focus = sel; renderSheet(); } else route(); };  // 모달 안에서 답·칩·담기를 누르면 모달만 다시 그린다(닫을 때 뒤 화면을 새로 그린다)
 const NAME_INPUTS = ["favB", "fav", "avoidIn", "acAvoid", "lkadd", "lmadd"];  // 배우 이름을 직접 쓰는 칸
 function route() {
+  if (MOVING) return;  // 새 주소로 넘기는 중(주소 이사)
   const h = decodeURIComponent(location.hash.slice(1) || entryRoute(S.prefs, S).slice(1));  // 첫 화면: 취향을 한 번도 안 다룬 사람은 취향폼, 아니면 홈
   if (/^(taste|onboard)\/3$/.test(h)) { history.replaceState(null, "", "#taste/2"); return route(); }  // 옛 3/3(기대 질문)은 이제 2/2
   if (/^(taste|onboard)\/(?:[4-9]|\d\d+)$/.test(h)) { history.replaceState(null, "", "#home"); return route(); }  // 옛 '선택 · 끌리는 배우 고르기' 단계(#taste/4·#onboard/4)는 없어졌다 → 홈(새로고침·저장된 주소도)
@@ -3562,6 +3612,13 @@ document.addEventListener("keydown", e => {  // 시트(모달)가 열려 있을 
 });
 const ENTER_ADD = {favB: '[data-act="addFav"][data-k="b"]', fav: '[data-act="addFav"]:not([data-k])', avoidIn: '[data-act="addAvoid"]', lkadd: '[data-act="lkAdd"]', lmadd: '[data-act="lmAdd"]', acAvoid: '[data-act="acAvoidAdd"]'};  // 배우 검색 칸에서 엔터 = 그 칸의 [추가]
 document.addEventListener("keydown", e => { const sel = e.key === "Enter" && !e.isComposing && ENTER_ADD[e.target.id]; if (sel) { e.preventDefault(); $(sel)?.click(); } });
+// 주소 이사로 들어왔으면(#move=…) 받은 데이터를 이 브라우저에 넣고 원래 보던 화면으로. 모양이 틀린 묶음은 버리고 주소만 정리한다
+let MOVED = false;
+if (!MOVING && location.hash.startsWith("#move=")) { const mv = readMove(location.hash);
+  if (mv) { S = applyMove(mv.pack, S, {get: k => localStorage.getItem(k), set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }, del: k => localStorage.removeItem(k)}, mergeState);
+    renameTags(S); saveRaw(); MOVED = true; }
+  const to = mv && /^#[^#]*$/.test(mv.to) && !mv.to.startsWith("#move=") ? mv.to : "";
+  history.replaceState(null, "", location.pathname + location.search + to); }
 // 로그인(계정 연결) 다녀온 주소: 실패·취소(?error=)는 바로 지우고 내 데이터 카드에 알린다. 성공 코드(?code=)는 supabase-js 가 읽은 뒤(SYNC.start 다음) 지운다
 // 연결하기가 '이미 다른 기록에 연결된 계정'으로 거절되면 묻지 않고 그 계정으로 불러오기까지 이어 간다(AUTO_SIGNIN). 불러오기도 실패하면 안내만(같은 일을 되풀이하지 않는다)
 let AUTO_SIGNIN = "";
@@ -3574,9 +3631,10 @@ if (!location.hash) history.replaceState(null, "", entryRoute(S.prefs, S));  // 
 if (!TRK.peekAnon()) (S.proto ||= {}).notice = NOTICE_VER;  // 이 기기에서 처음 기록하는 사람은 지금 안내가 처음이라 알림 없음
 const NOTICE_SEEN = noticeSendOk();  // 이번에 안내 화면으로 바로 들어온 사람은 끌 기회를 준 뒤(다음 방문·확인 버튼) 보낸다
 route();
-if (NOTICE_SEEN) { backfillReviews(); syncTickets(); }
+if (NOTICE_SEEN && !MOVING) { backfillReviews(); syncTickets(); }
+if (MOVED) toast("새 주소로 옮겨 왔어요. 저장한 기록도 그대로예요");
 renderDebug();
-if (SYNC) SYNC.start().then(() => {  // 화면을 먼저 그린 뒤 뒤에서 로그인·서버 판 맞추기
+if (SYNC && !MOVING) SYNC.start().then(() => {  // 화면을 먼저 그린 뒤 뒤에서 로그인·서버 판 맞추기
   let after = null; try { after = JSON.parse(localStorage.getItem(AFTER_AUTH) || "null"); localStorage.removeItem(AFTER_AUTH); } catch (e) {}
   cleanAuthUrl();
   if (AUTO_SIGNIN) { const p = AUTO_SIGNIN; AUTO_SIGNIN = ""; toast("이미 연결된 계정이라 그 계정에서 불러올게요");
