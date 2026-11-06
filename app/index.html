@@ -542,7 +542,7 @@ a.wcard:hover{border-color:var(--hl)}
 <div class="sheet-bg" id="sheetbg" data-noshot></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" data-noshot></div>
 
-<script src="data.js?v=202611061606"></script>
+<script src="data.js?v=202611061644"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -692,11 +692,11 @@ const onboardBody = (step, embed = false, w = "", base = "#taste") => {  // base
   const head = embed ? `<h2>${["좋아하는 배우 · 피하고 싶은 배우", "공연을 볼 때 기대하는 것"][n - 1]}</h2>` : `<div class="onboard-head"><p class="eyebrow">취향 고르기 ${n}/2${n > 1 ? ` · <a href="${base}/${n - 1}">이전</a>` : ""}</p><h1>${["좋아하는 배우가 있나요?", "공연을 볼 때 무엇을 기대하나요?"][n - 1]}</h1></div>`;
   if (n === 2) {
     const cnt = tagCounts(D), on = t => axes.includes(tagKey(t)), anyOn = q => (p.any || []).includes(q.id) && !q.opts.some(o => on(o[1]));
-    const qCard = (q, onlyData) => { const opts = onlyData ? q.opts.filter(o => cnt[o[1]]) : q.opts;
-      return `<div class="card"><h3>${esc(q.q)} <span class="small muted" style="white-space:nowrap">${PICK_MAX}개까지</span></h3><div class="chips">${opts.map(([l, t]) => `<button class="chip ${on(t) ? "on" : ""}" data-act="obPick" data-q="${q.id}" data-t="${esc(t)}"${w ? ` data-w="${esc(w)}"` : ""} aria-pressed="${on(t)}">${esc(l)}${cnt[t] ? "" : ` <span class="tiny muted">· 아직 데이터 없음</span>`}</button>`).join("")}
+    const qCard = (q, onlyData) => { const opts = onlyData && !q.keep ? q.opts.filter(o => cnt[o[1]]) : q.opts;
+      return `<div class="card"><h3>${esc(q.q)} <span class="small muted" style="white-space:nowrap">${PICK_MAX}개까지</span></h3><div class="chips">${opts.map(([l, t]) => `<button class="chip ${on(t) ? "on" : ""}" data-act="obPick" data-q="${q.id}" data-t="${esc(t)}"${w ? ` data-w="${esc(w)}"` : ""} aria-pressed="${on(t)}">${esc(l)}</button>`).join("")}
         <button class="chip x ${anyOn(q) ? "on" : ""}" data-act="obPick" data-q="${q.id}" data-t=""${w ? ` data-w="${esc(w)}"` : ""} aria-pressed="${anyOn(q)}">상관없어요</button></div></div>`; };
-    // 선택 질문은 근거가 있는 선택지만, 하나도 없으면 질문째 숨긴다. ①에서 춤·몸짓을 골랐으면 움직임 질문은 접지 않고 바로 보인다
-    const extra = ONBOARD_QS.filter(q => q.opt && q.opts.some(o => cnt[o[1]])), shown = extra.filter(q => q.id === "body" && p.prio === "몸"), folded = extra.filter(q => !shown.includes(q));
+    // 선택 질문은 근거가 있는 선택지만, 하나도 없으면 질문째 숨긴다(keep 질문은 전부 보인다). ①에서 춤·몸짓을 골랐으면 움직임 질문은 접지 않고 바로 보인다
+    const extra = ONBOARD_QS.filter(q => q.opt && (q.keep || q.opts.some(o => cnt[o[1]]))), shown = extra.filter(q => q.id === "body" && p.prio === "몸"), folded = extra.filter(q => !shown.includes(q));
     return `${head}
     <p class="muted small">배우를 평가하지 않고, 끌리는 특징만 골라요. 잘 모르겠으면 상관없어요를 누르면 돼요.</p>
     <div class="card"><h3>가장 기대하는 것은 무엇인가요?</h3><div class="chips">${PRIO.map(([v, l]) => `<button class="chip ${p.prio === v ? "on" : ""}" data-act="obPrio" data-v="${v}"${w ? ` data-w="${esc(w)}"` : ""} aria-pressed="${p.prio === v}">${esc(l)}</button>`).join("")}</div></div>
@@ -869,15 +869,20 @@ const TASTE_AXES = [
 ];
 // 한 축에서 하나만. 이미 고른 걸 다시 누르면 풀리고, v 가 비면 그 축은 '상관없어요'
 const toggleAxis = (axes, v, l, r) => !v ? axes.filter(x => x !== l && x !== r) : axes.includes(v) ? axes.filter(x => x !== v) : [...axes.filter(x => x !== (v === l ? r : l)), v];
-// 취향 질문(3/3): 필수 3개(음색·가창·연기) + ① 우선순위, '조금 더 골라 보기' 선택 3개(신체·해석·조합, 접힘). 선택지 하나 = 태그 하나.
+// 취향 질문(2/2): 필수 3개(음색·가창·연기) + ① 우선순위, '조금 더 골라 보기' 선택 7개(노래 기술·움직임·배역/대사·인물 표현·인물 해석·조합·그 외, 접힘). 선택지 하나 = 태그 하나. 태그 사전의 배우 태그와 조합 태그를 선택지로 모두 고를 수 있다(2026-11-06).
+// keep: true 인 선택 질문은 근거가 없는 선택지도 그대로 보여 준다(없으면 근거 있는 선택지만, 하나도 없으면 질문째 숨긴다). 질문이 늘어도 id·"tag:태그" 키는 그대로라 저장된 취향이 깨지지 않는다
 // 취향 키는 "tag:태그"(5축 키 '묵직한 음색'과 태그 '묵직한 음색'이 겹쳐서 접두어로 가른다). area 는 ① 우선순위 가중치에 쓴다
 const ONBOARD_QS = [
-  {id: "tone", area: "노래", q: "어떤 목소리에 더 끌리나요?", opts: [["맑고 깨끗한", "맑음"], ["부드럽고 따뜻한", "부드러움"], ["허스키하고 거친", "허스키"], ["낮고 묵직한", "묵직한 음색"], ["선명하고 쨍한", "선명하고 쨍한 음색"]]},
+  {id: "tone", area: "노래", q: "어떤 목소리에 더 끌리나요?", opts: [["맑고 깨끗한", "맑음"], ["부드럽고 따뜻한", "부드러움"], ["허스키하고 거친", "허스키"], ["낮고 묵직한", "묵직한 음색"], ["선명하고 쨍한", "선명하고 쨍한 음색"], ["개성 있고 독특한", "개성 있는 음색"]]},
   {id: "sing", area: "노래", q: "노래를 들을 때 특히 중요한 점은 무엇인가요?", opts: [["시원한 고음", "고음"], ["공간을 채우는 성량", "성량"], ["또렷한 가사", "딕션"], ["흔들림 없는 발성", "발성 안정성"], ["감정이 전해지는 노래", "감정 전달형"], ["섬세한 강약·호흡", "섬세한 가창 표현"]]},
-  {id: "act", area: "연기", q: "어떤 감정 표현에 더 끌리나요?", opts: [["감정을 크고 강하게 드러내는", "감정 크게 표현"], ["감정을 눌러 담는", "절제된 연기"], ["유쾌하고 코믹한", "코믹 연기"]]},
+  {id: "act", area: "연기", q: "어떤 감정 표현에 더 끌리나요?", opts: [["감정을 크고 강하게 드러내는", "감정 크게 표현"], ["감정을 눌러 담는", "절제된 연기"], ["유쾌하고 코믹한", "코믹 연기"], ["인물의 감정에 푹 빠져드는", "감정 몰입형"]]},
+  {id: "skill", area: "노래", opt: true, keep: true, q: "노래에서 또 눈여겨보는 점이 있나요?", opts: [["어려운 넘버도 거뜬히", "넘버 소화력"], ["시원하게 지르는 록 샤우팅", "샤우팅·록 발성"], ["가성을 살린 표현", "가성 표현"]]},
   {id: "body", area: "몸", opt: true, q: "움직임에서는 무엇을 보고 싶나요?", opts: [["춤·안무", "춤·안무 표현"], ["시원한 액션", "액션 표현"], ["자세·걸음·손짓의 디테일", "자세·동작 디테일"], ["표정·시선의 디테일", "표정·시선 디테일"]]},
+  {id: "role", area: "연기", opt: true, keep: true, q: "배역과 대사는 어떻게 보여주면 좋겠나요?", opts: [["배역과 딱 맞는 분위기", "배역 싱크로"], ["말투와 억양이 살아 있는", "대사 톤"], ["대본에 충실한", "텍스트 충실형"], ["자유로운 해석과 애드립", "자유 해석·애드립형"]]},
   {id: "char", area: "연기", opt: true, q: "인물을 어떤 방식으로 보여주면 좋겠나요?", opts: [["실제 사람처럼 자연스럽게", "현실적 설득형"], ["개성과 욕망을 선명하게", "강한 캐릭터성"], ["작은 표정과 몸짓으로 내면의 변화를", "섬세한 내면형"], ["상대 인물과의 관계를 중심으로", "관계 중심"]]},
-  {id: "combo", area: "", opt: true, q: "두 배우가 함께할 때 무엇이 가장 중요한가요?", opts: [["노래의 어우러짐", "음색·보컬 조화"], ["주고받는 연기", "연기합·티키타카"], ["감정선 연결", "감정선 조화"], ["이미지·분위기", "이미지·분위기 조화"], ["서로 다른 매력의 대비", "대비 시너지"]]},
+  {id: "view", area: "연기", opt: true, keep: true, q: "어떤 인물 해석에 더 끌리나요?", opts: [["순수하고 사랑스러운", "순수·사랑스러운 해석"], ["어른스럽고 노련한", "성숙한 해석"], ["상징적이고 초월적인", "상징적·초월적"], ["정답 없이 여운이 남는", "철학적·해석 여지"]]},
+  {id: "combo", area: "", opt: true, keep: true, q: "두 배우가 함께할 때 무엇이 가장 중요한가요?", opts: [["노래의 어우러짐", "음색·보컬 조화"], ["주고받는 연기", "연기합·티키타카"], ["감정선 연결", "감정선 조화"], ["이미지·분위기", "이미지·분위기 조화"], ["서로 다른 매력의 대비", "대비 시너지"], ["해석의 방향이 맞물리는", "해석 호환성"], ["전체 캐스트의 균형", "전체 캐스트 밸런스"]]},
+  {id: "etc", area: "", opt: true, keep: true, q: "그 외에 중요한 점이 있나요?", opts: [["기복 없는 실력", "회차 안정감"], ["무대를 압도하는 존재감", "무대 장악력"]]},
 ];
 const PRIO = [["노래", "노래"], ["연기", "연기·캐릭터 표현"], ["몸", "춤·몸짓"], ["고루", "골고루"]];
 const PICK_MAX = 2;  // 질문마다 2개까지, '상관없어요'는 그 질문을 비운다
@@ -896,7 +901,7 @@ const togglePick = (axes, q, t) => {
 };
 // ① 우선순위: 1순위 영역 질문에서 고른 태그는 2배, 나머지는 1(골고루·안 고름·조합 질문·예전 5축 키는 1)
 const prefWeight = (prio, p) => { const q = p.startsWith("tag:") && ONBOARD_QS.find(q => q.opts.some(o => tagKey(o[1]) === p)); return prio && q && q.area === prio ? 2 : 1; };
-// 태그별 확정 근거 수(배우 프로필 + 조합 태그). 0건인 선택지는 '아직 데이터 없음'으로 보이고, 선택 질문에서는 숨긴다
+// 태그별 확정 근거 수(배우 프로필 + 조합 태그). 0건인 선택지도 필수 질문·keep 질문에서는 표시 없이 그대로 보이고, 그 밖의 선택 질문에서는 숨긴다(2026-11-06 '아직 데이터 없음' 글자는 뺐다)
 const tagCounts = D => {
   const n = {};
   for (const pr of Object.values(D.actorProfiles || {})) for (const x of [...(pr.voice || []), ...(pr.role || [])]) n[x.tag] = (n[x.tag] || 0) + 1;
@@ -1667,9 +1672,9 @@ const rankNote = (D, S, work, recs, i) => {
   }
   return `${i + 1}순위: ${parts.join(", ")}`;
 };
-const SYNC_PTS = 0.3;
+const SYNC_PTS = 0.3, SYNC_TAG = "배역 싱크로";
 const comboRecs = (D, S, work, from, inDates = null) => {  // inDates: 날짜 먼저 경로에서 고른 날짜(그 안의 회차로만 조합을 만든다)
-  const mode = inDates ? "date" : "actor", wp = workPrefs(S, work), prefs = wp.axes, pw = personalWeights(S, D), hasPW = Object.keys(pw).length > 0, hide = new Set(S.proto?.hide?.[work] || []), wrong = wrongOf(S, work);
+  const mode = inDates ? "date" : "actor", wp = workPrefs(S, work), prefs = wp.axes, wantSync = prefs.some(p => prefT(D, p).includes(SYNC_TAG)), pw = personalWeights(S, D), hasPW = Object.keys(pw).length > 0, hide = new Set(S.proto?.hide?.[work] || []), wrong = wrongOf(S, work);
   const ac = actorConds(D, S, work, mode), prio = wp.prio, must = ac.must, ptsOf = new Map(ac.pick.map(x => [x.a, pickPts(x)])), never = [...ac.avoid, ...ac.extra], noTaste = !prefs.length;  // 배우 조건은 작품별 값(없으면 온보딩 기본값, 9.1절). must 는 배역과 상관없이(결정 12)  // 취향폼 1/3: '반드시 볼 배우'는 ⭐처럼, '피하고 싶은 배우'는 조연이어도 그 회차를 뺀다
   const seen = new Set((S.plans || []).filter(x => x.work === work && (x.tagged || x.date < from)).map(x => comboKey(D, work, x.cast)));
   const roleIdx = Object.fromEntries(unitRoles(D, work).map((r, i) => [r.role, i]));  // 화면 위쪽 배역일수록 주연(사용자 요청 2026-11-04: 배우 순위 대신 배역 순서)
@@ -1683,13 +1688,13 @@ const comboRecs = (D, S, work, from, inDates = null) => {  // inDates: 날짜 �
   for (const g of groups.values()) {
     const names = Object.values(g.cast);
     if (seen.has(g.key) || hide.has(g.key) || satBlocked(S, work, g.key, runLabelOf(D, work, g.perfs[0].date)) || !must.every(a => names.includes(a))) continue;
-    const e = comboEvidence(D, prefs, work, g.cast, wrong, p => prefWeight(prio, p));
+    const e = comboEvidence(D, prefs, work, g.cast, wrong, p => prefT(D, p).includes(SYNC_TAG) ? 0 : prefWeight(prio, p));  // 배역 싱크로는 일반 태그 점수(1·2점) 대신 아래 0.3점만
     const pc = hasPW ? names.flatMap(a => [...new Set(tagsOfActor(D, work, a).map(x => x.tag))].filter(tg => pw[tg]).map(tg => pw[tg])) : [];
-    // 배역 싱크로는 묻지 않고 기본 가산점(배우마다 0.3, 2026-11-04 0.5 → 0.3). 취향 근거가 있는 조합끼리 순서만 바꾸고, 이것만으로는 추천하지 않는다
-    const sync = e.hit > 0 ? names.filter(a => !wrong.includes(a) && tagsOfActor(D, work, a).some(x => x.tag === "배역 싱크로")).length * SYNC_PTS : 0;
+    // 배역 싱크로(사용자 요청 2026-11-06): 취향에서 '배역과 딱 맞는 분위기'를 고른 사람만, 그 태그가 있는 배우마다 0.3점. 고르지 않은 사람에게는 더하지 않는다(예전: 모두에게 기본 가산)
+    const sync = wantSync ? names.filter(a => !wrong.includes(a) && tagsOfActor(D, work, a).some(x => x.tag === SYNC_TAG)).length * SYNC_PTS : 0;
     const actorPts = names.reduce((n, a) => n + (ptsOf.get(a) || 0), 0);  // 본진 5 · 애정 3 · ★ 5 · ✓ 3
     const pers = Math.max(-2, Math.min(2, pc.reduce((n, x) => n + x, 0))), duel = duelBonus(S, work, g.cast), liked = likeBonus(S, work, names), score = e.hit + sync + actorPts + pers + duel + liked;  // liked: '마음에 들어요' 조합의 배우(결정 41·45)
-    if (!noTaste && !(score > 0 && (e.hit > 0 || actorPts > 0 || pers > 0 || duel > 0 || liked > 0))) continue;  // 취향 근거가 없어도 본진·애정·고른 배우가 나오면 추천한다(2026-11-04)  // 기대 답이 있는데 근거가 없으면 빼고, 기대 답을 모두 '상관없어요'로 비운 사람은 배우 조건만으로 추천한다(결정 21)
+    if (!noTaste && !(score > 0 && (e.hit > 0 || sync > 0 || actorPts > 0 || pers > 0 || duel > 0 || liked > 0))) continue;  // 취향 근거가 없어도 본진·애정·고른 배우가 나오면 추천한다(2026-11-04)  // 기대 답이 있는데 근거가 없으면 빼고, 기대 답을 모두 '상관없어요'로 비운 사람은 배우 조건만으로 추천한다(결정 21)
     const dates = [...new Set(g.perfs.map(p => p.date))].sort();
     const roleRank = Math.min(...Object.entries(g.cast).filter(([, a]) => ptsOf.has(a)).map(([r]) => roleIdx[r] ?? 99), 99);  // 꼭 보고 싶은 배우가 나오는 가장 위쪽 배역(주연일수록 작다)
     out.push({...g, ...e, mode, pers, duel, liked, actorPts, score, roleRank, cover: names.filter(a => wk.has(a)).length, dates, duelNames: names.filter(a => won.has(a)), evByActor: Object.fromEntries(names.map(a => [a, [...new Set(e.ev.filter(x => x.who === a).map(x => x.tag))]])), comboTags: [...new Set(e.ev.filter(x => x.role === "조합").map(x => x.tag))]});
@@ -2669,6 +2674,18 @@ const tasteSentence = p => {
     : has("코믹 연기") ? "웃음이 터지는"
     : p.prio === "몸" ? "몸으로 말하는"
     : has("음색·보컬 조화", "연기합·티키타카", "감정선 조화", "이미지·분위기 조화", "대비 시너지") ? "배우들의 호흡이 빛나는"
+    : has("무대 장악력") ? "압도적인 존재감이 빛나는"
+    : has("회차 안정감") ? "언제 봐도 믿고 볼 수 있는"
+    : has("넘버 소화력") ? "어려운 넘버도 거뜬히 소화하는"
+    : has("샤우팅·록 발성") ? "록 발성이 시원하게 터지는"
+    : has("가성 표현") ? "가성으로 감정을 더하는"
+    : has("개성 있는 음색") ? "개성 있는 목소리가 기억에 남는"
+    : has("감정 몰입형") ? "감정에 깊이 빠져드는"
+    : has("배역 싱크로") ? "배역과 딱 맞아떨어지는"
+    : has("대사 톤") ? "대사가 귀에 감기는"
+    : has("텍스트 충실형", "자유 해석·애드립형") ? "해석이 분명한"
+    : has("순수·사랑스러운 해석", "성숙한 해석") ? "인물의 결이 살아 있는"
+    : has("상징적·초월적", "철학적·해석 여지") ? "여운과 해석 여지가 남는"
     : labels.length ? `${labels[0]}${iga(labels[0])} 돋보이는`
     : p.prio === "노래" ? "노래가 중심인" : p.prio === "연기" ? "연기와 캐릭터가 살아 있는" : p.prio === "고루" ? "노래·연기·몸짓이 고루 어우러진" : "좋아하는 배우가 빛나는";
   // 본진은 '가장 좋아하고', 애정은 '선호하는'. 여러 명이어도 줄이지 않고 전부 쓴다(사용자 요청 2026-11-05)
@@ -2723,7 +2740,7 @@ const shareCard = () => { const url = location.origin + location.pathname, text 
   if (navigator.share) return go({title, text, url});
   copy(); };
 // 카드 앞면의 분류별 태그: 질문 하나 = 칸 하나. 문구는 온보딩 선택지 그대로
-const TK_GROUPS = {tone: "목소리", sing: "노래", act: "감정 표현", body: "움직임", char: "인물 표현", combo: "배우 호흡"};
+const TK_GROUPS = {tone: "목소리", sing: "노래", skill: "노래 기술", act: "감정 표현", body: "움직임", role: "배역·대사", char: "인물 표현", view: "인물 해석", combo: "배우 호흡", etc: "그 외"};
 const tasteCells = p => {
   const axes = p.axes || [], cells = [], [bon, love] = favSplit(p);
   if (p.prio) cells.push(["가장 기대하는 것", [PRIO.find(([v]) => v === p.prio)?.[1] || p.prio]]);
