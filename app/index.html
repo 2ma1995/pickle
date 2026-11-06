@@ -513,8 +513,8 @@ a.wcard:hover{border-color:var(--hl)}
 .favrow .tiny{font-size:11px;word-break:keep-all}
 @media (min-width:600px){.favrow{gap:12px}.favrow>.card{padding:18px 16px}}
 </style>
-<link rel="stylesheet" href="theme.css?v=20261105d">
-<link rel="stylesheet" href="app.css?v=20261105d">  <!-- 스타일을 고칠 때마다 theme.css·app.css 의 ?v= 숫자를 같이 올린다(브라우저가 옛 스타일을 기억하지 않게) -->
+<link rel="stylesheet" href="theme.css?v=20261105e">
+<link rel="stylesheet" href="app.css?v=20261105e">  <!-- 스타일을 고칠 때마다 theme.css·app.css 의 ?v= 숫자를 같이 올린다(브라우저가 옛 스타일을 기억하지 않게) -->
 </head>
 <body>
 <div class="shell">
@@ -542,7 +542,7 @@ a.wcard:hover{border-color:var(--hl)}
 <div class="sheet-bg" id="sheetbg" data-noshot></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" data-noshot></div>
 
-<script src="data.js?v=202611051417"></script>
+<script src="data.js?v=202611061327"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -554,6 +554,12 @@ const ROLE_COLORS = ["var(--r1)", "var(--r2)", "var(--r3)", "var(--r4)", "var(--
 const KEY = "pickle_v2";
 let S = {prefs: null, query: null, cal: {}, plans: [], tags: [], votes: [], likes: [], reviews: []};  // reviews: 관람 후 리뷰(docs/261027_2 11절) / votes: 같은 배역 두 배우 비교 투표 / likes: 좋아하는 배우 설문 [{actor, why, tags, roles: [{work, role, why, tags}]}]
 try { S = Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+// 사전에서 빠지거나 이름이 바뀐 태그(2026-11-05: '현실적·생활감'은 사전에서 뺐다 → '현실적 설득형'). 저장된 취향·좋아하는 배우·관람 리뷰의 태그를 새 이름으로
+const TAG_RENAMED = {"현실적·생활감": "현실적 설득형"};
+{ const rn = t => TAG_RENAMED[t] || t, rnList = xs => Array.isArray(xs) ? [...new Set(xs.map(rn))] : xs;
+  if (S.prefs?.axes) S.prefs.axes = [...new Set(S.prefs.axes.map(k => k.startsWith("tag:") ? "tag:" + rn(k.slice(4)) : k))];
+  for (const l of S.likes || []) { l.tags = rnList(l.tags); for (const r of l.roles || []) r.tags = rnList(r.tags); }
+  for (const rv of S.reviews || []) for (const r of Object.values(rv.rows || {})) if (r) r.tags = rnList(r.tags); }
 let SAVE_HOOK = null;  // 저장할 때마다 부르는 것(티켓 기록 보내기 예약). 기록 코드가 아래에서 채운다
 const saveRaw = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
 const save = () => { saveRaw(); if (SAVE_HOOK) SAVE_HOOK(); };
@@ -705,8 +711,7 @@ const onboardBody = (step, embed = false, w = "", base = "#taste") => {  // base
   const favBox = (k, title, sub, id, list, cls) => `<div class="card favbox ${cls}"><h3>${title}</h3><p class="favsub small muted">${sub}</p><div class="row"><input id="${id}" list="actors" placeholder="검색어를 입력하세요" aria-label="${title} 이름 검색" autocomplete="off" style="flex:1"><button class="chip" data-act="addFav"${k ? ` data-k="${k}"` : ""}>추가</button></div>
       <div class="chips">${list.map(a => `<button class="chip x on" data-act="rmFav" data-a="${esc(a)}" aria-label="${esc(actorLabel(a))} 빼기">${esc(actorLabel(a))} ×</button>`).join("")}</div></div>`;
   return `${head}
-    <p class="muted small">여러 명 골라도 돼요. 그 배우가 나오는 작품을 열면 캘린더에서 미리 체크돼 있어요.</p>
-    <p class="tiny muted">칸에 검색어를 입력하면 배우 이름이 나와요. 이름 일부만 써도 돼요.</p>
+    <p class="muted small">입력하면 조합 추천에 반영돼요</p>
     <datalist id="actors">${actorOptions().map(a => `<option value="${esc(a)}">`).join("")}</datalist>
     <div class="favrow">${favBox("b", "본진 배우", "가장 좋아하는 배우", "favB", bon, "bon")}
     ${favBox("", "애정 배우", "그 밖에 좋아하는 배우", "fav", love, "love")}
@@ -870,7 +875,7 @@ const ONBOARD_QS = [
   {id: "sing", area: "노래", q: "노래를 들을 때 특히 중요한 점은 무엇인가요?", opts: [["시원한 고음", "고음"], ["공간을 채우는 성량", "성량"], ["또렷한 가사", "딕션"], ["흔들림 없는 발성", "발성 안정성"], ["감정이 전해지는 노래", "감정 전달형"], ["섬세한 강약·호흡", "섬세한 가창 표현"]]},
   {id: "act", area: "연기", q: "어떤 감정 표현에 더 끌리나요?", opts: [["감정을 크고 강하게 드러내는", "감정 크게 표현"], ["감정을 눌러 담는", "절제된 연기"], ["유쾌하고 코믹한", "코믹 연기"]]},
   {id: "body", area: "몸", opt: true, q: "움직임에서는 무엇을 보고 싶나요?", opts: [["춤·안무", "춤·안무 표현"], ["시원한 액션", "액션 표현"], ["자세·걸음·손짓의 디테일", "자세·동작 디테일"], ["표정·시선의 디테일", "표정·시선 디테일"]]},
-  {id: "char", area: "연기", opt: true, q: "인물을 어떤 방식으로 보여주면 좋겠나요?", opts: [["실제 사람처럼 자연스럽게", "현실적·생활감"], ["개성과 욕망을 선명하게", "강한 캐릭터성"], ["작은 표정과 몸짓으로 내면의 변화를", "섬세한 내면형"], ["상대 인물과의 관계를 중심으로", "관계 중심"]]},
+  {id: "char", area: "연기", opt: true, q: "인물을 어떤 방식으로 보여주면 좋겠나요?", opts: [["실제 사람처럼 자연스럽게", "현실적 설득형"], ["개성과 욕망을 선명하게", "강한 캐릭터성"], ["작은 표정과 몸짓으로 내면의 변화를", "섬세한 내면형"], ["상대 인물과의 관계를 중심으로", "관계 중심"]]},
   {id: "combo", area: "", opt: true, q: "두 배우가 함께할 때 무엇이 가장 중요한가요?", opts: [["노래의 어우러짐", "음색·보컬 조화"], ["주고받는 연기", "연기합·티키타카"], ["감정선 연결", "감정선 조화"], ["이미지·분위기", "이미지·분위기 조화"], ["서로 다른 매력의 대비", "대비 시너지"]]},
 ];
 const PRIO = [["노래", "노래"], ["연기", "연기·캐릭터 표현"], ["몸", "춤·몸짓"], ["고루", "골고루"]];
@@ -1245,7 +1250,8 @@ const planDay = d => { PCAL_M = d.slice(0, 7);  // 캘린더로 돌아가면 이
 V.tag = i => { const x = S.plans[+i]; if (!x) return V.plans(); return V.review(x.work, x.date, x.time, "plan"); };
 let RV_MORE = {};  // 「＋ 추가하기」를 펼친 배역(저장 안 함)
 // 관람 리뷰 태그(사용자 요청 2026-10-29): 처음 보이는 건 태그 사전의 배우-가창·배우-연기, 「＋ 추가하기」로 배우-캐릭터 해석·배우-신체 표현
-const RV_BASE_GROUPS = ["가창", "연기"], RV_MORE_GROUPS = ["캐릭터 해석", "신체 표현"];
+const RV_BASE_GROUPS = ["가창", "연기"], RV_MORE_GROUPS = ["캐릭터 해석", "신체 표현", "공통"];  // 공통(2026-11-05): 무대 장악력·회차 안정감
+const RV_GROUP_NAME = {"공통": "무대 전반"};  // 칩 묶음 제목(사전 대분류 '배우 · 공통'은 화면에서 '무대 전반')
 const rvGroups = (D, names) => (D.actorTagGroups || []).filter(([g]) => names.includes(g.replace("배우 · ", "")));
 const rvDraft = (work, date, time, entry) => {  // 이어서 쓰는 초안. 이미 남긴 리뷰가 있으면 그걸 열어 고친다
   const k = [work, date, time].join("|"); if (S.proto?.rdraft?.k === k) return S.proto.rdraft;
@@ -1266,7 +1272,7 @@ V.review = (work, date, time, entry = "log") => {
       more = RV_MORE[role] || add.some(([, ts]) => ts.some(t => r?.tags.includes(t)));  // 추가 태그를 골라 둔 배역은 펼친 채로
     const others = rvRoleCands(D, rv, role).filter(b => b !== a);
     const tagBtn = t => { const on = r.tags.includes(t); return `<button type="button" class="chip ${on ? "on" : ""}" data-act="rvTag" data-r="${R}" data-t="${esc(t)}" aria-pressed="${on}">${esc(reviewLabel(t))}</button>`; };
-    const group = ([g, ts]) => `${g ? `<p class="tiny muted">${esc(g.replace("배우 · ", ""))}</p>` : ""}<div class="chips">${ts.map(tagBtn).join("")}</div>`;
+    const group = ([g, ts]) => `${g ? `<p class="tiny muted">${esc(RV_GROUP_NAME[g.replace("배우 · ", "")] || g.replace("배우 · ", ""))}</p>` : ""}<div class="chips">${ts.map(tagBtn).join("")}</div>`;
     const tags = r && r.rate !== "meh" ? `<p class="tiny muted">${r.rate === "good" ? "어떤 점이 좋았나요?" : "어떤 점이 아쉬웠나요?"} <span>(${REVIEW_MAX}개까지)</span></p>
       ${base.map(group).join("")}${more ? add.map(group).join("") : add.length ? `<div class="chips"><button type="button" class="chip x" data-act="rvMore" data-r="${R}" aria-expanded="false">＋ 추가하기</button></div>` : ""}` : "";
     return `<div class="rvrow"><div class="between"><span>${role === a ? `<b>${esc(a)}</b>` : `<b>${R}</b> · ${esc(a)}`}</span>${others.length ? `<button type="button" class="chip x" data-act="rvSwapOpen" data-r="${R}">다른 배우였어요</button>` : ""}</div>
@@ -1380,6 +1386,12 @@ const timePick = (cur, sel) => { const [h, m] = (cur || "19:00").split(":");
   return `<div class="lkt"><span class="tiny muted">시각</span><div class="tpick"><select id="${sel}h" aria-label="시">${HOURS.map(x => `<option value="${x}"${x === h ? " selected" : ""}>${hourLabel(x)}</option>`).join("")}</select>
     <select id="${sel}m" aria-label="분">${["00", "30"].map(x => `<option value="${x}"${x === m ? " selected" : ""}>${x}분</option>`).join("")}</select></div></div>`; };
 // 배우 이름 칸(사용자 요청 2026-11-04): 띄어쓰기·쉼표·가운뎃점·빗금으로 나눠 여러 명을 한 번에. 한 명당 20자까지
+const pickNames = (D, s) => { const out = [];  // 배우 이름 입력 칸 공통(사용자 요청 2026-11-05): 본 공연 기록하기처럼 여러 명을 한 번에
+  for (const part of String(s || "").split(/[,，、;|/]+/).map(x => x.trim()).filter(Boolean)) {
+    if (/\(\d{4}/.test(part)) { out.push(actorPick(part)); continue; }
+    const t = part.split(/\s+/).filter(Boolean);
+    for (let i = 0; i < t.length; i++) { const two = i + 1 < t.length ? t[i] + " " + t[i + 1] : ""; if (two && knownActor(D, two)) { out.push([two, ""]); i++; } else out.push([t[i].slice(0, 20), ""]); } }
+  return out.filter(([v], i, a) => v && a.findIndex(([w]) => w === v) === i); };
 const splitNames = s => [...new Set(String(s || "").split(/[\s,，、·/;|]+/).map(a => a.trim().slice(0, 20)).filter(Boolean))];
 let LOG_DATE = "";  // 캘린더 날짜에서 들어온 본 공연 기록하기의 날짜(저장 안 함)
 let LM = {title: "", venue: "", date: "", time: "19:00", cast: []};  // 직접 기록 초안(저장 안 함). 시각 기본 오후 7:00
@@ -1556,12 +1568,17 @@ const duelBonus = (S, work, cast) => { let n = 0; for (const d of duelsOf(S, wor
 const hasBatchim = w => { const c = [...String(w).trim()].pop(), k = c ? c.charCodeAt(0) : 0; return k >= 0xAC00 && k <= 0xD7A3 && (k - 0xAC00) % 28 !== 0; };
 const josa = (w, withB, noB) => w + (hasBatchim(w) ? withB : noB);  // josa("음색", "이", "가") → 음색이 · josa("연기", "이", "가") → 연기가
 const TAG_WORDS = {
+  // 2026-11-05 사전에 더한 7개
+  "넘버 소화력": ["어려운 넘버도 무리 없는 소화력", "어려운 넘버도 무리 없이 소화하는"], "샤우팅·록 발성": ["시원한 샤우팅과 록 발성", "록 발성과 샤우팅이 시원한"],
+  "대사 톤": ["대사의 말투와 억양", "대사의 말투와 억양이 돋보이는"], "순수·사랑스러운 해석": ["순수하고 사랑스러운 해석", "인물을 순수하고 사랑스럽게 그리는"],
+  "성숙한 해석": ["어른스럽고 성숙한 해석", "인물을 성숙하게 그리는"], "회차 안정감": ["회차마다 기복 없는 안정감", "언제 봐도 기복 없는"],
+  "무대 장악력": ["무대를 채우는 존재감", "무대를 장악하는"],
   "맑음": ["맑고 깨끗한 음색", "맑고 깨끗한 음색을 가진"], "부드러움": ["부드럽고 따뜻한 음색", "부드럽고 따뜻한 음색을 가진"], "허스키": ["허스키하고 거친 질감의 음색", "허스키하고 거친 질감의 음색을 가진"],
   "묵직한 음색": ["낮고 묵직한 음색", "낮고 묵직한 음색을 가진"], "성량": ["풍부한 성량", "풍부한 성량이 강점인"], "고음": ["안정적인 고음", "안정적인 고음이 강점인"], "딕션": ["또렷한 딕션", "또렷한 딕션이 강점인"],
   "감정 전달형": ["감정이 잘 전달되는 노래", "노래로 감정을 잘 전달하는"], "섬세한 가창 표현": ["섬세한 가창 표현", "섬세하게 노래하는"], "개성 있는 음색": ["개성 있는 음색", "개성 있는 음색을 가진"],
   "발성 안정성": ["흔들림 없는 발성", "흔들림 없는 발성이 강점인"], "가성 표현": ["가성을 살린 표현", "가성을 잘 활용하는"], "선명하고 쨍한 음색": ["선명하고 쨍한 음색", "선명하고 쨍한 음색을 가진"],
   "감정 크게 표현": ["감정을 크게 드러내는 연기", "감정을 크게 드러내는 연기가 돋보이는"], "절제된 연기": ["절제된 연기", "감정을 절제하는 연기가 돋보이는"], "코믹 연기": ["코믹 연기", "코믹 연기가 돋보이는"],
-  "배역 싱크로": ["배역과 잘 맞는 분위기", "배역과 잘 어울리는"], "현실적·생활감": ["생활감 있는 현실적인 연기", "생활감 있는 현실적인 연기가 돋보이는"], "강한 캐릭터성": ["선명하고 강렬한 캐릭터", "캐릭터가 선명하고 강렬한"],
+  "배역 싱크로": ["배역과 잘 맞는 분위기", "배역과 잘 어울리는"], "강한 캐릭터성": ["선명하고 강렬한 캐릭터", "캐릭터가 선명하고 강렬한"],
   "섬세한 내면형": ["섬세한 내면 연기", "인물의 내면을 섬세하게 그리는"], "상징적·초월적": ["상징적이고 초월적인 존재감", "상징적이고 초월적인 존재감을 지닌"], "철학적·해석 여지": ["해석의 여지가 큰 인물", "여러 해석의 여지를 남기는"],
   "관계 중심": ["상대와의 관계를 살리는 연기", "상대와의 관계를 잘 살리는"], "감정 몰입형": ["깊이 몰입하는 감정 연기", "감정에 깊이 몰입하는"], "현실적 설득형": ["납득되는 현실적인 연기", "행동에 설득력이 있는"],
   "춤·안무 표현": ["춤과 안무 표현", "춤과 안무 표현이 좋은"], "액션 표현": ["시원한 액션", "시원한 액션을 보여 주는"], "자세·동작 디테일": ["자세와 동작의 디테일", "자세와 동작의 디테일이 살아 있는"],
@@ -3022,6 +3039,7 @@ const vopenTap = d => {  // 영상 ID 가 있는 썸네일을 눌렀을 때: 유
   SHEET = {kind: "video", work: d.work, role: d.role || "", a: d.a, vid: d.vid}; renderSheet();
 };
 const vAfter = sel => { if (SHEET?.kind === "video") { SHEET.dirty = true; SHEET.focus = sel; renderSheet(); } else route(); };  // 모달 안에서 답·칩·담기를 누르면 모달만 다시 그린다(닫을 때 뒤 화면을 새로 그린다)
+const NAME_INPUTS = ["favB", "fav", "avoidIn", "acAvoid", "lkadd", "lmadd"];  // 배우 이름을 직접 쓰는 칸
 function route() {
   const h = decodeURIComponent(location.hash.slice(1) || entryRoute(S.prefs, S).slice(1));  // 첫 화면: 취향을 한 번도 안 다룬 사람은 취향폼, 아니면 홈
   if (/^(taste|onboard)\/3$/.test(h)) { history.replaceState(null, "", "#taste/2"); return route(); }  // 옛 3/3(기대 질문)은 이제 2/2
@@ -3034,7 +3052,9 @@ function route() {
   if (location.hash !== lastHash && S.proto?.flash) delete S.proto.flash;
   if (location.hash !== lastHash) PF_DRAFT = {};  // 티켓 칸 초안은 그 화면에서만  // 평가 안내는 그 화면에서만
   const keepBar = document.querySelector(".afilter")?.scrollLeft || 0, keepRows = [...document.querySelectorAll(".prow")].map(x => x.scrollLeft);  // 지역 칩 줄·추천 줄의 가로 스크롤 위치(다시 그려도 그 자리 유지)  // 지역 칩 줄의 가로 스크롤 위치(다시 그려도 그 자리 유지)
-  CTA = null; const view = $("#view"); view.innerHTML = (V[name] || V.home)(...args); view.dataset.view = V[name] ? name : "home";
+  const drafts = location.hash === lastHash ? NAME_INPUTS.map(id => [id, $("#" + id)?.value || ""]).filter(([, v]) => v) : [];  // 배우 이름 칸에 쓰던 글자(사용자 요청 2026-11-05: 등록된 이름을 지워도 쓰던 이름이 사라지지 않게)
+  CTA = null; const view = $("#view"); view.innerHTML = (V[name] || V.home)(...args);
+  for (const [id, v] of drafts) { const el = $("#" + id); if (el && !el.value) el.value = v; } view.dataset.view = V[name] ? name : "home";
   const cta = $("#cta"); if (CTA) { cta.hidden = false; cta.innerHTML = `<button class="btn" data-act="${CTA.act}">${esc(CTA.text)}</button>`; } else cta.hidden = true;  // 폰에서는 화면 아래 고정 버튼(넓은 화면은 덩어리 안 버튼)
   $("#back").hidden = ["home", "works", "taste", "onboard", "me"].includes(name) || (name === "plans" && !args.length);  // 캘린더 날짜 화면(#plans/날짜)에는 뒤로
   const tab = {plans: "plans", tag: "plans", review: "plans", log: "plans", ticket: "plans", me: "me", privacy: "me"}[name] || "home";
@@ -3105,9 +3125,12 @@ document.addEventListener("click", e => {
       const r = setActorCond(D, S, d.work, d.a, k); if (r === false) { toast("피하고 싶은 배우예요. '내 취향'에서 바꿀 수 있어요"); return; } if (r === null) return; save(); route(); break; }
     case "acMove": if (moveActor(D, S, d.work, d.a, +d.d)) { save(); route(); } break;
     case "acReset": resetActorConds(S, d.work); save(); route(); break;
-    case "acAvoidAdd": { const v = ($("#acAvoid")?.value || "").trim(); if (!v) return; const r = setActorCond(D, S, d.work, v, "avoid"); if (r === null) { toast("이 작품에 나오는 배우만 고를 수 있어요"); return; } save(); route(); break; }
+    case "acAvoidAdd": { const el = $("#acAvoid"), ns = pickNames(D, el?.value).map(([v]) => v); if (!ns.length) return; const miss = ns.filter(v => setActorCond(D, S, d.work, v, "avoid") === null);
+      el.value = miss.join(", "); save(); route(); if (miss.length) toast(`${miss.join("·")}: 이 작품에 나오는 배우만 고를 수 있어요`); $("#acAvoid")?.focus(); break; }
     case "wtReset": { const st = S.cal[d.w]; if (st) { st.edited = false; delete st.prio; followBase(st, S.prefs?.axes || []); } save(); route(); break; }  // 평소 취향으로 되돌리기
-    case "addAvoid": { const [v, born] = actorPick($("#avoidIn").value), P = prefsOf(); if (!v) return; if (born) (P.born ||= {})[v] = born; P.favs = P.favs.filter(a => a !== v); if (P.must) P.must = P.must.filter(a => a !== v); if (!(P.avoid ||= []).includes(v)) P.avoid.push(v); save(); route(); $("#avoidIn")?.focus(); break; }
+    case "addAvoid": { const el = $("#avoidIn"), ns = pickNames(D, el?.value), P = prefsOf(); if (!ns.length) return;
+      for (const [v, born] of ns) { if (born) (P.born ||= {})[v] = born; P.favs = P.favs.filter(a => a !== v); if (P.must) P.must = P.must.filter(a => a !== v); if (P.bonjin) P.bonjin = P.bonjin.filter(a => a !== v); if (!(P.avoid ||= []).includes(v)) P.avoid.push(v); }
+      el.value = ""; save(); route(); $("#avoidIn")?.focus(); break; }
     case "rmAvoid": { const P = prefsOf(); P.avoid = (P.avoid || []).filter(a => a !== d.a); save(); route(); break; }
     case "tasteSkipAll": { prefsOf(); save(); location.hash = "#home"; break; }  // 취향을 한 번도 안 고르고 전체 목록으로
     case "meDone": { delete prefsOf().must; save(); snapTaste(); CARD_BACK = false; location.hash = "#home"; if (hasTaste(S.prefs)) toast("취향을 저장했어요"); break; }  // 내 취향 확인 버튼 → 홈 취향 카드(앞면)
@@ -3188,9 +3211,11 @@ document.addEventListener("click", e => {
     case "dbgToggle": DBG_OPEN = !DBG_OPEN; renderDebug(); break;
     case "areaTab": { if (d.t === "pickle" || regionTabs(allShows(D, today())).some(([k]) => k === d.t)) { (S.proto ||= {}).areaTab = d.t; HOME_ROWS = 5; HOME_Q = ""; save(); route(); } break; }  // 홈 전체 목록의 구분 버튼(검색어는 비운다)
     case "homeMore": { HOME_ROWS += 5; const g = $("#homegrid"); if (g) g.innerHTML = homeGrid(today()); break; }  // 5줄씩 더(화면 전체를 다시 그리지 않아 스크롤 위치 그대로)
-    case "addFav": { const id = d.k === "b" ? "#favB" : "#fav", [v, born] = actorPick($(id)?.value), P = prefsOf(); if (!v) return; if (born) (P.born ||= {})[v] = born; if (P.avoid) P.avoid = P.avoid.filter(a => a !== v); if (!P.favs.includes(v)) { P.favs.push(v); if (!knownActor(D, v)) noteRequest(v); }
-      P.bonjin = (P.bonjin || []).filter(a => a !== v); if (d.k === "b") P.bonjin.push(v); if (!P.bonjin.length) delete P.bonjin;  // 같은 배우를 다른 칸에 넣으면 그 칸으로 옮긴다
-      save(); route(); $(id)?.focus(); break; }
+    case "addFav": { const id = d.k === "b" ? "#favB" : "#fav", el = $(id), ns = pickNames(D, el?.value), P = prefsOf(); if (!ns.length) return;
+      for (const [v, born] of ns) { if (born) (P.born ||= {})[v] = born; if (P.avoid) P.avoid = P.avoid.filter(a => a !== v); if (!P.favs.includes(v)) { P.favs.push(v); if (!knownActor(D, v)) noteRequest(v); }
+        P.bonjin = (P.bonjin || []).filter(a => a !== v); if (d.k === "b") P.bonjin.push(v); }  // 같은 배우를 다른 칸에 넣으면 그 칸으로 옮긴다
+      if (!P.bonjin.length) delete P.bonjin;
+      el.value = ""; save(); route(); $(id)?.focus(); break; }
     case "likeAsk": likeOpen.add(d.a); location.hash = "#me"; setTimeout(() => [...document.querySelectorAll(".likebox")].find(x => x.dataset.a === d.a)?.scrollIntoView(), 60); break;  // 홈의 '어떤 점이 좋아요?' → 내 취향의 그 배우 입력 칸을 열어 둔다
     case "rmFav": { const P = prefsOf(); P.favs = P.favs.filter(a => a !== d.a); if (P.must) P.must = P.must.filter(a => a !== d.a); if (P.bonjin) P.bonjin = P.bonjin.filter(a => a !== d.a); save(); route(); break; }
     case "setGrade": { const P = prefsOf(); P.grade = P.grade === d.g ? "" : d.g; save(); route(); break; }
@@ -3254,8 +3279,8 @@ document.addEventListener("click", e => {
     case "lkCast": LK.cast = LK.cast.includes(d.a) ? LK.cast.filter(a => a !== d.a) : [...LK.cast, d.a]; route(); break;
     case "lkRole": { if (LK.rc[d.r] === d.a) delete LK.rc[d.r]; else LK.rc[d.r] = d.a; LK.auto = false; route(); break; }  // 배역마다 한 명(다시 누르면 뺀다)
     case "lkTime": { const lc = logCastOf(LK.id); LK.time = d.t; if (lc) lkFill(lc); route(); break; }  // 회차표의 그날 회차 시각 칩
-    case "lkAdd": { const el = $("#lkadd"), as = splitNames(el?.value); if (!as.length) { el?.focus(); return; } LK.cast = [...new Set([...LK.cast, ...as])]; route(); $("#lkadd")?.focus(); break; }
-    case "lmAdd": { const el = $("#lmadd"), as = splitNames(el?.value); if (!as.length) { el?.focus(); return; } LM.cast = [...new Set([...LM.cast, ...as])]; route(); $("#lmadd")?.focus(); break; }
+    case "lkAdd": { const el = $("#lkadd"), as = pickNames(D, el?.value).map(([v]) => v); if (!as.length) { el?.focus(); return; } LK.cast = [...new Set([...LK.cast, ...as])]; el.value = ""; route(); $("#lkadd")?.focus(); break; }
+    case "lmAdd": { const el = $("#lmadd"), as = pickNames(D, el?.value).map(([v]) => v); if (!as.length) { el?.focus(); return; } LM.cast = [...new Set([...LM.cast, ...as])]; el.value = ""; route(); $("#lmadd")?.focus(); break; }
     case "lmDel": LM.cast = LM.cast.filter(a => a !== d.a); route(); break;
     case "lmGo": { const title = LM.title.trim(), from = today(); if (!LM.cast.length) return;
       if (!title) { toast("공연 이름을 적어 주세요"); $("#lmTitle")?.focus(); return; }
