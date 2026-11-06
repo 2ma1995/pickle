@@ -542,7 +542,7 @@ a.wcard:hover{border-color:var(--hl)}
 <div class="sheet-bg" id="sheetbg" data-noshot></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" data-noshot></div>
 
-<script src="data.js?v=202611061327"></script>
+<script src="data.js?v=202611061606"></script>
 <script>
 const D = window.PICKLE_DATA;
 const $ = (s, el = document) => el.querySelector(s);
@@ -556,13 +556,14 @@ let S = {prefs: null, query: null, cal: {}, plans: [], tags: [], votes: [], like
 try { S = Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
 // 사전에서 빠지거나 이름이 바뀐 태그(2026-11-05: '현실적·생활감'은 사전에서 뺐다 → '현실적 설득형'). 저장된 취향·좋아하는 배우·관람 리뷰의 태그를 새 이름으로
 const TAG_RENAMED = {"현실적·생활감": "현실적 설득형"};
-{ const rn = t => TAG_RENAMED[t] || t, rnList = xs => Array.isArray(xs) ? [...new Set(xs.map(rn))] : xs;
+const renameTags = S => { const rn = t => TAG_RENAMED[t] || t, rnList = xs => Array.isArray(xs) ? [...new Set(xs.map(rn))] : xs;  // 서버에서 받은 상태(동기화)에도 다시 쓴다
   if (S.prefs?.axes) S.prefs.axes = [...new Set(S.prefs.axes.map(k => k.startsWith("tag:") ? "tag:" + rn(k.slice(4)) : k))];
   for (const l of S.likes || []) { l.tags = rnList(l.tags); for (const r of l.roles || []) r.tags = rnList(r.tags); }
-  for (const rv of S.reviews || []) for (const r of Object.values(rv.rows || {})) if (r) r.tags = rnList(r.tags); }
-let SAVE_HOOK = null;  // 저장할 때마다 부르는 것(티켓 기록 보내기 예약). 기록 코드가 아래에서 채운다
+  for (const rv of S.reviews || []) for (const r of Object.values(rv.rows || {})) if (r) r.tags = rnList(r.tags); };
+renameTags(S);
+let SAVE_HOOK = null, SYNC_HOOK = null;  // 저장할 때마다 부르는 것. SAVE_HOOK: 티켓 기록 보내기 예약(기록 코드가 채움) · SYNC_HOOK: 내 데이터 서버 저장 예약(동기화 코드가 채움, 꺼져 있으면 null)
 const saveRaw = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
-const save = () => { saveRaw(); if (SAVE_HOOK) SAVE_HOOK(); };
+const save = () => { saveRaw(); if (SAVE_HOOK) SAVE_HOOK(); if (SYNC_HOOK) SYNC_HOOK(); };
 
 // 관람 후 리뷰의 좋았던 점을 추천 데이터에 합친다 (docs/261027_2 12절, 결정 49)
 // 같은 배우·태그를 서로 다른 사용자 2명 이상이 남겼을 때만(D.userReviews = 서버가 모아 준 다른 사용자 리뷰 행 + 이 기기 리뷰). 이 기기 혼자 남긴 태그는 기록만 하고 점수에 쓰지 않는다
@@ -1054,7 +1055,7 @@ const actorCredits = a => { const out = new Map();
   for (const [w, rs] of Object.entries(D.roles || {})) for (const r of rs) if (r.cast.includes(a)) add(w, r.role);
   const shows = [...(D.currentShows || []), ...(D.pastShows || [])];
   for (const [id, lc] of Object.entries(D.logCasts || {})) { const s = shows.find(x => x.id === id); if (s) for (const [r, as] of lc.roles) if (as.includes(a)) add(showTitle(s.title), r); }
-  for (const r of ((D.actorProfiles || {})[a]?.role || [])) add(r.work, r.role);
+  for (const r of ((D.actorProfiles || {})[a]?.role || [])) if (r.work !== "다른 작품") add(r.work, r.role);  // '다른 작품'은 태깅 시트에서 작품을 안 밝힌 근거(배역 칸은 지금 배역)라 출연작이 아니다
   for (const s of shows) if ((s.cast || []).includes(a)) add(showTitle(s.title));
   return [...out.values()]; };
 // 좋아하는 배우마다 접히는 설문 상자(내 취향 · 첫 화면 3/3 단계 공용)
@@ -1426,9 +1427,29 @@ const logKopis = id => {
     <button class="btn" data-act="lkGo" ${n ? "" : "disabled"}>${n ? `배우 ${n}명 평가하기` : "배우를 골라 주세요"}</button></div>`;
 };
 // 내 취향 탭(사용자 요청 2026-11-03): 맨 위 줄글 요약 + [수정하기]. 누르면(#me/1) 요약 아래로 홈 [수정하기](#taste/1)와 같은 취향 고르기 1/2(배우) → 2/2(기대, #me/2) → 홈 카드가 펼쳐진다
+// 내 데이터 카드(동기화를 켰을 때만): 저장 상태 한 줄 · 계정 연결(구글·카카오) · 로그아웃 · 내 데이터 모두 지우기. 지우기·로그아웃은 한 번 더 물어본다(ACC_ASK)
+let ACC_ASK = "", ACC_MSG = "";  // ACC_MSG: 로그인 다녀온 결과("elsewhere:google" 이미 다른 기록에 연결된 계정 · "fail" 취소·실패)
+const LOGIN_NAMES = {google: "구글", kakao: "카카오"};
+const accountCard = () => {
+  if (!SYNC) return "";
+  const st = SYNC.status(), login = SYNC_CFG.login, nm = p => LOGIN_NAMES[p] || p;
+  const line = {loading: "불러오는 중이에요…", saving: "저장하는 중이에요…", ok: "이 기기와 서버에 저장돼 있어요.", offline: "인터넷에 연결되면 서버에 저장해요. 이 기기에는 저장돼 있어요.", error: "서버에 저장하지 못했어요. 이 기기에는 저장돼 있고, 다음에 열 때 다시 시도해요."}[st.state] || "";
+  const ep = ACC_MSG.startsWith("elsewhere:") ? ACC_MSG.slice(10) : "";
+  const msg = ep ? `<div class="ask"><p class="small"><b>이 ${nm(ep)} 계정은 이미 다른 PICKLE 기록과 연결돼 있어요.</b> 그 계정으로 불러오면 이 기기에 있는 기록도 합쳐져요.</p><div class="nbgrid"><button class="nb" data-act="accSignIn" data-p="${esc(ep)}">${nm(ep)} 계정으로 불러오기</button><button class="nb" data-act="accMsg">닫기</button></div></div>`
+    : ACC_MSG === "fail" ? `<p class="small muted">계정 연결을 마치지 못했어요. 다시 해 주세요. <button class="chip x" data-act="accMsg">닫기</button></p>` : "";
+  const who = st.anon ? `<p class="small">${login.length ? "계정을 연결하면 브라우저를 지우거나 다른 기기에서도 이어서 쓸 수 있어요. 연결하지 않으면 이 브라우저에서만 찾을 수 있어요." : "이 브라우저에 연결돼 있어요. 브라우저 데이터를 지우면 되찾을 수 없어요."}</p>
+      ${login.length ? `<div class="chips">${login.map(p => `<button class="btn" data-act="accLink" data-p="${p}">${nm(p)} 계정 연결하기</button>`).join("")}</div>
+      <p class="tiny muted">이미 연결해 둔 계정이 있나요? ${login.map(p => `<button class="chip x" data-act="accSignIn" data-p="${p}">${nm(p)}로 불러오기</button>`).join(" ")}</p>` : ""}`
+    : `<p class="small">${esc(st.providers.map(nm).join("·") || "계정")} 계정${st.email ? ` (${esc(st.email)})` : ""}과 연결돼 있어요. 다른 기기에서 같은 계정으로 불러오면 이어서 쓸 수 있어요.</p>`;
+  const ask = ACC_ASK === "delete" ? `<div class="ask"><p class="small"><b>내 데이터를 모두 지울까요?</b> 서버에 저장된 취향·티켓·리뷰와 보낸 기록, 연결한 계정 정보, 이 기기의 데이터까지 지워요. 되돌릴 수 없어요.</p><div class="nbgrid"><button class="nb" data-act="accDelete">모두 지우기</button><button class="nb" data-act="accAsk">그만두기</button></div></div>`
+    : ACC_ASK === "signout" ? `<div class="ask"><p class="small"><b>로그아웃할까요?</b> 이 기기의 데이터는 지우고, 서버에 저장된 것은 그대로 둬요. 같은 계정으로 다시 불러올 수 있어요.</p><div class="nbgrid"><button class="nb" data-act="accSignOut">로그아웃</button><button class="nb" data-act="accAsk">그만두기</button></div></div>` : "";
+  return `<div class="card" id="acct"><h3>내 데이터</h3><p class="tiny muted" role="status">${line}</p>${msg}${who}
+    <div class="nbgrid">${st.anon ? "" : `<button class="nb" data-act="accAsk" data-k="signout">로그아웃</button>`}<button class="nb" data-act="accAsk" data-k="delete">내 데이터 모두 지우기</button></div>${ask}</div>`;
+};
 V.me = step => {
   const rows = exportRows(), open = step === "1" || step === "2";
   return `<div class="one">${SURVEY_BANNER}${tasteSum(S.prefs || {}, open, "#me/1", "#me")}${open ? onboardBody(step, false, "", "#me") : ""}
+    ${open ? "" : accountCard()}
     ${rows.length && debugOn() ? `<div class="card"><h3>팀 시트로 내보내기</h3><p class="small muted">'태그 기록' 탭 맨 아래에 붙여 넣는 TSV ${rows.length}줄이에요.</p><button class="btn ghost" data-act="copyTsv">TSV 복사</button><pre>${esc(rows.map(r => r.join("\t")).join("\n"))}</pre></div>` : ""}
    </div>`;
 };
@@ -2239,11 +2260,12 @@ function makeTracker(env, cfg = TRACK_CFG) {
   }
   const live = () => cfg.mode === "live" && /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(cfg.url || "") && !!cfg.key;
   const takeBatch = q => { const out = []; let n = 0; for (const r of q) { const b = bytes(JSON.stringify(row(r))); if (out.length >= cfg.batch || (out.length && n + b > cfg.keepaliveBytes)) break; out.push(r); n += b; } return out; };
-  const keyHeaders = () => ({apikey: cfg.key, ...(isJwt(cfg.key) ? {Authorization: `Bearer ${cfg.key}`} : {})});  // 새 형식 공개 키(sb_publishable_)는 JWT 가 아니라 Authorization 에 안 넣는다. 보내기·읽기 모두 같은 규칙
+  // 로그인 토큰(동기화를 켰을 때 env.token 이 준다)이 있으면 그것으로 보낸다 → 서버가 events.user_id 를 그 사람으로 채운다(docs/backend_plan 1단계). 없으면 예전처럼 공개 키로
+  const keyHeaders = (tok = env.token ? env.token() : null) => ({apikey: cfg.key, ...(tok && isJwt(tok) ? {Authorization: `Bearer ${tok}`} : isJwt(cfg.key) ? {Authorization: `Bearer ${cfg.key}`} : {})});  // 새 형식 공개 키(sb_publishable_)는 JWT 가 아니라 Authorization 에 안 넣는다. 보내기·읽기 모두 같은 규칙
   const buildRequest = batch => ({url: `${cfg.url}/rest/v1/${cfg.table}`, init: {method: "POST", keepalive: true,
     headers: {"Content-Type": "application/json", ...keyHeaders(), Prefer: "return=minimal"},
     body: JSON.stringify(batch.map(row))}});
-  const readRequest = path => ({url: `${cfg.url}/rest/v1/${path}`, init: {method: "GET", headers: keyHeaders()}});  // 공개 읽기 표(actor_trait_votes)만 읽는다. 익명 ID 는 안 보낸다
+  const readRequest = path => ({url: `${cfg.url}/rest/v1/${path}`, init: {method: "GET", headers: keyHeaders(null)}});  // 공개 읽기 표(actor_trait_votes)만 읽는다. 익명 ID 는 안 보낸다
   async function flush() {  // 연습 모드(또는 주소·키가 없을 때)는 안 보내고 큐를 그대로 둔다. 켜면 묶음씩 보내고 성공한 만큼만 지운다
     const q = readQ();
     if (!q.length || isOff()) return {sent: 0};
@@ -2286,9 +2308,137 @@ const cleanVotes = (rows, V) => {
   return out;
 };
 // </track>
+// <sync>
+// 내 데이터 동기화(docs/backend_plan_2026-11-06.md 1단계). 화면은 지금처럼 이 기기(localStorage)로 바로 그리고, 뒤에서 Supabase 의 user_state(유저 한 명 = 한 줄, RLS 로 자기 줄만)와 맞춘다.
+// 켜는 법: .env 또는 Actions 변수 SUPABASE_SYNC=<시행일 YYYY-MM-DD> → data.js 의 window.PICKLE_TRACK.sync. 로그인 버튼은 SUPABASE_LOGIN=google(,kakao). 꺼져 있으면 이 코드는 아무것도 하지 않는다(라이브러리도 안 받는다)
+// 유저: 처음 열면 Supabase 익명 로그인으로 보이지 않게 만든다(가입 없음). 원하는 사람만 구글·카카오를 연결해서 다른 기기에서도 이어 쓴다
+const SB_JS = {src: "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js", integrity: "sha384-uteMfOloLDGt042uDz+xHGF3ym63/WQ6rFq7murQRG8Ih7QrXGEGNtWd8688sb4O"};  // 버전 고정 + 무결성 해시(받은 파일이 바뀌면 브라우저가 실행하지 않는다)
+const SYNC_META = "pickle_sync", AFTER_AUTH = "pickle_after_auth";  // SYNC_META: {uid, rev(서버 판 번호), dirty(서버에 아직 안 올린 변경)} · AFTER_AUTH: 로그인하러 나갈 때 돌아올 화면과 제공자
+// 서버에 올리지 않는 것(화면 상태·이 기기 일시 값). 그 밖의 S 는 모두 올린다(새 칸이 생겨도 자동으로 따라가게 '빼는 목록' 방식). 앨범 포스터 사진(pickle_posters)은 S 밖이라 안 올라간다
+const LOCAL_ONLY = ["query", "plansTab", "draft"], LOCAL_PROTO = ["flash", "duelMsg", "areaTab"];
+const isObj = v => !!v && typeof v === "object" && !Array.isArray(v);
+const isEmptyVal = v => v == null || (Array.isArray(v) && !v.length) || (isObj(v) && !Object.keys(v).length);
+const syncPart = S => { const out = {};
+  for (const [k, v] of Object.entries(S || {})) if (!LOCAL_ONLY.includes(k) && v !== undefined) out[k] = v;
+  if (isObj(out.proto)) { out.proto = {...out.proto}; for (const k of LOCAL_PROTO) delete out.proto[k]; }
+  return JSON.parse(JSON.stringify(out)); };
+const hasContent = st => ["prefs", "plans", "reviews", "likes", "tags", "votes", "cal"].some(k => !isEmptyVal(st?.[k]));
+// 목록을 합칠 때 같은 것으로 보는 열쇠. 없는 목록은 내용 전체(JSON)가 같아야 같은 것
+const LIST_KEYS = {
+  plans: x => [x.work || x.title || "", x.date || "", x.time || ""].join("|") + (x.work || x.date ? "" : "|" + (x.tid || JSON.stringify(x))),
+  reviews: x => [x.work || "", x.date || "", x.time || ""].join("|"),
+  likes: x => x.actor || JSON.stringify(x),
+  requests: x => x.name || JSON.stringify(x),
+};
+const unionList = (a, b, key) => { const out = new Map();
+  for (const x of a) out.set(key(x), x);
+  for (const x of b) { const k = key(x), y = out.get(k); out.set(k, isObj(y) && isObj(x) ? {...y, ...x} : x); }
+  return [...out.values()]; };
+// 두 기기에서 따로 고친 것을 합친다(서버 판과 이 기기 판이 둘 다 바뀌었을 때만 쓴다. 한쪽만 바뀌었으면 그쪽을 그대로 쓴다).
+// 규칙: 목록(일정·리뷰·좋아하는 배우…)은 합집합, 같은 항목은 이 기기 것 · cal(작품별 설정)·proto 는 칸별로 합치고 같은 칸은 이 기기 것 · 그 밖(prefs 등)은 이 기기 것, 단 이 기기가 비어 있으면 서버 것
+// 알려진 한계: 다른 기기에서 지운 항목이, 이 기기도 오프라인으로 고친 채였다면 합치면서 되살아날 수 있다
+const mergeState = (server, local) => {
+  server = isObj(server) ? server : {}; local = isObj(local) ? local : {};
+  const out = {...server};
+  for (const [k, lv] of Object.entries(local)) {
+    const sv = server[k];
+    if (isEmptyVal(lv)) { if (!(k in server)) out[k] = lv; continue; }
+    if (isEmptyVal(sv)) { out[k] = lv; continue; }
+    if (Array.isArray(lv) && Array.isArray(sv)) out[k] = unionList(sv, lv, LIST_KEYS[k] || (x => JSON.stringify(x)));
+    else if (isObj(lv) && isObj(sv) && (k === "cal" || k === "proto" || k === "stats")) {
+      const o = {...sv};
+      for (const [kk, v] of Object.entries(lv)) {
+        const w = sv[kk];
+        o[kk] = k === "proto" && isObj(v) && isObj(w) ? {...w, ...v} : k === "proto" && Array.isArray(v) && Array.isArray(w) ? unionList(w, v, x => JSON.stringify(x)) : v;
+      }
+      out[k] = o;
+    } else out[k] = lv;
+  }
+  return out;
+};
+// env: {sb(): Promise<supabase 클라이언트>, store: {get, set, del}, getState(): S, applyState(part): 서버 판을 화면에 반영, legacyAnon(): 예전 익명 번호,
+//       version, timer(f, ms), clear(t), redirectTo(): 로그인 후 돌아올 주소, changed(): 상태가 바뀌었을 때(화면 갱신), online(): 인터넷 연결 여부, log}
+function makeSync(env) {
+  let sb = null, uid = null, anon = true, email = "", providers = [], token = null, state = "off", err = "", pushT = null, busy = null, again = false, edits = 0;
+  const meta = () => { try { const m = JSON.parse(env.store.get(SYNC_META) || "{}"); return isObj(m) ? m : {}; } catch (e) { return {}; } };
+  const setMeta = m => env.store.set(SYNC_META, JSON.stringify(m));
+  const changed = () => { try { if (env.changed) env.changed(); } catch (e) {} };
+  const fail = e => { state = env.online && !env.online() ? "offline" : "error"; err = String((e && e.message) || e || ""); if (env.log) env.log("sync", err); };
+  const setUser = s => { const u = s && s.user; uid = (u && u.id) || null; anon = !u || !!u.is_anonymous; email = (u && u.email) || "";
+    providers = ((u && u.identities) || []).map(i => i.provider).filter(p => p && p !== "anonymous"); token = (s && s.access_token) || null; };
+  const fetchRow = async () => { const r = await sb.from("user_state").select("state, rev").eq("user_id", uid).maybeSingle(); if (r.error) throw r.error; return r.data; };
+  async function start() {
+    try {
+      state = "loading"; changed();
+      sb = await env.sb();
+      // 콜백 안에서 바로 supabase 를 부르지 않는다(라이브러리 권고). 토큰이 새로 나오면(1시간마다) 기록기가 쓰는 토큰도 바뀐다
+      sb.auth.onAuthStateChange((ev, s) => { const before = uid; setUser(s); if (before && uid && before !== uid) env.timer(() => pull().catch(fail), 0); changed(); });
+      let {data: {session}} = await sb.auth.getSession();
+      if (!session) { const r = await sb.auth.signInAnonymously(); if (r.error) throw r.error; session = r.data.session; }
+      setUser(session);
+      await pull();
+    } catch (e) { fail(e); }
+    changed();
+  }
+  // 서버 판 받기. 서버에 줄이 없으면 이 기기 것을 올린다(기존 베타 사용자 자동 이전). 서버 판이 앞서 있으면: 이 기기에 안 올린 변경이 없으면 서버 판으로 바꾸고, 있으면 합쳐서 올린다
+  async function pull() {
+    if (!sb || !uid) return;
+    const row = await fetchRow(), m = meta(), mine = m.uid === uid, local = syncPart(env.getState());
+    if (!row) {  // 아직 저장할 게 없으면 줄을 만들지 않는다(앱을 열기만 한 방문자마다 빈 줄이 쌓이지 않게). 처음 저장할 때 만든다
+      if (!hasContent(local)) { setMeta({uid, rev: 0, dirty: false}); state = "ok"; return; }
+      setMeta({uid, rev: 0, dirty: true}); return push(); }
+    if (mine && row.rev === m.rev) { state = "ok"; return m.dirty ? push() : undefined; }
+    const dirty = mine ? !!m.dirty : hasContent(local);  // 다른 사람(예전 익명 번호)으로 쓰던 기기에서 계정을 불러왔으면 이 기기 기록도 합친다
+    if (!dirty) { env.applyState(row.state || {}); setMeta({uid, rev: row.rev, dirty: false}); state = "ok"; return; }
+    env.applyState(mergeState(row.state || {}, local)); setMeta({uid, rev: row.rev, dirty: true});
+    return push();
+  }
+  // 올리기: 내가 마지막으로 본 판(rev)이 서버와 같을 때만 저장된다(save_state). 다르면(다른 기기가 먼저 저장) 받아서 합친 뒤 다시, 3번까지
+  async function push() {
+    if (!sb || !uid) return;
+    if (busy) { again = true; return busy; }
+    busy = (async () => {
+      for (let i = 0; i < 3; i++) {
+        const m = meta(), base = m.uid === uid ? (m.rev || 0) : 0, at = edits;
+        state = "saving"; changed();
+        const r = await sb.rpc("save_state", {p_state: syncPart(env.getState()), p_base_rev: base, p_app_version: env.version, p_legacy_anon: (env.legacyAnon && env.legacyAnon()) || null});
+        if (r.error) { setMeta({...m, uid, dirty: true}); throw r.error; }
+        if (r.data !== null && r.data !== undefined) { setMeta({uid, rev: Number(r.data), dirty: edits !== at}); state = "ok"; err = ""; return; }
+        const row = await fetchRow();
+        if (!row) continue;
+        env.applyState(mergeState(row.state || {}, syncPart(env.getState()))); setMeta({uid, rev: row.rev, dirty: true});
+      }
+      throw new Error("conflict");
+    })();
+    try { await busy; } catch (e) { fail(e); } finally { busy = null; changed(); }
+    if (again) { again = false; return push(); }
+  }
+  // save() 마다: 안 올린 변경 표시를 남기고 2초 모아서 올린다(라이브러리를 받기 전·로그인 전이면 표시만 남기고, 시작할 때 올린다)
+  const schedule = () => { edits++; const m = meta(); if (!m.dirty) setMeta({...m, dirty: true});
+    if (!sb || !uid) return; env.clear(pushT); pushT = env.timer(() => { pushT = null; push(); }, 2000); };
+  const flushNow = () => { if (pushT !== null && sb && uid) { env.clear(pushT); pushT = null; push(); } };  // 화면을 떠날 때 기다리던 저장을 바로
+  const go = async (how, provider) => { env.store.set(AFTER_AUTH, JSON.stringify({to: "#me", p: provider, how}));
+    const r = await sb.auth[how]({provider, options: {redirectTo: env.redirectTo()}}); if (r.error) { env.store.del(AFTER_AUTH); throw r.error; } };
+  return {
+    start, pull, push, schedule, flushNow,
+    status: () => ({state, err, uid, anon, email, providers}),
+    token: () => token,
+    link: p => go("linkIdentity", p),  // 익명 계정에 구글·카카오를 붙인다(이 기기 기록 그대로)
+    signIn: p => go("signInWithOAuth", p),  // 이미 연결해 둔 계정으로 들어간다(돌아오면 이 기기 기록과 합친다)
+    async signOut() { await push(); await sb.auth.signOut({scope: "local"}); env.store.del(SYNC_META); },
+    async deleteAll() { const r = await sb.rpc("delete_my_data"); if (r.error) throw r.error; try { await sb.auth.signOut({scope: "local"}); } catch (e) {} env.store.del(SYNC_META); },
+  };
+}
+// 로그인 다녀온 주소의 ?code=·?error= 를 지운다(다른 쿼리, 예: ?debug=1 은 그대로)
+const cleanAuthUrl = () => { const q = new URLSearchParams(location.search); let hit = false;
+  for (const k of ["code", "error", "error_code", "error_description", "state"]) if (q.has(k)) { q.delete(k); hit = true; }
+  if (hit) history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "") + location.hash); };
+// </sync>
 const randUuid = () => { try { return crypto.randomUUID(); } catch (e) { return null; } };  // 난수는 브라우저 암호 난수만. 없으면 null → 기록하지 않는다
 const VOCAB = buildVocab(D);
+let SYNC = null;  // 내 데이터 동기화(아래에서 켜졌을 때만 만든다). 기록기는 로그인 토큰을 여기서 받는다
 const TRK = makeTracker({
+  token: () => SYNC ? SYNC.token() : null,
   get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} },
   del: k => { try { localStorage.removeItem(k); } catch (e) {} },
@@ -2317,6 +2467,36 @@ const votesP = loadVotes();
 const track = (event, props) => { const ok = TRK.track(event, props); if (ok) scheduleFlush(); if (typeof renderDebug === "function") renderDebug(); return ok; };
 let flushT; const scheduleFlush = () => { if (!TRK.live()) return; clearTimeout(flushT); flushT = setTimeout(() => TRK.flush().then(r => { if (r?.sent && TRK.queue().length) scheduleFlush(); }), 3000); };  // 남은 묶음이 있으면 이어서(티켓 CSV 처럼 한 번에 많을 때)
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && TRK.live()) TRK.flush(); });
+// 내 데이터 동기화 켜기(docs/backend_plan_2026-11-06.md 1단계): 기록 설정이 켜져 있고 PICKLE_TRACK.sync 에 시행일이 있을 때만
+const SYNC_CFG = (() => { const t = window.PICKLE_TRACK || {}; return TRK.live() && /^\d{4}-\d{2}-\d{2}$/.test(t.sync || "") ? {since: t.sync, login: (Array.isArray(t.login) ? t.login : []).filter(p => ["google", "kakao"].includes(p))} : null; })();
+const typing = () => /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || "");
+const loadSbLib = () => new Promise((ok, no) => {  // supabase-js 는 동기화를 켰을 때만 받는다(버전 고정·무결성 해시)
+  if (window.supabase && window.supabase.createClient) return ok(window.supabase);
+  const el = document.createElement("script"); el.src = SB_JS.src; el.integrity = SB_JS.integrity; el.crossOrigin = "anonymous";
+  el.onload = () => window.supabase && window.supabase.createClient ? ok(window.supabase) : no(new Error("supabase-js 없음")); el.onerror = () => no(new Error("supabase-js 를 받지 못함"));
+  document.head.appendChild(el); });
+if (SYNC_CFG) {
+  SYNC = makeSync({
+    sb: async () => (await loadSbLib()).createClient(window.PICKLE_TRACK.url, window.PICKLE_TRACK.key, {auth: {flowType: "pkce", persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: "pickle_auth"}}),
+    store: {get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }, del: k => { try { localStorage.removeItem(k); } catch (e) {} }},
+    getState: () => S,
+    applyState: part => {  // 서버 판으로 바꾼다. 화면 상태(LOCAL_ONLY)는 이 기기 것을 그대로 둔다
+      const keep = {}; for (const k of LOCAL_ONLY) if (k in S) keep[k] = S[k];
+      const lp = {}; for (const k of LOCAL_PROTO) if (S.proto && k in S.proto) lp[k] = S.proto[k];
+      const next = {prefs: null, query: null, cal: {}, plans: [], tags: [], votes: [], likes: [], reviews: [], ...JSON.parse(JSON.stringify(part || {})), ...keep};
+      next.proto = {...(isObj(next.proto) ? next.proto : {}), ...lp}; renameTags(next);
+      S = next; saveRaw(); if (!typing()) route();
+    },
+    legacyAnon: () => TRK.peekAnon(), version: APP_VER,
+    timer: (f, ms) => setTimeout(f, ms), clear: t => clearTimeout(t),
+    redirectTo: () => location.origin + location.pathname,
+    online: () => typeof navigator === "undefined" || navigator.onLine !== false,
+    changed: () => { const el = CUR && CUR.name === "me" ? document.querySelector("#acct") : null; if (el && el.isConnected !== false) el.outerHTML = accountCard(); },  // 내 데이터 카드만 다시 그린다(열린 시트·입력 칸은 그대로)
+    log: (...a) => console.warn("[sync]", ...a),
+  });
+  SYNC_HOOK = () => SYNC.schedule();
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") SYNC.flushNow(); });
+}
 
 // ---------- proto: 기록 안내 배너 · 설정 · 안내 화면 · 디버그 목록 ----------
 let DBG_OPEN = false, CLR_ASK = false;
@@ -2339,20 +2519,28 @@ const trackSettings = () => { const off = TRK.isOff();
   return `<div class="card"><h3>끄기와 지우기</h3>
     <p class="small">기록 보내기 <b>${off ? "꺼짐" : "켜짐"}</b> · 꺼도 추천은 그대로 쓸 수 있어요.</p>
     <div class="nbgrid"><button class="nb" data-act="trackToggle">${off ? "기록 켜기" : "기록 끄기"}</button><button class="nb" data-act="trackClear">이 기기 기록 지우기</button></div>
-    <p class="tiny muted"><b>기록 끄기</b> 지금부터 보내지 않고 이 기기의 번호를 지워요. 이미 보낸 기록은 누구 것인지 알 수 없는 채로 남아요.</p>
+    <p class="tiny muted"><b>기록 끄기</b> 지금부터 보내지 않고 이 기기의 번호를 지워요. ${SYNC_CFG ? "이미 보낸 기록은 남아요. 지우려면 내 취향 탭의 [내 데이터 모두 지우기]를 눌러 주세요. 내 데이터 저장(동기화)은 기록을 꺼도 이어져요." : "이미 보낸 기록은 누구 것인지 알 수 없는 채로 남아요."}</p>
     <p class="tiny muted"><b>이 기기 기록 지우기</b> 이 기기의 번호만 지워요. 켜 둔 상태면 다음 기록부터 새 번호예요.</p>
     ${CLR_ASK ? `<div class="ask"><p class="small"><b>기록을 지웠어요.</b> 이 기기에 저장된 취향·내 티켓 일정도 지울까요?</p><div class="nbgrid"><button class="nb" data-act="clearAppData">취향·볼 예정도 지우기</button><button class="nb" data-act="clearAppKeep">그대로 두기</button></div></div>` : ""}</div>`; };
+// 동기화를 켰을 때 개인정보 안내에 더하는 카드와 홈 알림(docs/backend_plan_2026-11-06.md 1단계). 문장은 동기화 코드와 맞춘다: S 전체(화면 상태 빼고)를 user_state 에 저장, 앨범 사진은 안 올림, 기록 끄기와 따로, [내 데이터 모두 지우기] = delete_my_data
+const krDate = d => { const [y, m, dd] = String(d).split("-").map(Number); return `${y}년 ${m}월 ${dd}일`; };
+const syncPrivacy = () => SYNC_CFG ? `<div class="card"><h3>내 데이터 저장</h3><p class="small">브라우저를 지우거나 기기를 바꿔도 이어 쓸 수 있게, 고른 취향·좋아하는 배우·내 티켓과 일정·관람 리뷰(쓴 글 포함)를 서버에 저장해요. 앨범에서 고른 포스터 사진은 올리지 않아요.</p>
+    <p class="small">가입 없이 이 브라우저에 무작위 번호로 연결해 저장해요. ${SYNC_CFG.login.length ? "구글·카카오 계정을 연결하면 그 계정의 이메일을 함께 저장하고, 다른 기기에서도 불러올 수 있어요. " : ""}이 저장은 앱을 쓰는 데 필요한 것이라 [기록 끄기]와 상관없이 이어져요.</p>
+    <p class="small">내 취향 탭의 [내 데이터 모두 지우기]를 누르면 서버의 내 데이터와 보낸 기록, 연결한 계정 정보를 바로 지워요. 누르지 않으면 서비스를 운영하는 동안 보관해요.</p></div>` : "";
+const syncNoticeCard = () => SYNC_CFG && (S.proto?.syncNotice || "") !== SYNC_CFG.since ? `<div class="card accent notice" role="status"><p class="small"><b>내 데이터를 서버에도 저장해요 (${krDate(SYNC_CFG.since).slice(6)})</b></p>
+  <p class="small">브라우저를 지우거나 기기를 바꿔도 이어 쓸 수 있게 취향·내 티켓·관람 리뷰를 서버에 저장해요.${SYNC_CFG.login.length ? " 계정을 연결하면 다른 기기에서도 불러올 수 있어요." : ""} 언제든 내 취향 탭에서 모두 지울 수 있어요.</p>
+  <div class="chips"><button class="btn" data-act="syncNoticeOk">확인</button><a class="btn ghost" href="#privacy">자세히 보기</a></div></div>` : "";
 // 기록·개인정보 안내(사용자 요청 2026-11-03: 꼭 필요한 것만). 홈 맨 아래 링크로만 들어온다. 문장은 기록기 코드와 맞춰 둔다:
 // 이벤트 표(EVENTS)에 이름·연락처·IP·시각 칸이 없고(서버 한 줄 = 무작위 번호·버전·이벤트·payload, 시각은 순서 seq 로 대신), 관람 후 리뷰(after_review)에 주관식이 없고, 광고·분석 스크립트를 싣지 않는다
 V.privacy = () => !trackUi() ? `<div class="one"><div class="card"><p class="small">이 앱은 지금 아무 기록도 서버로 보내지 않아요.</p><a class="btn ghost" href="#home">홈으로</a></div></div>` : `<div class="one prv">
   <div><h1>기록·개인정보 안내</h1></div>
-  <div class="card prvno"><h3>남기지 않는 것</h3><ul class="small"><li>이름, 연락처, 아이디, 가입 정보가 없어요.</li><li>IP를 따로 저장하지 않아요.</li><li>기록한 시각은 남기지 않고 날짜만 남겨요.</li><li>관람 리뷰에 쓴 후기 글은 보내지 않아요.</li><li>앨범에서 고른 포스터 사진은 보내지 않아요.</li><li>광고나 외부 분석 도구가 없어요.</li></ul></div>
-  <div class="card"><h3>남기는 것</h3><p class="small">이 기기의 무작위 익명 번호와 함께, 고른 취향·추천에 대한 반응·화면 이동·본 공연 기록을 남겨요.</p><p class="small">내 티켓에 등록한 티켓은 공연명, 일시, 출연, 장소, 좌석, 금액, 구매처, 리뷰/메모를 남겨요. 리뷰/메모에는 연락처 같은 개인정보를 적지 마세요. 본 공연 기록은 공연, 본 날짜, 배우별 평가와 고른 태그를 남겨요. 전에 이 기기에 저장해 둔 티켓과 기록도 같은 방식으로 한 번 보내요.</p>
+  <div class="card prvno"><h3>남기지 않는 것</h3><ul class="small">${SYNC_CFG ? "<li>이름, 연락처를 묻지 않아요. 계정을 연결하면 그 계정의 이메일만 받아요.</li>" : "<li>이름, 연락처, 아이디, 가입 정보가 없어요.</li>"}<li>IP를 따로 저장하지 않아요.</li><li>기록한 시각은 남기지 않고 날짜만 남겨요.</li>${SYNC_CFG ? "" : "<li>관람 리뷰에 쓴 후기 글은 보내지 않아요.</li>"}<li>앨범에서 고른 포스터 사진은 보내지 않아요.</li><li>광고나 외부 분석 도구가 없어요.</li></ul></div>
+  ${syncPrivacy()}<div class="card"><h3>남기는 것</h3><p class="small">이 기기의 무작위 익명 번호와 함께, 고른 취향·추천에 대한 반응·화면 이동·본 공연 기록을 남겨요.</p><p class="small">내 티켓에 등록한 티켓은 공연명, 일시, 출연, 장소, 좌석, 금액, 구매처, 리뷰/메모를 남겨요. 리뷰/메모에는 연락처 같은 개인정보를 적지 마세요. 본 공연 기록은 공연, 본 날짜, 배우별 평가와 고른 태그를 남겨요. 전에 이 기기에 저장해 둔 티켓과 기록도 같은 방식으로 한 번 보내요.</p>
     <h3>목적과 보관 기간</h3><p class="small">추천을 고치는 데만 쓰고, 서비스를 운영하는 동안 보관해요. 서비스를 마치면 지워요.</p></div>
   <div class="card"><h3>국외 이전</h3><p class="small">기록은 Supabase Pte. Ltd.(싱가포르)에 맡겨 저장해요. 저장 위치는 서울 리전이지만, Supabase와 협력 업체가 있는 나라에서 처리될 수 있어요.</p>
-    <table class="prt"><tr><td>이전 항목</td><td>위 '남기는 것'(이름·연락처 없음)</td></tr><tr><td>국가</td><td>싱가포르 등 Supabase가 처리하는 나라</td></tr><tr><td>시기·방법</td><td>기록할 때마다 인터넷으로 전송</td></tr><tr><td>받는 자</td><td>Supabase Pte. Ltd.</td></tr><tr><td>목적·기간</td><td>추천 개선, 서비스를 운영하는 동안</td></tr><tr><td>거부 방법</td><td>아래 [기록 끄기]. 꺼도 추천은 그대로 쓸 수 있어요</td></tr></table></div>
+    <table class="prt"><tr><td>이전 항목</td><td>${SYNC_CFG ? "위 '내 데이터 저장'과 '남기는 것'(계정을 연결하면 이메일)" : "위 '남기는 것'(이름·연락처 없음)"}</td></tr><tr><td>국가</td><td>싱가포르 등 Supabase가 처리하는 나라</td></tr><tr><td>시기·방법</td><td>기록할 때마다 인터넷으로 전송</td></tr><tr><td>받는 자</td><td>Supabase Pte. Ltd.</td></tr><tr><td>목적·기간</td><td>추천 개선, 서비스를 운영하는 동안</td></tr><tr><td>거부 방법</td><td>아래 [기록 끄기]. 꺼도 추천은 그대로 쓸 수 있어요</td></tr></table></div>
   ${trackSettings()}
-  <p class="tiny muted">시행일 2026년 11월 5일</p></div>`;
+  <p class="tiny muted">${SYNC_CFG ? `시행일 ${krDate(SYNC_CFG.since)}` : "시행일 2026년 11월 5일"}</p></div>`;
 
 // ---------- proto: 취향폼(1·2·3 + 건너뛰기) ----------
 V.taste = (step = "1") => `<div class="one">${SURVEY_BANNER}${onboardBody(step)}</div>`;  // '취향 없이 지금 하는 공연 전체 보기'는 MVP에서 뺐다(작품 추천 목록)
@@ -2565,7 +2753,7 @@ V.home = () => {
   Object.keys(RATE_CTX).forEach(k => delete RATE_CTX[k]);
   const visit = due >= 0 && S.plans[due] ? visitCard(due) : "";  // 관람 후 배너(결정 46 사용자 결정: 푸시 대신 홈 배너). 카드보다 위
   // 홈 맨 위의 기록 안내 줄은 뺐다(사용자 요청 2026-10-29). 기록·개인정보 안내는 홈 맨 아래 링크
-  if (!p) return `${noticeCard()}${visit}${tkFan(from)}<div class="tcwrap">
+  if (!p) return `${noticeCard()}${syncNoticeCard()}${visit}${tkFan(from)}<div class="tcwrap">
     <section class="tk empty" aria-label="아직 비어 있는 내 취향 카드">${TK_CURTAIN}
       <div class="tkveilbg" aria-hidden="true">${TK_HEAD}<div class="tkcell tkbig">나의 뮤지컬 관극 취향</div>
         <div class="tkgrid"><span class="tkcell"><span class="tkk">목소리</span><span class="tcskel w60"></span></span><span class="tkcell"><span class="tkk">노래</span><span class="tcskel w40"></span></span><span class="tkcell"><span class="tkk">본진 배우</span><span class="tcskel w60"></span></span><span class="tkcell"><span class="tkk">애정 배우</span><span class="tcskel w60"></span></span></div></div>
@@ -2587,7 +2775,7 @@ V.home = () => {
         <div class="tkperf" aria-hidden="true"></div>
         <div class="tkbtns" data-noshot><button type="button" class="tkedit" data-go="#taste/1">수정하기</button><button type="button" class="tkedit" data-act="tkShare">공유하기</button><button type="button" class="tkedit" data-act="tkSave">저장하기</button></div>${foot}</div>`;
   if (!CARD_BACK) prepCardImg();
-  return `${noticeCard()}${visit}${tkFan(from)}<div class="tcwrap">${card}</div></div></div>${homeWorks(from)}
+  return `${noticeCard()}${syncNoticeCard()}${visit}${tkFan(from)}<div class="tcwrap">${card}</div></div></div>${homeWorks(from)}
     ${privacyLink() ? `<p class="tiny muted">${privacyLink().replace(/^\s*·\s*/, "")}</p>` : ""}`;  // 기록·개인정보 안내 링크는 홈 맨 아래에만(사용자 요청 2026-11-03)
 };
 // 홈 아래 작품 목록(사용자 요청 2026-10-28: 홈이 비어 보이지 않게). ① 배우 조합을 추천받을 수 있는 작품(#find/작품) ② 지금 하는 공연 전체(KOPIS, 인기순·지역 칩, #show/…)
@@ -3047,7 +3235,8 @@ function route() {
   const [name, ...args] = h.split("/");
   if (name !== "home") CARD_BACK = false;  // 다른 화면에 다녀오면 카드는 앞면
   CUR = {name, args};
-  if (name === "privacy" && S.proto?.notice !== NOTICE_VER) { (S.proto ||= {}).notice = NOTICE_VER; save(); }  // 안내 화면을 열어 봤으면 알림은 끝(끄기는 그 화면에서)
+  if (name === "privacy" && S.proto?.notice !== NOTICE_VER) { (S.proto ||= {}).notice = NOTICE_VER; save(); }
+  if (name === "privacy" && SYNC_CFG && S.proto?.syncNotice !== SYNC_CFG.since) { (S.proto ||= {}).syncNotice = SYNC_CFG.since; save(); }  // 동기화 알림도 안내 화면을 열어 봤으면 끝  // 안내 화면을 열어 봤으면 알림은 끝(끄기는 그 화면에서)
   closeSheet(true);
   if (location.hash !== lastHash && S.proto?.flash) delete S.proto.flash;
   if (location.hash !== lastHash) PF_DRAFT = {};  // 티켓 칸 초안은 그 화면에서만  // 평가 안내는 그 화면에서만
@@ -3208,6 +3397,16 @@ document.addEventListener("click", e => {
     case "trackClear": TRK.clearDevice(); CLR_ASK = true; renderDebug(); route(); toast("이 기기 기록을 지웠어요"); break;
     case "clearAppData": { CLR_ASK = false; try { localStorage.removeItem(KEY); } catch (e) {} location.hash = "#taste/1"; location.reload(); break; }  // 취향·볼 예정(앱 사용 데이터)은 따로 물어서만 지운다
     case "clearAppKeep": CLR_ASK = false; route(); break;
+    // 내 데이터(동기화) 카드
+    case "accLink": case "accSignIn": if (SYNC) SYNC[d.act === "accLink" ? "link" : "signIn"](d.p).catch(() => toast("계정 연결을 시작하지 못했어요. 잠시 뒤 다시 해 주세요")); break;
+    case "accAsk": ACC_ASK = d.k || ""; route(); break;
+    case "accMsg": ACC_MSG = ""; route(); break;
+    case "accSignOut": { ACC_ASK = ""; if (!SYNC) break; const done = () => { try { localStorage.removeItem(KEY); } catch (e) {} location.hash = "#home"; location.reload(); };
+      SYNC.signOut().then(done, () => toast("로그아웃하지 못했어요. 잠시 뒤 다시 해 주세요")); break; }
+    case "accDelete": { ACC_ASK = ""; if (!SYNC) break; toast("지우는 중이에요…");
+      SYNC.deleteAll().then(() => { for (const k of [KEY, "pickle_anon", "pickle_q", "pickle_posters", "pickle_votes"]) { try { localStorage.removeItem(k); } catch (e) {} } location.hash = "#home"; location.reload(); },
+        () => { toast("지우지 못했어요. 잠시 뒤 다시 해 주세요"); route(); }); break; }
+    case "syncNoticeOk": (S.proto ||= {}).syncNotice = SYNC_CFG ? SYNC_CFG.since : ""; save(); route(); break;
     case "dbgToggle": DBG_OPEN = !DBG_OPEN; renderDebug(); break;
     case "areaTab": { if (d.t === "pickle" || regionTabs(allShows(D, today())).some(([k]) => k === d.t)) { (S.proto ||= {}).areaTab = d.t; HOME_ROWS = 5; HOME_Q = ""; save(); route(); } break; }  // 홈 전체 목록의 구분 버튼(검색어는 비운다)
     case "homeMore": { HOME_ROWS += 5; const g = $("#homegrid"); if (g) g.innerHTML = homeGrid(today()); break; }  // 5줄씩 더(화면 전체를 다시 그리지 않아 스크롤 위치 그대로)
@@ -3348,12 +3547,27 @@ document.addEventListener("keydown", e => {  // 시트(모달)가 열려 있을 
 });
 const ENTER_ADD = {favB: '[data-act="addFav"][data-k="b"]', fav: '[data-act="addFav"]:not([data-k])', avoidIn: '[data-act="addAvoid"]', lkadd: '[data-act="lkAdd"]', lmadd: '[data-act="lmAdd"]', acAvoid: '[data-act="acAvoidAdd"]'};  // 배우 검색 칸에서 엔터 = 그 칸의 [추가]
 document.addEventListener("keydown", e => { const sel = e.key === "Enter" && !e.isComposing && ENTER_ADD[e.target.id]; if (sel) { e.preventDefault(); $(sel)?.click(); } });
+// 로그인(계정 연결) 다녀온 주소: 실패·취소(?error=)는 바로 지우고 내 데이터 카드에 알린다. 성공 코드(?code=)는 supabase-js 가 읽은 뒤(SYNC.start 다음) 지운다
+// 연결하기가 '이미 다른 기록에 연결된 계정'으로 거절되면 묻지 않고 그 계정으로 불러오기까지 이어 간다(AUTO_SIGNIN). 불러오기도 실패하면 안내만(같은 일을 되풀이하지 않는다)
+let AUTO_SIGNIN = "";
+if (SYNC) { const q = new URLSearchParams(location.search), code = q.get("error_code") || q.get("error");
+  if (code) { let a = {}; try { a = JSON.parse(localStorage.getItem(AFTER_AUTH) || "{}") || {}; } catch (e) {}
+    const p = a.p || "google", taken = code === "identity_already_exists" || /already/i.test(q.get("error_description") || "");
+    if (taken && a.how === "linkIdentity") AUTO_SIGNIN = p; else ACC_MSG = taken ? "elsewhere:" + p : "fail";
+    try { localStorage.removeItem(AFTER_AUTH); } catch (e) {} cleanAuthUrl(); history.replaceState(null, "", "#me"); } }
 if (!location.hash) history.replaceState(null, "", entryRoute(S.prefs, S));  // 처음 온 사람(취향 없음)의 첫 화면은 3단계 취향. #pick/… 같은 주소로 바로 들어온 사람은 그대로 둔다
 if (!TRK.peekAnon()) (S.proto ||= {}).notice = NOTICE_VER;  // 이 기기에서 처음 기록하는 사람은 지금 안내가 처음이라 알림 없음
 const NOTICE_SEEN = noticeSendOk();  // 이번에 안내 화면으로 바로 들어온 사람은 끌 기회를 준 뒤(다음 방문·확인 버튼) 보낸다
 route();
 if (NOTICE_SEEN) { backfillReviews(); syncTickets(); }
 renderDebug();
+if (SYNC) SYNC.start().then(() => {  // 화면을 먼저 그린 뒤 뒤에서 로그인·서버 판 맞추기
+  let after = null; try { after = JSON.parse(localStorage.getItem(AFTER_AUTH) || "null"); localStorage.removeItem(AFTER_AUTH); } catch (e) {}
+  cleanAuthUrl();
+  if (AUTO_SIGNIN) { const p = AUTO_SIGNIN; AUTO_SIGNIN = ""; toast("이미 연결된 계정이라 그 계정에서 불러올게요");
+    SYNC.signIn(p).catch(() => { ACC_MSG = "elsewhere:" + p; route(); }); return; }
+  if (after && after.to) { location.hash = after.to; if (!SYNC.status().anon) toast(after.how === "signInWithOAuth" ? "계정에서 불러왔어요. 이 기기 기록도 합쳤어요" : "계정을 연결했어요"); }
+});
 </script>
 </body>
 </html>
