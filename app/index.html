@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>PICKLE 주소가 바뀌었어요</title>
+<link rel="canonical" href="https://pickle-musical.com/">
+<style>
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #14171c; color: #eceff3; font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; text-align: center; padding: 24px; box-sizing: border-box; }
+  h1 { font-size: 1.4rem; margin: 0 0 12px; }
+  p { margin: 8px 0; line-height: 1.6; color: #c3c9d2; }
+  a { color: #9cc8ff; }
+</style>
+</head>
+<body>
+<main>
+  <h1>PICKLE 주소가 바뀌었어요</h1>
+  <p>새 주소 <b>pickle-musical.com</b>으로 이동하고 있어요.<br>이 브라우저에 저장한 취향·내 티켓·리뷰도 함께 옮겨요.</p>
+  <p><a id="go" href="https://pickle-musical.com/app/">자동으로 넘어가지 않으면 여기를 눌러 주세요</a></p>
+</main>
+<script>
+// 예전 주소(2ma1995.github.io/pickle) 이사 페이지. 소스: pickle-src 의 tools/move_page (README.md 참고). 아래 move-core 는 앱(app/index.html)과 글자 그대로 같다
+const MOVE_HOME = "https://pickle-musical.com";
+// <move-core> (tools/move_page/index.html 에 글자 그대로 같은 사본이 있다. 고치면 둘 다 — tests/move_check.js 가 확인)
+const MOVE_FROM = ["2ma1995.github.io", "soobworks.github.io"];  // 예전 주소들. 2ma1995 는 팀원 저장소의 이사 페이지(tools/move_page)가, soobworks 는 이 앱이 넘긴다
+const MOVE_KEYS = ["pickle_v2", "pickle_anon", "pickle_track_off", "pickle_q", "pickle_posters"];  // 넘기는 것: 앱 데이터·익명 번호·기록 끄기 표시·안 보낸 기록·앨범 포스터. 로그인 정보(pickle_auth)는 주소마다 새로 만든다
+const MOVE_MAX = 600000, MOVE_POSTER_MAX = 300000;  // 주소 길이 상한(글자). 포스터 사진이 크면 사진만 빼고 넘긴다
+const b64u = s => { const b = new TextEncoder().encode(s); let bin = ""; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));  // 나눠서 바꾼다(큰 데이터에서 호출 스택이 넘치지 않게)
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+const unb64u = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0)));
+// 이 브라우저의 PICKLE 데이터를 묶는다(없으면 null)
+const packMove = get => { const out = {};
+  for (const k of MOVE_KEYS) { const v = get(k); if (v !== null && v !== undefined && v !== "") out[k] = String(v); }
+  if ((out.pickle_posters || "").length > MOVE_POSTER_MAX) delete out.pickle_posters;
+  return out.pickle_v2 || out.pickle_anon || out.pickle_track_off ? out : null; };
+// 새 주소: https://새주소/app/#move=<묶음>&to=<원래 화면 주소>. 묶음이 너무 길면 포스터, 안 보낸 기록 순으로 뺀다
+const moveUrl = (home, pack, hash) => {
+  const to = hash && hash !== "#" ? "&to=" + encodeURIComponent(hash) : "";
+  if (!pack) return home.replace(/\/+$/, "") + "/app/" + (hash || "");
+  let p = {...pack}, enc = b64u(JSON.stringify(p));
+  for (const k of ["pickle_posters", "pickle_q"]) if (enc.length > MOVE_MAX && p[k]) { delete p[k]; enc = b64u(JSON.stringify(p)); }
+  return home.replace(/\/+$/, "") + "/app/#move=" + enc + to; };
+// </move-core>
+(() => {
+  let pack = null; try { pack = packMove(k => localStorage.getItem(k)); } catch (e) {}
+  const atApp = /\/app(\/|$)/.test(location.pathname);
+  const url = pack || atApp ? moveUrl(MOVE_HOME, pack, location.hash) : MOVE_HOME + "/";  // 데이터가 있거나 앱 주소였으면 새 앱으로(데이터와 보던 화면 함께), 아니면 새 소개 페이지로
+  document.getElementById("go").href = url;
+  location.replace(url);
+})();
+</script>
+</body>
+</html>
